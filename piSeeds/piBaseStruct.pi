@@ -1,0 +1,21 @@
+piScratchDir /Users/primwind/proj/dev/pi/pi/scratchPis 'locattion for storing pis befor piIndexing and piID directory tree encritipn is present.'
+# piStruct.piProlog
+piStruct piProlog 'Defines a data structure for piProlog.\nA dictionary defining the structure of the piProlog added to the top of all piPi. piStructS00(title, version, author, copyright).'
+piStructS00 title 'A string value for storing the name of any system used to process pis.'
+piStructS00 version 'A string value for storing th e version of the system used to process pis.'
+piStructS00 author 'A string value for storing the author of the system used to process pis.'
+piStructS00 copyright 'A string value for storing the copyright holder and year of the system used to process pis.'
+piValuesSetD piProlog 'defines default prolog values from a piProlog structure'
+piValue piProlog.title pi
+piValue piProlog.version '0.0.1'
+piValue piProlog.author 'martin@pidev.com'
+piValue piProlog.copyright '2023 Pi Development'
+# piStruct.piBase
+piStruct piBase 'Defines a data structure for pi.\nA dictionary for holding pi topic information.'
+piStructS00 piType 'piStruct child of pi storing a string type name of the pi.'
+piStructS00 piTitle 'piStruct child of pi storing a string title of the pi.'
+piStructS00 piSD pi
+piValuesSetD piBase 'defines default piBase values from a piBase structure'
+piValue piBase.piType pi
+piValue piBase.piTitle pi
+piValue piBase.piSD 'Smallest particle of Pertinent Information, uesed to define base pis.'

@@ -1,0 +1,26 @@
+[project]
+
+name = "piGenCode"
+version = "0.1.0"
+description = "piGenCode pip package"
+readme = ""
+license = {text = "MIT License"}
+authors = [
+{name = "mpytel", email = "mpytel@domain.com"}
+]
+maintainers = [
+{name = "mpytel", email = "mpytel@domain.com"}
+]
+classifiers=[
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    ]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+[project.scripts]
+piGenCode = "piGenCode.main:main"
