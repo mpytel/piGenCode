@@ -1,0 +1,26 @@
+{
+  "switcheFlags": {},
+  "newCmd": {
+    "newCmd_description": "Add new command <cmdName> with [argNames...]. Also creates a file cmdName.py.",
+    "cmdName": "Name of new command",
+    "argName": "(argName...), Optional names of argument to associate with the new command."
+  },
+  "modCmd": {
+    "modCmd_description": "Modify a command or argument discriptions, or add another argument for command. The cmdName.py file will not be modified.",
+    "cmdName": "Name of command being modified",
+    "argName": "(argName...) Optional names of argument(s) to modify."
+  },
+  "rmCmd": {
+    "rmCmd_description": "Remove <cmdName> and delete file cmdName.py, or remove an argument for a command.",
+    "cmdName": "Name of command to remove, cmdName.py and other commands listed as argument(s) will be delated.",
+    "argName": "Optional names of argument to remove.v It is and I am both pi."
+  },
+  "germSeed": {
+    "piGermSeed_description": "Germinate a set of piSeeds.",
+    "seedFile": "Name of text file containg piSeeds."
+  },
+  "genCode": {
+    "piGenCode_description": "Genarate code from piSeeds",
+    "filename": "Name of text file containing piCG piValue seed pis."
+  }
+}
