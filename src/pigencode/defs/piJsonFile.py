@@ -5,7 +5,7 @@ from pathlib import Path
 from json import load, loads, dump, dumps, JSONDecodeError
 from .logIt import logIt, printIt, lable
 from ..classes.piSeeds import PiSeedTypes, PiSeed, PiSeedTypeREs
-from ..defs.piRCFile import readRC
+from ..defs.piRCFile import readRC, getKeyItem
 from ..defs.piID import getPiIDs
 
 def readJson(fileName: str, verbose=True) -> dict:
@@ -118,7 +118,7 @@ def piLoadPiClassGCJson(PiClassName, piClassGCDir) -> dict:
     lowerPiClassName = PiClassName[:2].lower() + PiClassName[2:]
     # look in class file for listm of parametersm being inharited as children of paramType
     fileName = Path(piClassGCDir).joinpath(lowerPiClassName + '.py')
-    printIt(f'piLoadPiClassGCJson fileName: {fileName}', lable.ABORTPRT)
+    printIt(f'piLoadPiClassGCJson fileName: {fileName}', lable.DEBUG)
     if fileName.is_file():
         piStartStr = f'{PiClassName}_PI = '
         piJsonStr = ''
@@ -137,8 +137,9 @@ def piLoadPiClassGCJson(PiClassName, piClassGCDir) -> dict:
 
 class PiClassGCFiles():
     def __init__(self) -> None:
-        self.fileDirName = Path(readRC("piClassGCDir"))
-        makedirs(self.fileDirName, exist_ok=True)
+        piScratchPath = Path(getKeyItem("piScratchDir"))
+        self.fileDirName = piScratchPath.joinpath("piClassGC")
+        self.fileDirName.mkdir(mode=511, parents=True, exist_ok=True)
         self.baseMaxFileInt = self._getBaseMaxFileInt()
         self.maxFileInt = self.baseMaxFileInt
         self.lastLineNumber = 0
@@ -215,6 +216,7 @@ class PiClassGCFiles():
         return str(fileInt).zfill(3)
 
     def _getPiClassGCFileName(self, piType, piTitle, lineNumber = 0) -> str:
+
         makedirs(self.fileDirName, exist_ok=True)
         fileIntStr = self._getFileIntZFill(piTitle, lineNumber)
         fileName = self.fileDirName.joinpath(f'{piType}{fileIntStr}_{piTitle}.json')
@@ -222,6 +224,7 @@ class PiClassGCFiles():
 
     def writePiClassGC(self, piType, piTitle, lineNumber, aDict: dict, verbose=True) -> bool:
         piStrucFileName = self._getPiClassGCFileName(piType, piTitle, lineNumber)
+        #print('piStrucFileName:', piStrucFileName)
         rtnBool = writeJson(piStrucFileName, aDict, verbose)
         if rtnBool: self.classGCFilePaths.append(piStrucFileName)
         if rtnBool and verbose: printIt(piStrucFileName,lable.SAVED)

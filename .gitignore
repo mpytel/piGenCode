@@ -1,6 +1,8 @@
 
 # unmanged package file or directory
 scrach/
+piSeeds/
+piGerms/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -8,7 +8,8 @@ from ..classes.piGermSeeds import PiGermSeeds, germinateSeeds
 from ..classes.piSeeds import PiSeeds
 from .genCode import genCodeFile
 
-seedFilePattern = reCompile(r'(piSeed)([0-9]{3})_.*(.pi)') # piSeed000_name.pi
+seedFilePattern = reCompile(
+    r'(piSeed)([0-9]{3})(?:_.*)?(.pi)')  # piSeed000_name.pi
 
 def germSeed(argParse: ArgParse):
     args = argParse.parser.parse_args()
@@ -62,7 +63,7 @@ def germAllSeedFiles(verbose=True) -> PiGermSeeds:
         seedFiles.sort()
         for fileName in seedFiles:
             theMatch = seedFilePattern.match(fileName)
-            print('theMatch', fileName, theMatch)
+            #print('theMatch', fileName, theMatch)
             if theMatch:
                 seedFile = seedPath.joinpath(fileName)
                 piGermSeeds = germSeedFile(seedFile, verbose)
@@ -92,17 +93,16 @@ def getSeedPath() -> Path | None:
     writeRC("piSeedsDir", str(seedPath))
     return seedPath
 
-
-
-
-
-def germSeedFile(fileName, verbose=True) -> PiGermSeeds:
+def germSeedFile(fileName: str, verbose=True) -> PiGermSeeds:
     piGermSeeds: PiGermSeeds
+    seedFilePath = Path(fileName)
     try:
-        if os.path.isfile(fileName):
+        if seedFilePath.is_file():
             piGermSeeds = germinateSeeds(fileName)
             seedCount = piGermSeeds.seeds.seedCount
-            if verbose: printIt(f'{seedCount} seeds germinated from: {fileName}',lable.INFO)
+            if verbose:
+                printIt(
+                    f'{seedCount} seeds germinated from: {seedFilePath.name}', lable.INFO)
         else:
             printIt(fileName, lable.FileNotFound)
             exit()
@@ -111,5 +111,15 @@ def germSeedFile(fileName, verbose=True) -> PiGermSeeds:
         printIt(f'germSeedFile:\n{tb_str}', lable.ERROR)
         printIt('File name required', lable.IndexError)
     return piGermSeeds
+
+'''
+cp /Users/primwind/proj/python/piGenCode/piSeeds/holdSeeds/piSeed002_piTouch.pi ./piSeeds/
+cp /Users/primwind/proj/python/piGenCode/piSeeds/holdSeeds/piSeed003_piIndexer.pi ./piSeeds/
+cp /Users/primwind/proj/python/piGenCode/piSeeds/holdSeeds/piSeed004_piInfluence.pi ./piSeeds/
+cp /Users/primwind/proj/python/piGenCode/piSeeds/holdSeeds/piSeed005_pi.pi ./piSeeds/
+cp /Users/primwind/proj/python/piGenCode/piSeeds/holdSeeds/piSeed006_argument.pi ./piSeeds/
+cp /Users/primwind/proj/python/piGenCode/piSeeds/holdSeeds/piSeed007_fromImports.pi ./piSeeds/
+cp /Users/primwind/proj/python/piGenCode/piSeeds/holdSeeds/piSeed008_piClassGC.pi ./piSeeds/
+'''
 
 
