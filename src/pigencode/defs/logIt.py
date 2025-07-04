@@ -105,26 +105,34 @@ def logIt(*message, logFileName="piGenCode.log"):
     with open(logFileName, "a") as f:
         f.write(prtStr)
 
-def printIt(*message):
+
+def printIt(*message, asStr: bool = False) -> str:
     prtStr = ""
     rtnStr = ""
     needClip = False
-    if len(message) > 0:
-        for mess in message:
-            if mess == lable.BLANK:
-                prtStr += mess
-                rtnStr += mess
-            elif mess in color.l2cDict:
-                prtStr = color.l2cDict[mess] + mess + color.RESET + prtStr
-                rtnStr = mess + rtnStr
-            else:
-                needClip = True
-                prtStr += str(mess) + " "
-                rtnStr += str(mess) + " "
-        if needClip:
-            prtStr = prtStr[:-1]
-            rtnStr = rtnStr[:-1]
-    print(prtStr)
+    abortPrt = False
+    for mess in message:
+        if mess == lable.ABORTPRT:
+            abortPrt = True
+    if not abortPrt:
+        if len(message) > 0:
+            for mess in message:
+                if mess == lable.BLANK:
+                    prtStr = message[0]
+                    rtnStr = message[0]
+                    needClip = False
+                elif mess in color.l2cDict:
+                    prtStr = color.l2cDict[mess] + mess + color.RESET + prtStr
+                    rtnStr = mess + rtnStr
+                else:
+                    needClip = True
+                    prtStr += str(mess) + " "
+                    rtnStr += str(mess) + " "
+            if needClip:
+                prtStr = prtStr[:-1]
+                rtnStr = rtnStr[:-1]
+        if not asStr:
+            print(prtStr)
     return rtnStr
 
 def cStr(inStr:str, cVal:str):

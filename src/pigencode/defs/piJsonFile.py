@@ -118,7 +118,7 @@ def piLoadPiClassGCJson(PiClassName, piClassGCDir) -> dict:
     lowerPiClassName = PiClassName[:2].lower() + PiClassName[2:]
     # look in class file for listm of parametersm being inharited as children of paramType
     fileName = Path(piClassGCDir).joinpath(lowerPiClassName + '.py')
-    printIt(f'piLoadPiClassGCJson fileName: {fileName}', lable.DEBUG)
+    # printIt(f'piLoadPiClassGCJson fileName: {fileName}', lable.DEBUG)
     if fileName.is_file():
         piStartStr = f'{PiClassName}_PI = '
         piJsonStr = ''
