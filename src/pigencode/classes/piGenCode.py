@@ -414,6 +414,11 @@ class PiGenCode():
                     rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + f'{self.initArguments[param]["value"]}'
                 else:
                     rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + f'{paramType}()'
+            elif "Optional" in paramType:
+                if str(self.initArguments[param]["value"]).lower() == "none":
+                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + 'None'
+                else:
+                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + '{}'
             else:
                 printIt(f'{param} {paramType} from {self.PiFileName} not defined01.',lable.ERROR)
         rtnLines += '):\n'

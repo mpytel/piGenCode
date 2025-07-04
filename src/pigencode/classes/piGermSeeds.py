@@ -4,6 +4,7 @@ from ..defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiD
 from ..defs.piID import getPiMD5, getPiID
 from ..defs.logIt import logIt, printIt, germDbug, lable
 from .piSeeds import PiSeeds, PiSeedTypes, piSeedTitelSplit
+from .piSeedRegistry import pi_seed_registry, register_pi_seed_handler
 
 class piDictLevelError(Exception):
     pass
@@ -26,7 +27,7 @@ class PiGermSeeds():
             lastSeed = False
             while self.seeds.currPi.piType:
                 if self.seeds.currPi.piSeedType in PiSeedTypes:
-                    if dprint00: printIt('exec('+f'self.germinate_{self.seeds.currPi.piSeedType}()'+')',lable.DEBUG)
+                    if dprint00: printIt(f'Processing piSeed type: {self.seeds.currPi.piSeedType}', lable.DEBUG)
                     self.germinateSeeds()
                     if lastSeed: break # last seed run.
                     if self.seeds.nextPi == None:
@@ -58,8 +59,22 @@ class PiGermSeeds():
             while self.seeds.currPi != None:
                 #print(self.seeds.currPi)
                 if self.seeds.currPi.piSeedType in PiSeedTypes:
-                    if dprint00: print('exec('+f'self.germinate_{self.seeds.currPi.piSeedType}()'+')')
-                    exec(f'self.germinate_{self.seeds.currPi.piSeedType}()')
+                    if dprint00: print(f'Processing piSeed type: {self.seeds.currPi.piSeedType}')
+                    # Use registry pattern instead of exec()
+                    if pi_seed_registry.has_handler(self.seeds.currPi.piSeedType):
+                        pi_seed_registry.process_seed(self, self.seeds.currPi.piSeedType)
+                    else:
+                        # Fallback for piSeedTypes that don't have registered handlers
+                        # This handles piType and piIndexer which use different logic
+                        if self.seeds.currPi.piSeedType == "piType":
+                            self.germinate_pi()
+                        elif self.seeds.currPi.piSeedType == "piIndexer":
+                            # piIndexer might need special handling - for now, skip
+                            printIt(f"piIndexer seed type not yet implemented: {self.seeds.currPi.piTitle}", lable.WARN)
+                            self.seeds.next()
+                        else:
+                            printIt(f"Unknown piSeed type: {self.seeds.currPi.piSeedType}", lable.ERROR)
+                            self.seeds.next()
                     if self.seeds.nextPi == None: break
                 else: break
 
@@ -718,6 +733,45 @@ def germinateSeeds(fileName) -> PiGermSeeds:
     piSeeds = PiSeeds(fileName)
     seedPis = PiGermSeeds(piSeeds)
     return seedPis
+
+
+# Register all piSeed type handlers with the registry
+# This replaces the exec() pattern with a cleaner registry approach
+
+@register_pi_seed_handler("piScratchDir")
+def handle_piScratchDir(germ_seeds_instance):
+    """Handler for piScratchDir seed type"""
+    germ_seeds_instance.germinate_piScratchDir()
+
+@register_pi_seed_handler("piStruct")
+def handle_piStruct(germ_seeds_instance):
+    """Handler for piStruct seed type"""
+    germ_seeds_instance.germinate_piStruct()
+
+@register_pi_seed_handler("piValuesSetD")
+def handle_piValuesSetD(germ_seeds_instance):
+    """Handler for piValuesSetD seed type"""
+    germ_seeds_instance.germinate_piValuesSetD()
+
+@register_pi_seed_handler("piValue")
+def handle_piValue(germ_seeds_instance):
+    """Handler for piValue seed type"""
+    germ_seeds_instance.germinate_piValue()
+
+@register_pi_seed_handler("piClassGC")
+def handle_piClassGC(germ_seeds_instance):
+    """Handler for piClassGC seed type"""
+    germ_seeds_instance.germinate_piClassGC()
+
+@register_pi_seed_handler("piValueA")
+def handle_piValueA(germ_seeds_instance):
+    """Handler for piValueA seed type"""
+    germ_seeds_instance.germinate_piValueA()
+
+# Note: piType and piIndexer handlers are not registered here because
+# their corresponding germinate methods don't exist in the class.
+# They are handled by the fallback logic in the main processing loop.
+
 
 # struc                   self.cloneDict(self.currPiStruct)
 # dict                       self.cloneDict(theDict)

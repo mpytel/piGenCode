@@ -4,6 +4,7 @@ from ..defs.logIt import printIt, lable
 from .commands import Commands
 from .cmdOptSwitchbord import cmdOptSwitchbord
 from ..classes.argParse import ArgParse
+from ..classes.piSeedRegistry import command_registry
 
 cmdObj = Commands()
 commands = cmdObj.commands
@@ -29,8 +30,13 @@ def cmdSwitchbord(argParse: ArgParse):
             args: Namespace = argParse.args
             theCmd = args.commands[0]
             if theCmd in commands.keys():
-                exec(f'from ..commands.{theCmd} import {theCmd}')
-                exec(f'{theCmd}(argParse)')
+                # Use registry pattern instead of exec()
+                try:
+                    command_registry.execute_command(theCmd, argParse)
+                except ValueError:
+                    # Fallback to old exec() method if command not in registry
+                    exec(f'from ..commands.{theCmd} import {theCmd}')
+                    exec(f'{theCmd}(argParse)')
             else:
                 print(args)
                 printIt(f'Command "{theCmd}" not present.\n',lable.ERROR)
@@ -41,3 +47,19 @@ def cmdSwitchbord(argParse: ArgParse):
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
         printIt(f'{theCmd}\n{tb_str}', lable.ERROR)
         exit()
+
+
+# Register all commands with the command registry for lazy loading
+# This replaces the exec() pattern with a cleaner registry approach
+def _register_commands():
+    """Register all available commands with the command registry"""
+    # Register commands for lazy loading
+    command_registry.register_lazy("newCmd", "newCmd")
+    command_registry.register_lazy("modCmd", "modCmd") 
+    command_registry.register_lazy("rmCmd", "rmCmd")
+    command_registry.register_lazy("germSeed", "germSeed")
+    command_registry.register_lazy("genCode", "genCode")
+    command_registry.register_lazy("syncCode", "syncCode")
+
+# Initialize command registration
+_register_commands()

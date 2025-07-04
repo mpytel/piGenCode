@@ -65,7 +65,7 @@ def germAllSeedFiles(verbose=True) -> PiGermSeeds:
             theMatch = seedFilePattern.match(fileName)
             #print('theMatch', fileName, theMatch)
             if theMatch:
-                seedFile = seedPath.joinpath(fileName)
+                seedFile = str(seedPath.joinpath(fileName))
                 piGermSeeds = germSeedFile(seedFile, verbose)
     else:
         printIt(f'No piSeed Directory founc: {seedPath}',lable.FileNotFound)
