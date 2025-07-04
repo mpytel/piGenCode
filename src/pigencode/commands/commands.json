@@ -22,5 +22,9 @@
   "genCode": {
     "piGenCode_description": "Genarate code from piSeeds",
     "filename": "Name of text file containing piCG piValue seed pis."
+  },
+  "syncCode": {
+    "syncCode_description": "Synchronize changes from modified Python files back to their corresponding piSeed files",
+    "filename": "Name of modified Python file to sync back to piSeed, or leave empty to sync all changed files in piClasses directory"
   }
 }
