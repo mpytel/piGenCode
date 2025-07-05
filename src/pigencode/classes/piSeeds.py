@@ -107,7 +107,7 @@ class PiSeeds():
             #raise StopIteration
         return rtnPi
 
-PiSeedTypes = ["piScratchDir", "piStruct", "piValuesSetD", "piValue", "piClassGC", "piValueA", "piType", "piIndexer"]
+PiSeedTypes = ["piScratchDir", "piStruct", "piValuesSetD", "piValue", "piClassGC", "piValueA", "piType", "piIndexer", "piDefGC"]
 PiSeedTypeVarTypes = ["B", "I", "S", "F", "D", "L", "C", "A"]
 PiSeedTypeVarTypesStr = ''.join(PiSeedTypeVarTypes)
 PiSeedTypeVarValues = {
@@ -125,10 +125,12 @@ PiSeedTypeREs = {
     PiSeedTypes[1]: reCompile(f'(piStruct)([{PiSeedTypeVarTypesStr}]'+'{1})([0-9]{2})'),
     PiSeedTypes[2]: reCompile(r'(.+)\.(.*)[\:]*'),
     PiSeedTypes[3]: reCompile('piClassGC(\\d{3})_(.+).json'),
-    PiSeedTypes[4]: reCompile('(piValueA)'),
-    PiSeedTypes[5]: reCompile('(piType)'),
-    PiSeedTypes[6]: reCompile('(piIndexer)'),
-    PiSeedTypes[7]: reCompile('(.+)') # this last one returns the input string
+    PiSeedTypes[4]: reCompile('(piClassGC)'),
+    PiSeedTypes[5]: reCompile('(piValueA)'),
+    PiSeedTypes[6]: reCompile('(piType)'),
+    PiSeedTypes[7]: reCompile('(piIndexer)'),
+    PiSeedTypes[8]: reCompile('(piDefGC)'),
+    'default': reCompile('(.+)') # this last one returns the input string
 } # example piStrucD00
 PiFunctionsTokens = ["getPiIDMD5", "getPiMD5", "getMD5"]
 PiFunctionsTokenREs = {
@@ -175,15 +177,49 @@ def readSeedPis(piFileName) -> list[tuple]:
                 break
             if not __chkReg.match(currLine) and len(currLine) > 1: # > 1 because blank lines contain \n char.
                 try:
+                    # First try normal shlex parsing
                     tokens = shlex.split(currLine)
                     if len(tokens) == 3:
                         piType, piTitle, piSD = tokens
                     elif len(tokens) == 2:
                         piType, piTitle = tokens
                         piSD = ""
-                    else: raise Exception("2 or 3 piTokens only")
+                    else: 
+                        # If we get more than 3 tokens, try to handle it by joining the extra parts as piSD
+                        if len(tokens) > 3:
+                            piType = tokens[0]
+                            piTitle = tokens[1]
+                            piSD = ' '.join(tokens[2:])
+                        else:
+                            raise Exception("2 or 3 piTokens only")
                     piBaseList.append((inLineNumber,piType, piTitle, piSD))
 
+                except ValueError as ve:
+                    # Handle shlex parsing errors (like unclosed quotes)
+                    if "No closing quotation" in str(ve):
+                        # Try to parse manually by splitting on spaces but preserving quoted sections
+                        try:
+                            # Simple fallback: split on first two spaces, treat rest as description
+                            parts = currLine.strip().split(None, 2)
+                            if len(parts) >= 2:
+                                piType = parts[0]
+                                piTitle = parts[1]
+                                piSD = parts[2] if len(parts) > 2 else ""
+                                # Clean up quotes if they exist
+                                if piSD.startswith('"') and not piSD.endswith('"'):
+                                    piSD = piSD[1:]  # Remove starting quote
+                                elif piSD.endswith('"') and not piSD.startswith('"'):
+                                    piSD = piSD[:-1]  # Remove ending quote
+                                piBaseList.append((inLineNumber,piType, piTitle, piSD))
+                            else:
+                                raise Exception("Could not parse line with quote issues")
+                        except Exception as fallback_e:
+                            tb_str = ''.join(format_exception(None, fallback_e, fallback_e.__traceback__))
+                            printIt(f'{fileName}, line:{inLineNumber}\n{tb_str}', lable.ERROR)
+                            printIt(f'current line: {currLine}', lable.ERROR)
+                    else:
+                        # Re-raise other ValueError types
+                        raise ve
                 except Exception as e:
                     tb_str = ''.join(format_exception(None, e, e.__traceback__))
                     printIt(f'{piFileName}, line:{inLineNumber}\n{tb_str}',lable.ERROR)

@@ -26,18 +26,37 @@ def germSeed(argParse: ArgParse):
             fileName = getSeedFileName(fileIntStr)
             piGermSeeds = germSeedFile(fileName)
             if piGermSeeds:
+                # Generate code for piClassGC files
                 for classGCFile in piGermSeeds.piClassGCFiles.classGCFilePaths:
                     savedCodeFiles = genCodeFile(str(classGCFile))
+                    for savedCodeFile in savedCodeFiles:
+                        printIt(f'{savedCodeFile} generated',lable.INFO)
+                # Generate code for piDefGC files
+                for defGCFile in piGermSeeds.piDefGCFiles.defGCFilePaths:
+                    savedCodeFiles = genCodeFile(str(defGCFile))
                     for savedCodeFile in savedCodeFiles:
                         printIt(f'{savedCodeFile} generated',lable.INFO)
         else:
             while argIndex < len(theArgs):
                 fileName = theArgs[argIndex]
                 piGermSeeds = germSeedFile(fileName)
+                if piGermSeeds:
+                    # Generate code for piClassGC files
+                    for classGCFile in piGermSeeds.piClassGCFiles.classGCFilePaths:
+                        savedCodeFiles = genCodeFile(str(classGCFile))
+                        for savedCodeFile in savedCodeFiles:
+                            printIt(f'{savedCodeFile} generated',lable.INFO)
+                    # Generate code for piDefGC files
+                    for defGCFile in piGermSeeds.piDefGCFiles.defGCFilePaths:
+                        savedCodeFiles = genCodeFile(str(defGCFile))
+                        for savedCodeFile in savedCodeFiles:
+                            printIt(f'{savedCodeFile} generated',lable.INFO)
                 argIndex += 1
     if piGermSeeds:
         for piGermSeed in piGermSeeds.piClassGCFiles.classGCFilePaths:
             printIt(f'classGCFile created: {piGermSeed}',lable.INFO)
+        for piGermSeed in piGermSeeds.piDefGCFiles.defGCFilePaths:
+            printIt(f'defGCFile created: {piGermSeed}',lable.INFO)
 
 def getSeedFileName(fileIntStr) -> str:
     fileName = ''

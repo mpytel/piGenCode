@@ -56,7 +56,7 @@ class PiGenCode():
         try: self.jsonCode = self.piClassGC["jsonCode"]
         except: self.jsonCode = []
         try: self.classDefCode = self.piClassGC["classDefCode"]
-        except: self.classDefCode = []
+        except: self.classDefCode = {}
         try: self.globalCode = self.piClassGC["globalCode"]
         except: self.globalCode = []
     def __getuniqeParametersPiTypes(self):

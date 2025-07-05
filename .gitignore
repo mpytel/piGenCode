@@ -4,6 +4,7 @@ scrach/
 piSeeds/
 piGerms/
 piClasses/
+piDefs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

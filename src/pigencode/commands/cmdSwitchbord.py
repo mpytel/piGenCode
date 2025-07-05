@@ -55,11 +55,12 @@ def _register_commands():
     """Register all available commands with the command registry"""
     # Register commands for lazy loading
     command_registry.register_lazy("newCmd", "newCmd")
-    command_registry.register_lazy("modCmd", "modCmd") 
+    command_registry.register_lazy("modCmd", "modCmd")
     command_registry.register_lazy("rmCmd", "rmCmd")
     command_registry.register_lazy("germSeed", "germSeed")
     command_registry.register_lazy("genCode", "genCode")
     command_registry.register_lazy("syncCode", "syncCode")
+    command_registry.register_lazy("reorderSeeds", "reorderSeeds")
 
 # Initialize command registration
 _register_commands()

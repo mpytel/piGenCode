@@ -3,6 +3,7 @@ import datetime
 from traceback import format_exception
 from pathlib import Path
 from json import load, loads, dump, dumps, JSONDecodeError
+from re import compile as reCompile
 from .logIt import logIt, printIt, lable
 from ..classes.piSeeds import PiSeedTypes, PiSeed, PiSeedTypeREs
 from ..defs.piRCFile import readRC, getKeyItem
@@ -97,10 +98,14 @@ def getPiFileName(aDict: dict) -> str:
     piStrucFileName = piTypeDir.joinpath(f'{baseTitle}.json')
     return str(piStrucFileName)
 
-def writePi(aDict: dict, verbose=True) -> bool:
-    piStrucFileName = getPiFileName(aDict)
-    rtnBool = writeJson(piStrucFileName, aDict, verbose)
-    if rtnBool and verbose: printIt(piStrucFileName,lable.SAVED)
+def writePi(aDict: dict, fileName = '', verbose=True) -> bool:
+    if fileName:
+        piFileName = fileName
+    else:
+       piFileName = getPiFileName(aDict)
+    rtnBool = writeJson(piFileName, aDict, verbose)
+    if rtnBool and verbose:
+        printIt(piFileName, lable.SAVED)
     return rtnBool
 
 def readPi(thePi: PiSeed, verbose=True) -> dict:
@@ -134,6 +139,102 @@ def piLoadPiClassGCJson(PiClassName, piClassGCDir) -> dict:
     else:
         printIt('piLoadPiClassGCJson', fileName, lable.FileNotFound)
     return rtnJson
+
+class PiDefGCFiles():
+    def __init__(self) -> None:
+        piScratchPath = Path(getKeyItem("piScratchDir"))
+        self.fileDirName = piScratchPath.joinpath("piDefGC")
+        self.fileDirName.mkdir(mode=0o755, parents=True, exist_ok=True)
+        self.baseMaxFileInt = self._getBaseMaxFileInt()
+        self.maxFileInt = self.baseMaxFileInt
+        self.lastLineNumber = 0
+        self.defGCFilePaths = []
+    
+    def _getPiDefGCFiles(self):
+        # Pattern for piDefGC files: piDefGC001_filename.json
+        defgc_pattern = reCompile(r'piDefGC(\d{3})_(.+)\.json')
+        return [p.name for p in self.fileDirName.iterdir() if p.is_file() and defgc_pattern.match(p.name)]
+    
+    def _getBaseMaxFileInt(self):
+        rtnInt = 1
+        PiDefGCFiles = self._getPiDefGCFiles()
+        if PiDefGCFiles:
+            PiDefGCFiles.sort()
+            defgc_pattern = reCompile(r'piDefGC(\d{3})_(.+)\.json')
+            fileMatch = defgc_pattern.match(str(PiDefGCFiles[-1]))
+            if fileMatch:
+                fileParts = fileMatch.groups()
+                rtnInt = int(fileParts[0]) + 1
+        return rtnInt
+
+    def _shiftFilesUpOneFromBaseMaxFileInt(self, pad=3):
+        PiDefGCFiles = self._getPiDefGCFiles()
+        if PiDefGCFiles:
+            PiDefGCFiles.sort(reverse=True)
+            defgc_pattern = reCompile(r'piDefGC(\d{3})_(.+)\.json')
+            for PiDefGCFile in PiDefGCFiles:
+                fileMatch = defgc_pattern.match(PiDefGCFile)
+                if fileMatch:
+                    fileParts = fileMatch.groups()
+                    fileInt = int(fileParts[0])
+                    if fileInt >= self.baseMaxFileInt:
+                        newName = self.fileDirName.joinpath(f'piDefGC{str(int(fileParts[0])+1).zfill(pad)}_{fileParts[1]}.json')
+                        oldName = self.fileDirName.joinpath(PiDefGCFile)
+                        self.fileDirName.joinpath(PiDefGCFile).rename(newName)
+
+    def _chkForExistingFile(self, piTitle):
+        fileInt = 0
+        PiDefGCFiles = self._getPiDefGCFiles()
+        if PiDefGCFiles:
+            PiDefGCFiles.sort()
+            defgc_pattern = reCompile(r'piDefGC(\d{3})_(.+)\.json')
+            for PiDefGCFile in PiDefGCFiles:
+                fileMatch = defgc_pattern.match(PiDefGCFile)
+                if fileMatch:
+                    fileParts = fileMatch.groups()
+                    if fileParts[0].isnumeric():
+                        chkFileName = fileParts[1]
+                        if chkFileName == piTitle:
+                            fileInt = int(fileParts[0])
+                            break
+        return fileInt
+
+    def _getFileIntZFill(self, piTitle: str, lineNumber, pad=3) -> str:
+        fileInt = self._chkForExistingFile(piTitle)
+        if not fileInt:
+            if not self.lastLineNumber:
+                self.lastLineNumber = lineNumber
+            if lineNumber < self.lastLineNumber:
+                self._shiftFilesUpOneFromBaseMaxFileInt(pad)
+                fileInt = self.baseMaxFileInt
+            else:
+                self.lastLineNumber = lineNumber
+                fileInt = self.maxFileInt
+            self.maxFileInt += 1
+        else:
+            print(">>>", piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exists')
+        return str(fileInt).zfill(3)
+
+    def _getPiDefGCFileName(self, piType, piTitle, lineNumber=0) -> str:
+        makedirs(self.fileDirName, exist_ok=True)
+        fileIntStr = self._getFileIntZFill(piTitle, lineNumber)
+        fileName = self.fileDirName.joinpath(f'{piType}{fileIntStr}_{piTitle}.json')
+        return str(fileName)
+
+    def writePiDefGC(self, piType, piTitle, lineNumber, aDict: dict, verbose=True) -> bool:
+        piStrucFileName = self._getPiDefGCFileName(piType, piTitle, lineNumber)
+        rtnBool = writeJson(piStrucFileName, aDict, verbose)
+        if rtnBool: 
+            self.defGCFilePaths.append(piStrucFileName)
+        if rtnBool and verbose: 
+            printIt(piStrucFileName, lable.SAVED)
+        return rtnBool
+
+    def readPiDefGC(self, piType, piTitle, verbose=True) -> dict:
+        piStrucFileName = self._getPiDefGCFileName(piType, piTitle)
+        rtnDict = readJson(piStrucFileName, verbose)
+        return rtnDict
+
 
 class PiClassGCFiles():
     def __init__(self) -> None:

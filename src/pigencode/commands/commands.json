@@ -24,7 +24,15 @@
     "filename": "Name of text file containing piCG piValue seed pis."
   },
   "syncCode": {
-    "syncCode_description": "Synchronize changes from modified Python files back to their corresponding piSeed files",
-    "filename": "Name of modified Python file to sync back to piSeed, or leave empty to sync all changed files in piClasses directory"
+    "syncCode_description": "Synchronize changes from modified Python files back to their corresponding piSeed files. Supports both piClassGC (classes) and piDefGC (function definitions).",
+    "filename": "Name of modified Python file to sync back to piSeed, or leave empty to sync all changed files in piClasses and piDefs directories"
+  },
+  "reorderSeeds": {
+    "reorderSeeds_description": "Move a piSeed file to a different position and renumber all affected files to maintain processing order. Supports both file paths and integer shortcuts.",
+    "sourceFile": "Path to the piSeed file to move (e.g., piSeeds/piSeed044_piStruct_piDefGC.pi) OR integer number (e.g., 44)",
+    "targetFile": "Target position with desired filename (e.g., piSeeds/piSeed009_piStruct_piDefGC.pi) OR integer number (e.g., 9)"
+  },
+  "rmGC": {
+    "rmGC_description": "Remove generated directories (piGerms, piClasses, piDefs) to clean up all generated files for a fresh start."
   }
 }

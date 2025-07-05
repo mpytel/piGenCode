@@ -1,6 +1,6 @@
 import os, datetime, copy, json, re, traceback
 from ..defs.piRCFile import readRC, writeRC
-from ..defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles
+from ..defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles
 from ..defs.piID import getPiMD5, getPiID
 from ..defs.logIt import logIt, printIt, germDbug, lable
 from .piSeeds import PiSeeds, PiSeedTypes, piSeedTitelSplit
@@ -20,6 +20,7 @@ class PiGermSeeds():
         self.piStructs = {}
         self.piDictSourceTypes = ["piStructs","piDefault", "piStruc"]
         self.piClassGCFiles = PiClassGCFiles()
+        self.piDefGCFiles = PiDefGCFiles()
         self.classDefCodeDescrtion = {}
 
         # find and write structures to files
@@ -159,6 +160,47 @@ class PiGermSeeds():
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
             printIt(tb_str,lable.ERROR)
             exit()
+    def germinate_piDefGC(self):
+        # print('in germinate_piDefGC"',self.seeds.currPi)
+        try:
+            while self.seeds.currIndex < self.seeds.seedCount:
+                if self.seeds.currPi.piSeedType == PiSeedTypes[8]:  # piDefGC is now index 8
+                    lastSeed = False
+                    baseType = "piDefGC"  # Use piDefGC as the structure type
+                    baseTitle = self.seeds.currPi.piTitle
+                    baseLineNumber = int(self.seeds.currPi.lineNumber)
+                    targetPi = self.getTargetPi(baseType,source=self.piDictSourceTypes[2])
+                    targetPi["piBase"]["piTitle"] = baseTitle
+                    targetPi["piBase"]["piSD"] = self.seeds.currPi.piSD
+                    piMD5 = getPiMD5(targetPi["piIndexer"])
+                    targetPi["piIndexer"]["piMD5"] = piMD5
+                    targetPi["piID"] = "TBD"
+                    self.piStructs[self.seeds.currPi.piTitle] = targetPi
+                    if self.seeds.nextPi == None:
+                        self.piDefGCFiles.writePiDefGC(baseType,baseTitle,baseLineNumber,targetPi,False)
+                    self.seeds.next()
+                else:
+                    self.germinateSeeds()
+                    self.piDefGCFiles.writePiDefGC(baseType,baseTitle,baseLineNumber, targetPi,False)
+                    if lastSeed: break # last seed run.
+                    if self.seeds.nextPi == None:
+                        lastSeed = True # Run the last piSeed
+
+        except piIncorectPiValuePath:
+            printIt(f'{self.seeds.currPi.piTitle}',lable.IncorectPiValuePath)
+            exit()
+        except piPiStrucNotFound:
+            printIt("germinate_piDefGC", lable.DEBUG)
+            raise piPiStrucNotFound
+        except StopIteration:
+            # print("germinate_piDefGC", "StopIteration")
+            pass
+        except Exception as e:
+            printIt(f'germinate_piDefGC\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(tb_str,lable.ERROR)
+            exit()
+
     def germinate_piValueA(self):
         try:
             #piValueA piDates.piBody:piClassGC:imports datetime
@@ -178,15 +220,69 @@ class PiGermSeeds():
                                     aDict = targetPi
                                     piExDefDictKeys = list(filter(None, piElemKeys.split(":")))
 
+                                    # Navigate to the parent container
                                     for piExDefDictKey in piExDefDictKeys[:-1]:
+                                        if piExDefDictKey not in aDict:
+                                            aDict[piExDefDictKey] = {}
                                         aDict = aDict[piExDefDictKey]
-                                    if len(aDict[piExDefDictKeys[-1]])==1:
-                                        # append def description here.
-                                        if piExDefDictKeys[-1] in self.classDefCodeDescrtion.keys():
-                                            if self.seeds.prevPi.piSD != "@property":
-                                                appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[piExDefDictKeys[-1]]+ "'"*3
-                                                aDict[piExDefDictKeys[-1]].append(appendStr)
-                                    aDict[piExDefDictKeys[-1]].append(baseValue)
+                                    
+                                    # Handle the final key
+                                    final_key = piExDefDictKeys[-1]
+                                    
+                                    # Special handling for classDefCode structure
+                                    if len(piExDefDictKeys) >= 2 and piExDefDictKeys[-2] == 'classDefCode':
+                                        # This is a method within classDefCode, ensure classDefCode is a dict
+                                        parent_dict = aDict
+                                        parent_key = piExDefDictKeys[-2]
+                                        
+                                        # Ensure classDefCode exists as a dictionary
+                                        if parent_key not in parent_dict:
+                                            parent_dict[parent_key] = {}
+                                        elif not isinstance(parent_dict[parent_key], dict):
+                                            # Convert to dict if it's not already
+                                            parent_dict[parent_key] = {}
+                                        
+                                        # Ensure the method key exists as a list
+                                        if final_key not in parent_dict[parent_key]:
+                                            parent_dict[parent_key][final_key] = []
+                                        
+                                        # Add to the method's list
+                                        method_list = parent_dict[parent_key][final_key]
+                                        if len(method_list) == 1:
+                                            # append def description here.
+                                            if final_key in self.classDefCodeDescrtion.keys():
+                                                if self.seeds.prevPi.piSD != "@property":
+                                                    appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[final_key]+ "'"*3
+                                                    method_list.append(appendStr)
+                                        method_list.append(baseValue)
+                                    else:
+                                        # Regular handling for other structures
+                                        if final_key not in aDict:
+                                            aDict[final_key] = []
+                                        
+                                        # Only proceed if the target is a list (not a dict)
+                                        if isinstance(aDict[final_key], list):
+                                            if len(aDict[final_key])==1:
+                                                # append def description here.
+                                                if final_key in self.classDefCodeDescrtion.keys():
+                                                    if self.seeds.prevPi.piSD != "@property":
+                                                        appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[final_key]+ "'"*3
+                                                        aDict[final_key].append(appendStr)
+                                            aDict[final_key].append(baseValue)
+                                        else:
+                                            # Handle case where target is a dictionary
+                                            if isinstance(aDict[final_key], dict):
+                                                # This might be a structure that should be a list, check if it's empty
+                                                if not aDict[final_key]:
+                                                    # Empty dict, convert to list
+                                                    aDict[final_key] = [baseValue]
+                                                else:
+                                                    # Non-empty dict, this might be an error but let's be more permissive
+                                                    # Skip silently as this is expected behavior for classDefCode
+                                                    pass
+                                            else:
+                                                # Some other type, try to convert to list
+                                                aDict[final_key] = [baseValue]
                             else: raise Exception
                         else: raise Exception
                     else: raise Exception
@@ -767,6 +863,11 @@ def handle_piClassGC(germ_seeds_instance):
 def handle_piValueA(germ_seeds_instance):
     """Handler for piValueA seed type"""
     germ_seeds_instance.germinate_piValueA()
+
+@register_pi_seed_handler("piDefGC")
+def handle_piDefGC(germ_seeds_instance):
+    """Handler for piDefGC seed type"""
+    germ_seeds_instance.germinate_piDefGC()
 
 # Note: piType and piIndexer handlers are not registered here because
 # their corresponding germinate methods don't exist in the class.

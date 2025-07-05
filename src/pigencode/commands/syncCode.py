@@ -8,7 +8,7 @@ from ..defs.piRCFile import getKeyItem
 def syncCode(argParse: ArgParse):
     """
     Synchronize changes from modified Python files back to their corresponding piSeed files.
-    This command analyzes changes in piClasses directory and updates the appropriate piSeed files.
+    This command analyzes changes in piClasses and piDefs directories and updates the appropriate piSeed files.
     """
     args = argParse.parser.parse_args()
     theArgs = args.arguments
@@ -18,7 +18,7 @@ def syncCode(argParse: ArgParse):
         fileName = theArgs[0]
         syncSingleFile(fileName)
     else:
-        # Sync all changed files in piClasses directory
+        # Sync all changed files in piClasses and piDefs directories
         syncAllChangedFiles()
 
 def syncSingleFile(fileName: str):
@@ -26,12 +26,20 @@ def syncSingleFile(fileName: str):
     try:
         filePath = Path(fileName)
         if not filePath.exists():
-            # Try looking in piClasses directory
+            # Try looking in piClasses directory first
             piClassesDir = Path("piClasses")
             if piClassesDir.exists():
                 filePath = piClassesDir / fileName
                 if not filePath.exists():
                     filePath = piClassesDir / f"{fileName}.py"
+            
+            # If not found in piClasses, try piDefs directory
+            if not filePath.exists():
+                piDefsDir = Path("piDefs")
+                if piDefsDir.exists():
+                    filePath = piDefsDir / fileName
+                    if not filePath.exists():
+                        filePath = piDefsDir / f"{fileName}.py"
         
         if not filePath.exists():
             printIt(f"File not found: {fileName}", lable.FileNotFound)
@@ -41,17 +49,28 @@ def syncSingleFile(fileName: str):
             printIt(f"File must be a Python file: {fileName}", lable.ERROR)
             return
         
-        # Extract class name from filename
-        className = filePath.stem
+        # Determine if this is a class file or def file based on directory
+        isDefFile = filePath.parent.name == "piDefs"
         
-        # Find corresponding piSeed file
-        piSeedFile = findPiSeedFile(className)
-        if not piSeedFile:
-            printIt(f"Could not find piSeed file for class: {className}", lable.WARN)
-            return
+        if isDefFile:
+            # Handle piDefGC file
+            defName = filePath.stem
+            piSeedFile = findPiDefGCSeedFile(defName)
+            if not piSeedFile:
+                printIt(f"Could not find piDefGC piSeed file for: {defName}", lable.WARN)
+                return
+            
+            changes = syncPythonDefToSeed(filePath, piSeedFile)
+        else:
+            # Handle piClassGC file (existing logic)
+            className = filePath.stem
+            piSeedFile = findPiClassGCSeedFile(className)
+            if not piSeedFile:
+                printIt(f"Could not find piClassGC piSeed file for class: {className}", lable.WARN)
+                return
+            
+            changes = syncPythonClassToSeed(filePath, piSeedFile)
         
-        # Perform the sync
-        changes = syncPythonToSeed(filePath, piSeedFile)
         if changes:
             printIt(f"Synced {len(changes)} changes from {filePath.name} to {piSeedFile.name}", lable.INFO)
             for change in changes:
@@ -64,42 +83,58 @@ def syncSingleFile(fileName: str):
         printIt(f'syncSingleFile error:\n{tb_str}', lable.ERROR)
 
 def syncAllChangedFiles():
-    """Sync all changed files in the piClasses directory"""
+    """Sync all changed files in the piClasses and piDefs directories"""
     try:
-        piClassesDir = Path("piClasses")
-        if not piClassesDir.exists():
-            printIt("piClasses directory not found", lable.FileNotFound)
-            return
-        
-        pythonFiles = list(piClassesDir.glob("*.py"))
-        if not pythonFiles:
-            printIt("No Python files found in piClasses directory", lable.WARN)
-            return
-        
         totalChanges = 0
         processedFiles = 0
         
-        for pyFile in pythonFiles:
-            className = pyFile.stem
-            piSeedFile = findPiSeedFile(className)
+        # Process piClasses directory (existing logic)
+        piClassesDir = Path("piClasses")
+        if piClassesDir.exists():
+            pythonFiles = list(piClassesDir.glob("*.py"))
             
-            if piSeedFile:
-                changes = syncPythonToSeed(pyFile, piSeedFile)
-                if changes:
-                    totalChanges += len(changes)
-                    printIt(f"Synced {len(changes)} changes from {pyFile.name}", lable.INFO)
-                processedFiles += 1
-            else:
-                printIt(f"No piSeed file found for {className}", lable.DEBUG)
+            for pyFile in pythonFiles:
+                className = pyFile.stem
+                piSeedFile = findPiClassGCSeedFile(className)
+                
+                if piSeedFile:
+                    changes = syncPythonClassToSeed(pyFile, piSeedFile)
+                    if changes:
+                        totalChanges += len(changes)
+                        printIt(f"Synced {len(changes)} changes from {pyFile.name}", lable.INFO)
+                    processedFiles += 1
+                else:
+                    printIt(f"No piClassGC piSeed file found for {className}", lable.DEBUG)
         
-        printIt(f"Processed {processedFiles} files, made {totalChanges} total changes", lable.INFO)
+        # Process piDefs directory (NEW)
+        piDefsDir = Path("piDefs")
+        if piDefsDir.exists():
+            pythonFiles = list(piDefsDir.glob("*.py"))
+            
+            for pyFile in pythonFiles:
+                defName = pyFile.stem
+                piSeedFile = findPiDefGCSeedFile(defName)
+                
+                if piSeedFile:
+                    changes = syncPythonDefToSeed(pyFile, piSeedFile)
+                    if changes:
+                        totalChanges += len(changes)
+                        printIt(f"Synced {len(changes)} changes from {pyFile.name}", lable.INFO)
+                    processedFiles += 1
+                else:
+                    printIt(f"No piDefGC piSeed file found for {defName}", lable.DEBUG)
+        
+        if processedFiles == 0:
+            printIt("No Python files found in piClasses or piDefs directories", lable.WARN)
+        else:
+            printIt(f"Processed {processedFiles} files, made {totalChanges} total changes", lable.INFO)
         
     except Exception as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
         printIt(f'syncAllChangedFiles error:\n{tb_str}', lable.ERROR)
 
-def findPiSeedFile(className: str) -> Optional[Path]:
-    """Find the piSeed file that corresponds to a given class name"""
+def findPiClassGCSeedFile(className: str) -> Optional[Path]:
+    """Find the piSeed file that corresponds to a given class name (piClassGC)"""
     try:
         # Get piSeeds directory
         seedDirName = "piSeeds"
@@ -132,12 +167,49 @@ def findPiSeedFile(className: str) -> Optional[Path]:
         return None
         
     except Exception as e:
-        printIt(f"Error finding piSeed file for {className}: {e}", lable.ERROR)
+        printIt(f"Error finding piClassGC piSeed file for {className}: {e}", lable.ERROR)
         return None
 
-def syncPythonToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
+def findPiDefGCSeedFile(defName: str) -> Optional[Path]:
+    """Find the piSeed file that corresponds to a given function definition name (piDefGC)"""
+    try:
+        # Get piSeeds directory
+        seedDirName = "piSeeds"
+        seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
+        
+        if not seedPath.exists():
+            # Try current directory
+            cwd = Path.cwd()
+            if cwd.name == seedDirName:
+                seedPath = cwd
+            else:
+                seedPath = cwd / seedDirName
+        
+        if not seedPath.exists():
+            return None
+        
+        # Look for piSeed files that contain piDefGC for this def name
+        seedFiles = list(seedPath.glob("*.pi"))
+        
+        for seedFile in seedFiles:
+            try:
+                with open(seedFile, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    # Look for piDefGC line with this def name
+                    if re.search(rf'^piDefGC\s+{re.escape(defName)}\s+', content, re.MULTILINE):
+                        return seedFile
+            except Exception:
+                continue
+        
+        return None
+        
+    except Exception as e:
+        printIt(f"Error finding piDefGC piSeed file for {defName}: {e}", lable.ERROR)
+        return None
+
+def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
     """
-    Sync changes from Python file back to piSeed file.
+    Sync changes from Python class file back to piClassGC piSeed file.
     Returns list of changes made.
     """
     changes = []
@@ -267,6 +339,139 @@ def syncPythonToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
     
     return changes
 
+def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
+    """
+    Sync changes from Python function definition file back to piDefGC piSeed file.
+    Returns list of changes made.
+    """
+    changes = []
+    
+    try:
+        # Read the Python file
+        with open(pythonFile, 'r', encoding='utf-8') as f:
+            pythonContent = f.read()
+        
+        # Read the piSeed file
+        with open(piSeedFile, 'r', encoding='utf-8') as f:
+            seedContent = f.read()
+        
+        # Parse Python file to extract elements
+        try:
+            tree = ast.parse(pythonContent)
+            defName = pythonFile.stem
+            
+            # Extract different elements from the Python file
+            importStatements = []
+            functionDefs = {}
+            constants = []
+            globalCode = []
+            fileComments = []
+            headers = []
+            
+            # Process top-level nodes
+            for node in tree.body:
+                if isinstance(node, (ast.Import, ast.ImportFrom)):
+                    importStatements.append(node)
+                elif isinstance(node, ast.FunctionDef):
+                    # Extract function definition
+                    funcCode = extractMethodCode(pythonContent, node)
+                    functionDefs[node.name] = funcCode
+                elif isinstance(node, ast.Assign):
+                    # Constants (module-level assignments)
+                    constantCode = extractAssignmentCode(pythonContent, node)
+                    if constantCode:
+                        constants.append(constantCode)
+                elif isinstance(node, ast.If) and hasattr(node.test, 'left') and hasattr(node.test.left, 'id'):
+                    # Handle if __name__ == '__main__': blocks
+                    if (node.test.left.id == '__name__' and 
+                        hasattr(node.test.comparators[0], 's') and 
+                        node.test.comparators[0].s == '__main__'):
+                        globalCode.extend(extractIfMainCode(pythonContent, node))
+            
+            # Extract file comments and headers from the beginning of the file
+            lines = pythonContent.split('\n')
+            for line in lines:
+                stripped = line.strip()
+                if stripped.startswith('#') and not stripped.startswith('# Module'):
+                    if 'Generated from' in stripped:
+                        headers.append(stripped)
+                    else:
+                        headers.append(stripped)
+                elif stripped.startswith('"""') or stripped.startswith("'''"):
+                    # Extract docstring as file comment
+                    docstring = extractModuleDocstring(pythonContent)
+                    if docstring:
+                        fileComments.extend(docstring)
+                    break
+                elif stripped and not stripped.startswith('#'):
+                    break
+            
+            # Update piSeed file with extracted elements
+            
+            # Update headers
+            if headers:
+                newSeedContent, changed = updateDefSeedHeaders(seedContent, defName, headers)
+                if changed:
+                    seedContent = newSeedContent
+                    changes.append("headers")
+            
+            # Update file comments
+            if fileComments:
+                newSeedContent, changed = updateDefSeedFileComments(seedContent, defName, fileComments)
+                if changed:
+                    seedContent = newSeedContent
+                    changes.append("fileComment")
+            
+            # Update imports
+            if importStatements:
+                fromImports, regularImports = extractImportStatements(importStatements)
+                
+                if regularImports:
+                    newSeedContent, changed = updateDefSeedImports(seedContent, defName, regularImports)
+                    if changed:
+                        seedContent = newSeedContent
+                        changes.append("imports")
+                
+                if fromImports:
+                    newSeedContent, changed = updateDefSeedFromImports(seedContent, defName, fromImports)
+                    if changed:
+                        seedContent = newSeedContent
+                        changes.append("fromImports")
+            
+            # Update constants
+            if constants:
+                newSeedContent, changed = updateDefSeedConstants(seedContent, defName, constants)
+                if changed:
+                    seedContent = newSeedContent
+                    changes.append("constants")
+            
+            # Update function definitions
+            if functionDefs:
+                newSeedContent, changed = updateDefSeedFunctionDefs(seedContent, defName, functionDefs)
+                if changed:
+                    seedContent = newSeedContent
+                    changes.append("functionDefs")
+            
+            # Update global code
+            if globalCode:
+                newSeedContent, changed = updateDefSeedGlobalCode(seedContent, defName, globalCode)
+                if changed:
+                    seedContent = newSeedContent
+                    changes.append("globalCode")
+            
+            # Write updated piSeed file if changes were made
+            if changes:
+                with open(piSeedFile, 'w', encoding='utf-8') as f:
+                    f.write(seedContent)
+                    
+        except SyntaxError as e:
+            printIt(f"Syntax error in Python file {pythonFile}: {e}", lable.ERROR)
+        
+    except Exception as e:
+        printIt(f"Error syncing {pythonFile} to {piSeedFile}: {e}", lable.ERROR)
+    
+    return changes
+
 def mapMethodToCodeElement(methodName: str) -> Optional[str]:
     """Map Python method names to piSeed code element names"""
     method_mapping = {
@@ -346,26 +551,46 @@ def updateSeedCodeElement(seedContent: str, className: str, codeElementName: str
         # Pattern to match the specific code element
         elementPattern = rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:{re.escape(codeElementName)}\s+'
         
-        # Find and replace existing code element entries
+        # Extract existing code element content for comparison
+        existingCode = []
         i = 0
         foundElement = False
+        
         while i < len(lines):
             line = lines[i]
             
             # Check if this line matches our code element pattern
             if re.match(elementPattern, line):
                 if not foundElement:
-                    # First occurrence - replace with new code
                     foundElement = True
-                    for codeLine in methodCode:
-                        # Escape quotes in code lines
-                        escapedCode = codeLine.replace('"', '\\"')
-                        newLines.append(f'piValueA {className}.piBody:piClassGC:{codeElementName} "{escapedCode}"')
-                    changed = True
-                # Skip all subsequent lines that match this pattern (old code)
-                while i < len(lines) and re.match(elementPattern, lines[i]):
+                    # Extract existing code lines
+                    while i < len(lines) and re.match(elementPattern, lines[i]):
+                        # Extract the quoted content
+                        match = re.match(rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:{re.escape(codeElementName)}\s+"(.*)"$', lines[i])
+                        if match:
+                            # Unescape quotes
+                            existingLine = match.group(1).replace('\\"', '"')
+                            existingCode.append(existingLine)
+                        i += 1
+                    
+                    # Compare existing code with new code
+                    if existingCode != methodCode:
+                        # Content is different, replace with new code
+                        for codeLine in methodCode:
+                            # Escape quotes in code lines
+                            escapedCode = codeLine.replace('"', '\\"')
+                            newLines.append(f'piValueA {className}.piBody:piClassGC:{codeElementName} "{escapedCode}"')
+                        changed = True
+                    else:
+                        # Content is the same, keep existing code
+                        for existingLine in existingCode:
+                            escapedCode = existingLine.replace('"', '\\"')
+                            newLines.append(f'piValueA {className}.piBody:piClassGC:{codeElementName} "{escapedCode}"')
+                    continue
+                else:
+                    # Skip remaining lines (already processed above)
                     i += 1
-                continue
+                    continue
             else:
                 newLines.append(line)
                 i += 1
@@ -552,6 +777,8 @@ def updateSeedInitArguments(seedContent: str, className: str, initArgs: Dict[str
         argTypePattern = rf'^piValue\s+{re.escape(className)}\.piBody:piClassGC:initArguments:(\w+):type\s+'
         argValuePattern = rf'^piValue\s+{re.escape(className)}\.piBody:piClassGC:initArguments:(\w+):value\s+'
         
+        # Extract existing arguments for comparison
+        existingArgs = {}
         i = 0
         foundInitArgs = False
         
@@ -564,26 +791,66 @@ def updateSeedInitArguments(seedContent: str, className: str, initArgs: Dict[str
                 newLines.append(line)
                 i += 1
                 
-                # Skip existing argument definitions
+                # Extract existing argument definitions
                 while i < len(lines):
                     line = lines[i]
-                    if (re.match(argStructPattern, line) or 
-                        re.match(argTypePattern, line) or 
-                        re.match(argValuePattern, line)):
+                    
+                    # Extract argument structure declarations
+                    argStructMatch = re.match(argStructPattern, line)
+                    if argStructMatch:
+                        argName = argStructMatch.group(1)
+                        if argName not in existingArgs:
+                            existingArgs[argName] = {'type': 'str', 'value': '""'}
                         i += 1
                         continue
-                    else:
-                        break
+                    
+                    # Extract argument type definitions
+                    argTypeMatch = re.match(argTypePattern, line)
+                    if argTypeMatch:
+                        argName = argTypeMatch.group(1)
+                        # Extract the type part after the pattern
+                        typePart = line[re.match(argTypePattern, line).end():].strip()
+                        if argName not in existingArgs:
+                            existingArgs[argName] = {'type': 'str', 'value': '""'}
+                        existingArgs[argName]['type'] = typePart
+                        i += 1
+                        continue
+                    
+                    # Extract argument value definitions
+                    argValueMatch = re.match(argValuePattern, line)
+                    if argValueMatch:
+                        argName = argValueMatch.group(1)
+                        # Extract the value part after the pattern
+                        valuePart = line[re.match(argValuePattern, line).end():].strip()
+                        if argName not in existingArgs:
+                            existingArgs[argName] = {'type': 'str', 'value': '""'}
+                        existingArgs[argName]['value'] = valuePart
+                        i += 1
+                        continue
+                    
+                    # If we reach here, we're done with initArguments section
+                    break
                 
-                # Add new argument definitions
-                for argName, argInfo in initArgs.items():
-                    newLines.append(f'piStructC01 argument {argName}.')
+                # Compare existing arguments with new arguments
+                if existingArgs != initArgs:
+                    # Arguments are different, add new argument definitions
+                    for argName, argInfo in initArgs.items():
+                        newLines.append(f'piStructC01 argument {argName}.')
+                    
+                    for argName, argInfo in initArgs.items():
+                        newLines.append(f'piValue {className}.piBody:piClassGC:initArguments:{argName}:type {argInfo["type"]}')
+                        newLines.append(f'piValue {className}.piBody:piClassGC:initArguments:{argName}:value {argInfo["value"]}')
+                    
+                    changed = True
+                else:
+                    # Arguments are the same, keep existing definitions
+                    for argName, argInfo in existingArgs.items():
+                        newLines.append(f'piStructC01 argument {argName}.')
+                    
+                    for argName, argInfo in existingArgs.items():
+                        newLines.append(f'piValue {className}.piBody:piClassGC:initArguments:{argName}:type {argInfo["type"]}')
+                        newLines.append(f'piValue {className}.piBody:piClassGC:initArguments:{argName}:value {argInfo["value"]}')
                 
-                for argName, argInfo in initArgs.items():
-                    newLines.append(f'piValue {className}.piBody:piClassGC:initArguments:{argName}:type {argInfo["type"]}')
-                    newLines.append(f'piValue {className}.piBody:piClassGC:initArguments:{argName}:value {argInfo["value"]}')
-                
-                changed = True
                 continue
             else:
                 newLines.append(line)
@@ -777,6 +1044,8 @@ def updateSeedImports(seedContent: str, className: str, regularImports: List[str
         # Pattern to match regular imports
         importsPattern = rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:imports\s+'
         
+        # Extract existing imports for comparison
+        existingImports = []
         i = 0
         foundImports = False
         
@@ -787,15 +1056,29 @@ def updateSeedImports(seedContent: str, className: str, regularImports: List[str
             if re.match(importsPattern, line):
                 if not foundImports:
                     foundImports = True
-                    # Replace all existing imports with new ones
-                    for import_item in regularImports:
-                        newLines.append(f'piValueA {className}.piBody:piClassGC:imports {import_item}')
-                    changed = True
-                
-                # Skip all existing import lines
-                while i < len(lines) and re.match(importsPattern, lines[i]):
+                    # Extract existing import lines
+                    while i < len(lines) and re.match(importsPattern, lines[i]):
+                        # Extract the import name
+                        match = re.match(rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:imports\s+(.+)$', lines[i])
+                        if match:
+                            existingImports.append(match.group(1))
+                        i += 1
+                    
+                    # Compare existing imports with new imports
+                    if set(existingImports) != set(regularImports):
+                        # Imports are different, replace with new imports
+                        for import_item in regularImports:
+                            newLines.append(f'piValueA {className}.piBody:piClassGC:imports {import_item}')
+                        changed = True
+                    else:
+                        # Imports are the same, keep existing imports
+                        for import_item in existingImports:
+                            newLines.append(f'piValueA {className}.piBody:piClassGC:imports {import_item}')
+                    continue
+                else:
+                    # Skip remaining import lines (already processed above)
                     i += 1
-                continue
+                    continue
             else:
                 newLines.append(line)
                 i += 1
@@ -825,4 +1108,401 @@ def updateSeedImports(seedContent: str, className: str, regularImports: List[str
         
     except Exception as e:
         printIt(f"Error updating seed imports: {e}", lable.ERROR)
+        return seedContent, False
+
+# Helper functions for piDefGC synchronization
+
+def extractAssignmentCode(pythonContent: str, assignNode: ast.Assign) -> Optional[str]:
+    """Extract assignment code (constants) from AST node"""
+    try:
+        lines = pythonContent.split('\n')
+        line_num = assignNode.lineno - 1
+        if line_num < len(lines):
+            return lines[line_num].strip()
+        return None
+    except Exception as e:
+        printIt(f"Error extracting assignment code: {e}", lable.ERROR)
+        return None
+
+def extractIfMainCode(pythonContent: str, ifNode: ast.If) -> List[str]:
+    """Extract code from if __name__ == '__main__': block"""
+    try:
+        lines = pythonContent.split('\n')
+        startLine = ifNode.lineno - 1
+        
+        # Find the end of the if block
+        endLine = len(lines)
+        ifIndent = len(lines[startLine]) - len(lines[startLine].lstrip())
+        
+        for i in range(startLine + 1, len(lines)):
+            line = lines[i]
+            if line.strip():  # Non-empty line
+                lineIndent = len(line) - len(line.lstrip())
+                if lineIndent <= ifIndent:
+                    endLine = i
+                    break
+        
+        # Extract if block content
+        ifCode = []
+        for i in range(startLine, endLine):
+            line = lines[i]
+            if i == startLine:
+                # First line (if statement)
+                ifCode.append(line.strip())
+            else:
+                # Subsequent lines - preserve relative indentation
+                if line.strip():
+                    if len(line) > ifIndent:
+                        ifCode.append(line[ifIndent:])
+                    else:
+                        ifCode.append(line.strip())
+                else:
+                    ifCode.append("")
+        
+        return ifCode
+        
+    except Exception as e:
+        printIt(f"Error extracting if main code: {e}", lable.ERROR)
+        return []
+
+def extractModuleDocstring(pythonContent: str) -> List[str]:
+    """Extract module-level docstring"""
+    try:
+        tree = ast.parse(pythonContent)
+        if (tree.body and isinstance(tree.body[0], ast.Expr) and 
+            isinstance(tree.body[0].value, ast.Constant) and 
+            isinstance(tree.body[0].value.value, str)):
+            
+            docstring = tree.body[0].value.value
+            return docstring.split('\n')
+        return []
+        
+    except Exception as e:
+        printIt(f"Error extracting module docstring: {e}", lable.ERROR)
+        return []
+
+def updateDefSeedHeaders(seedContent: str, defName: str, headers: List[str]) -> Tuple[str, bool]:
+    """Update headers in piDefGC seed file"""
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+        
+        # Pattern to match headers
+        headerPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:headers\s+'
+        
+        i = 0
+        foundHeaders = False
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            if re.match(headerPattern, line):
+                if not foundHeaders:
+                    foundHeaders = True
+                    # Replace with new headers
+                    for header in headers:
+                        escapedHeader = header.replace('"', '\\"')
+                        newLines.append(f'piValueA {defName}.piBody:piDefGC:headers "{escapedHeader}"')
+                    changed = True
+                
+                # Skip all existing header lines
+                while i < len(lines) and re.match(headerPattern, lines[i]):
+                    i += 1
+                continue
+            else:
+                newLines.append(line)
+                i += 1
+        
+        return '\n'.join(newLines), changed
+        
+    except Exception as e:
+        printIt(f"Error updating def seed headers: {e}", lable.ERROR)
+        return seedContent, False
+
+def updateDefSeedFileComments(seedContent: str, defName: str, fileComments: List[str]) -> Tuple[str, bool]:
+    """Update file comments in piDefGC seed file"""
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+        
+        # Pattern to match file comments
+        commentPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:fileComment\s+'
+        
+        i = 0
+        foundComments = False
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            if re.match(commentPattern, line):
+                if not foundComments:
+                    foundComments = True
+                    # Replace with new comments
+                    for comment in fileComments:
+                        if comment.strip():
+                            escapedComment = comment.strip().replace('"', '\\"')
+                            newLines.append(f'piValueA {defName}.piBody:piDefGC:fileComment "{escapedComment}"')
+                    changed = True
+                
+                # Skip all existing comment lines
+                while i < len(lines) and re.match(commentPattern, lines[i]):
+                    i += 1
+                continue
+            else:
+                newLines.append(line)
+                i += 1
+        
+        return '\n'.join(newLines), changed
+        
+    except Exception as e:
+        printIt(f"Error updating def seed file comments: {e}", lable.ERROR)
+        return seedContent, False
+
+def updateDefSeedImports(seedContent: str, defName: str, imports: List[str]) -> Tuple[str, bool]:
+    """Update regular imports in piDefGC seed file"""
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+        
+        # Pattern to match imports
+        importPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:imports\s+'
+        
+        # Extract existing imports for comparison
+        existingImports = []
+        i = 0
+        foundImports = False
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            if re.match(importPattern, line):
+                if not foundImports:
+                    foundImports = True
+                    # Extract existing import lines
+                    while i < len(lines) and re.match(importPattern, lines[i]):
+                        # Extract the import name
+                        match = re.match(rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:imports\s+(.+)$', lines[i])
+                        if match:
+                            existingImports.append(match.group(1))
+                        i += 1
+                    
+                    # Compare existing imports with new imports
+                    if set(existingImports) != set(imports):
+                        # Imports are different, replace with new imports
+                        for imp in imports:
+                            newLines.append(f'piValueA {defName}.piBody:piDefGC:imports {imp}')
+                        changed = True
+                    else:
+                        # Imports are the same, keep existing imports
+                        for imp in existingImports:
+                            newLines.append(f'piValueA {defName}.piBody:piDefGC:imports {imp}')
+                    continue
+                else:
+                    # Skip remaining import lines (already processed above)
+                    i += 1
+                    continue
+            else:
+                newLines.append(line)
+                i += 1
+        
+        return '\n'.join(newLines), changed
+        
+    except Exception as e:
+        printIt(f"Error updating def seed imports: {e}", lable.ERROR)
+        return seedContent, False
+
+def updateDefSeedFromImports(seedContent: str, defName: str, fromImports: Dict[str, Dict[str, str]]) -> Tuple[str, bool]:
+    """Update from imports in piDefGC seed file"""
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+        
+        # Patterns for from imports
+        structPattern = rf'^piStructA00\s+{re.escape(defName)}\.piBody:piDefGC:fromImports\s*$'
+        importStructPattern = rf'^piStructC01\s+fromImports\s+(\w+)\.\s*$'
+        importFromPattern = rf'^piValue\s+{re.escape(defName)}\.piBody:piDefGC:fromImports:(\w+):from\s+'
+        importImportPattern = rf'^piValue\s+{re.escape(defName)}\.piBody:piDefGC:fromImports:(\w+):import\s+'
+        
+        i = 0
+        foundFromImports = False
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            if re.match(structPattern, line):
+                foundFromImports = True
+                newLines.append(line)
+                i += 1
+                
+                # Skip existing from import definitions
+                while i < len(lines):
+                    line = lines[i]
+                    if (re.match(importStructPattern, line) or 
+                        re.match(importFromPattern, line) or 
+                        re.match(importImportPattern, line)):
+                        i += 1
+                        continue
+                    else:
+                        break
+                
+                # Add new from import definitions
+                for module_name, import_info in fromImports.items():
+                    clean_module = module_name.replace('.', '_').replace('-', '_')
+                    newLines.append(f'piStructC01 fromImports {clean_module}.')
+                
+                for module_name, import_info in fromImports.items():
+                    clean_module = module_name.replace('.', '_').replace('-', '_')
+                    newLines.append(f'piValue {defName}.piBody:piDefGC:fromImports:{clean_module}:from "{import_info["from"]}"')
+                    newLines.append(f'piValue {defName}.piBody:piDefGC:fromImports:{clean_module}:import "{import_info["import"]}"')
+                
+                changed = True
+                continue
+            else:
+                newLines.append(line)
+                i += 1
+        
+        return '\n'.join(newLines), changed
+        
+    except Exception as e:
+        printIt(f"Error updating def seed from imports: {e}", lable.ERROR)
+        return seedContent, False
+
+def updateDefSeedConstants(seedContent: str, defName: str, constants: List[str]) -> Tuple[str, bool]:
+    """Update constants in piDefGC seed file"""
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+        
+        # Pattern to match constants
+        constantPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:constants\s+'
+        
+        i = 0
+        foundConstants = False
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            if re.match(constantPattern, line):
+                if not foundConstants:
+                    foundConstants = True
+                    # Replace with new constants
+                    for constant in constants:
+                        escapedConstant = constant.replace('"', '\\"')
+                        newLines.append(f'piValueA {defName}.piBody:piDefGC:constants "{escapedConstant}"')
+                    changed = True
+                
+                # Skip all existing constant lines
+                while i < len(lines) and re.match(constantPattern, lines[i]):
+                    i += 1
+                continue
+            else:
+                newLines.append(line)
+                i += 1
+        
+        return '\n'.join(newLines), changed
+        
+    except Exception as e:
+        printIt(f"Error updating def seed constants: {e}", lable.ERROR)
+        return seedContent, False
+
+def updateDefSeedFunctionDefs(seedContent: str, defName: str, functionDefs: Dict[str, List[str]]) -> Tuple[str, bool]:
+    """Update function definitions in piDefGC seed file"""
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+        
+        # Patterns for function definitions
+        structPattern = rf'^piStructA00\s+{re.escape(defName)}\.piBody:piDefGC:functionDefs\s*$'
+        funcStructPattern = rf'^piStructL01\s+(\w+)\s+'
+        funcDefPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:functionDefs:(\w+)\s+'
+        
+        i = 0
+        foundFunctionDefs = False
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            if re.match(structPattern, line):
+                foundFunctionDefs = True
+                newLines.append(line)
+                i += 1
+                
+                # Skip existing function definitions
+                while i < len(lines):
+                    line = lines[i]
+                    if (re.match(funcStructPattern, line) or 
+                        re.match(funcDefPattern, line)):
+                        i += 1
+                        continue
+                    else:
+                        break
+                
+                # Add new function definitions
+                for funcName, funcLines in functionDefs.items():
+                    newLines.append(f'piStructL01 {funcName} \'Function definition for {funcName}\'')
+                
+                for funcName, funcLines in functionDefs.items():
+                    for funcLine in funcLines:
+                        # Fix docstring quotes: convert ''' to ''''
+                        if funcLine.strip() == "'''":
+                            escapedLine = "''''"
+                        else:
+                            escapedLine = funcLine.replace('"', '\\"')
+                        newLines.append(f'piValueA {defName}.piBody:piDefGC:functionDefs:{funcName} "{escapedLine}"')
+                
+                changed = True
+                continue
+            else:
+                newLines.append(line)
+                i += 1
+        
+        return '\n'.join(newLines), changed
+        
+    except Exception as e:
+        printIt(f"Error updating def seed function definitions: {e}", lable.ERROR)
+        return seedContent, False
+
+def updateDefSeedGlobalCode(seedContent: str, defName: str, globalCode: List[str]) -> Tuple[str, bool]:
+    """Update global code in piDefGC seed file"""
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+        
+        # Pattern to match global code
+        globalPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:globalCode\s+'
+        
+        i = 0
+        foundGlobalCode = False
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            if re.match(globalPattern, line):
+                if not foundGlobalCode:
+                    foundGlobalCode = True
+                    # Replace with new global code
+                    for codeLine in globalCode:
+                        escapedCode = codeLine.replace('"', '\\"')
+                        newLines.append(f'piValueA {defName}.piBody:piDefGC:globalCode "{escapedCode}"')
+                    changed = True
+                
+                # Skip all existing global code lines
+                while i < len(lines) and re.match(globalPattern, lines[i]):
+                    i += 1
+                continue
+            else:
+                newLines.append(line)
+                i += 1
+        
+        return '\n'.join(newLines), changed
+        
+    except Exception as e:
+        printIt(f"Error updating def seed global code: {e}", lable.ERROR)
         return seedContent, False
