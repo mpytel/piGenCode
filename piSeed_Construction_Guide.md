@@ -2,65 +2,92 @@
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [piSeed File Structure](#piseed-file-structure)
-   - [Basic Syntax](#basic-syntax)
-   - [Comments](#comments)
-3. [1. piStruct Generation](#1-pistruct-generation)
-   - [Required piSeedTypes for piStruct](#required-piseedtypes-for-pistruct)
-   - [piScratchDir](#piscratchdir)
-   - [piStruct](#pistruct)
-   - [piStructS00, piStructC00, piStructD00, piStructL00, piStructA00](#pistructs00-pistructc00-pistructd00-pistructl00-pistructa00)
-   - [Important: piStructC00 Cloning Syntax](#important-pistructc00-cloning-syntax)
-   - [Example piStruct piSeed](#example-pistruct-piseed)
-4. [2. piValuesSetD Generation](#2-pivaluessetd-generation)
-   - [Required piSeedTypes for piValuesSetD](#required-piseedtypes-for-pivaluessetd)
-   - [piValuesSetD](#pivaluessetd)
-   - [piValue](#pivalue)
-   - [Example piValuesSetD piSeed](#example-pivaluessetd-piseed)
-5. [3. piClassGC Generation](#3-piclassgc-generation)
-   - [Required piSeedTypes for piClassGC](#required-piseedtypes-for-piclassgc)
-   - [piClassGC](#piclassgc)
-   - [piValue (for metadata)](#pivalue-for-metadata)
-   - [piValueA (for code arrays)](#pivaluea-for-code-arrays)
-   - [piStructA00, piStructC01 (for nested structures)](#pistructa00-pistructc01-for-nested-structures)
-   - [Key piClassGC Sections](#key-piclassgc-sections)
-   - [Example piClassGC piSeed](#example-piclassgc-piseed)
-6. [Structure Cloning: Composition vs Inheritance](#structure-cloning-composition-vs-inheritance)
-   - [Composition (Nested Cloning)](#composition-nested-cloning)
-   - [Inheritance (Merge Cloning)](#inheritance-merge-cloning)
-   - [Key Differences](#key-differences)
-   - [Real-World Example](#real-world-example)
-7. [piStructA00: Append to Structure](#pistructa00-append-to-structure)
-   - [How piStructA00 Works](#how-pistructa00-works)
-   - [Example: Building fromImports Structure](#example-building-fromimports-structure)
-   - [Key Points About piStructA00](#key-points-about-pistructa00)
-   - [Common Pattern](#common-pattern)
-8. [piClassGC Code Elements](#piclassgc-code-elements)
-   - [Constructor Code Elements](#constructor-code-elements)
-   - [Property Generation](#property-generation)
-   - [Method Override Elements](#method-override-elements)
-   - [Custom Methods and Global Code](#custom-methods-and-global-code)
-   - [Code Element Usage Patterns](#code-element-usage-patterns)
-9. [4. piDefGC Generation (NEW)](#4-pidefgc-generation-new)
-   - [Required piSeedTypes for piDefGC](#required-piseedtypes-for-pidefgc)
-   - [Key piDefGC Sections](#key-pidefgc-sections)
-   - [Example piDefGC piSeed](#example-pidefgc-piseed)
-   - [piDefGC vs piClassGC Differences](#pidefgc-vs-piclassgc-differences)
-10. [Processing Order](#processing-order)
-11. [File Naming Convention](#file-naming-convention)
-12. [Best Practices](#best-practices)
+- [piSeed Construction Guide](#piseed-construction-guide)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [piSeed File Structure](#piseed-file-structure)
+    - [Basic Syntax](#basic-syntax)
+    - [Comments](#comments)
+  - [1. piStruct Generation](#1-pistruct-generation)
+    - [Required piSeedTypes for piStruct:](#required-piseedtypes-for-pistruct)
+      - [piScratchDir](#piscratchdir)
+      - [piStruct](#pistruct)
+      - [piSeed Types](#piseed-types)
+      - [Important: piStructC00 Cloning Syntax](#important-pistructc00-cloning-syntax)
+    - [Example piStruct piSeed:](#example-pistruct-piseed)
+  - [2. piValuesSetD Generation](#2-pivaluessetd-generation)
+    - [Required piSeedTypes for piValuesSetD:](#required-piseedtypes-for-pivaluessetd)
+      - [piValuesSetD](#pivaluessetd)
+      - [piValue](#pivalue)
+    - [Example piValuesSetD piSeed:](#example-pivaluessetd-piseed)
+  - [3. piClassGC Generation](#3-piclassgc-generation)
+    - [Required piSeedTypes for piClassGC:](#required-piseedtypes-for-piclassgc)
+      - [piClassGC](#piclassgc)
+      - [piValue (for metadata)](#pivalue-for-metadata)
+      - [piValueA (for code arrays)](#pivaluea-for-code-arrays)
+      - [piStructA00, piStructC01 (for nested structures)](#pistructa00-pistructc01-for-nested-structures)
+    - [Key piClassGC Sections:](#key-piclassgc-sections)
+      - [Class Definition](#class-definition)
+      - [Import Statements](#import-statements)
+      - [Constructor Arguments](#constructor-arguments)
+      - [Method Code](#method-code)
+    - [Example piClassGC piSeed:](#example-piclassgc-piseed)
+    - [Structure Cloning: Composition vs Inheritance](#structure-cloning-composition-vs-inheritance)
+    - [Composition (Nested Cloning)](#composition-nested-cloning)
+    - [Inheritance (Merge Cloning)](#inheritance-merge-cloning)
+    - [Key Differences](#key-differences)
+    - [Real-World Example](#real-world-example)
+    - [piStructA00: Append to Structure](#pistructa00-append-to-structure)
+    - [How piStructA00 Works](#how-pistructa00-works)
+    - [Example: Building fromImports Structure](#example-building-fromimports-structure)
+    - [Key Points About piStructA00](#key-points-about-pistructa00)
+    - [Common Pattern](#common-pattern)
+    - [piClassGC Code Elements](#piclassgc-code-elements)
+      - [Constructor Code Elements](#constructor-code-elements)
+        - [preSuperInitCode](#presuperinitcode)
+        - [postSuperInitCode](#postsuperinitcode)
+        - [initAppendCode](#initappendcode)
+      - [Property Generation](#property-generation)
+        - [genProps](#genprops)
+      - [Method Override Elements](#method-override-elements)
+        - [strCode](#strcode)
+        - [jsonCode](#jsoncode)
+      - [Custom Methods and Global Code](#custom-methods-and-global-code)
+        - [classDefCode](#classdefcode)
+        - [globalCode](#globalcode)
+      - [Code Element Usage Patterns](#code-element-usage-patterns)
+        - [Multi-line Code Blocks](#multi-line-code-blocks)
+        - [Empty Lines](#empty-lines)
+        - [Code Comments and Docstrings](#code-comments-and-docstrings)
+  - [4. piDefGC Generation](#4-pidefgc-generation)
+    - [Required piSeedTypes for piDefGC:](#required-piseedtypes-for-pidefgc)
+      - [piDefGC](#pidefgc)
+      - [piValue (for metadata)](#pivalue-for-metadata-1)
+      - [piValueA (for code arrays)](#pivaluea-for-code-arrays-1)
+    - [Key piDefGC Sections:](#key-pidefgc-sections)
+      - [File Definition](#file-definition)
+      - [File Directory (NEW)](#file-directory-new)
+      - [Import Statements](#import-statements-1)
+      - [From Imports (same structure as piClassGC)](#from-imports-same-structure-as-piclassgc)
+      - [Function Definitions](#function-definitions)
+      - [Constants](#constants)
+      - [Global Code](#global-code)
+    - [Example piDefGC piSeed:](#example-pidefgc-piseed)
+    - [piDefGC vs piClassGC Differences:](#pidefgc-vs-piclassgc-differences)
+  - [Processing Order](#processing-order)
+  - [File Naming Convention](#file-naming-convention)
+  - [Best Practices](#best-practices)
     - [1. Structure Dependencies](#1-structure-dependencies)
     - [2. Default Values](#2-default-values)
     - [3. Code Organization](#3-code-organization)
     - [4. Quoting Rules](#4-quoting-rules)
-13. [Common Patterns](#common-patterns)
+  - [Common Patterns](#common-patterns)
     - [Simple Data Class](#simple-data-class)
     - [Class with Methods](#class-with-methods)
-14. [Troubleshooting](#troubleshooting)
+  - [Troubleshooting](#troubleshooting)
     - [Common Errors](#common-errors)
     - [Validation](#validation)
-15. [Summary](#summary)
+  - [Summary](#summary)
 
 ## Overview
 
@@ -304,7 +331,7 @@ piValue piBase.piBody:piClassGC:initArguments:piSD:type str
 piValue piBase.piBody:piClassGC:initArguments:piSD:value 'Base pi object'
 ```
 
-## Structure Cloning: Composition vs Inheritance
+### Structure Cloning: Composition vs Inheritance
 
 Understanding the difference between nested cloning and merge cloning is crucial for proper piSeed construction.
 
@@ -391,7 +418,7 @@ piStructC00 pi piClassGC.
 
 This is why generated piClassGC JSON files have `piProlog`, `piBase`, `piTouch` etc. as direct fields - they inherit the complete pi structure.
 
-## piStructA00: Append to Structure
+### piStructA00: Append to Structure
 
 The **piStructA00** operation is often misunderstood. It doesn't create an array, but rather **appends a new container element** to a structure, which then becomes the target for subsequent child elements.
 
@@ -464,13 +491,13 @@ piValue <path>:<childName>:<field> <value>
 
 This pattern allows you to build complex nested structures incrementally, which is essential for piClassGC configurations that need detailed import statements, method definitions, and other structured code elements.
 
-## piClassGC Code Elements
+### piClassGC Code Elements
 
 piClassGC configurations include several elements that contain user-specified Python code. These elements allow you to customize the generated class behavior beyond the basic structure.
 
-### Constructor Code Elements
+#### Constructor Code Elements
 
-#### preSuperInitCode
+##### preSuperInitCode
 Lines of code in the `__init__` function that execute **before** the `super(<className>, self).__init__()` call when the class inherits from another class.
 
 ```
@@ -487,7 +514,7 @@ def __init__(self, ...):
     # rest of init code
 ```
 
-#### postSuperInitCode
+##### postSuperInitCode
 Lines of code in the `__init__` function that execute **after** the `super(<className>, self).__init__()` call when the class inherits from another class.
 
 ```
@@ -505,7 +532,7 @@ def __init__(self, ...):
     # standard init assignments
 ```
 
-#### initAppendCode
+##### initAppendCode
 Lines of code in the `__init__` function that go at the **end** when the class does **not** inherit from another class.
 
 ```
@@ -524,9 +551,9 @@ def __init__(self, ...):
     self.register_callbacks()
 ```
 
-### Property Generation
+#### Property Generation
 
-#### genProps
+##### genProps
 Flag to add `@property` decorators so initial parameters are treated as class properties with getters/setters.
 
 ```
@@ -544,9 +571,9 @@ def param1(self, value):
     self._param1 = value
 ```
 
-### Method Override Elements
+#### Method Override Elements
 
-#### strCode
+##### strCode
 Code that **replaces** the default `__str__` class function.
 
 ```
@@ -560,7 +587,7 @@ def __str__(self):
     return f'MyClass(name={self.name}, id={self.id})'
 ```
 
-#### jsonCode
+##### jsonCode
 Code to **replace** the default code that `genCode.py` creates for the `json()` class function.
 
 ```
@@ -580,9 +607,9 @@ def json(self) -> dict:
     }
 ```
 
-### Custom Methods and Global Code
+#### Custom Methods and Global Code
 
-#### classDefCode
+##### classDefCode
 A **dictionary** of lists of code text that become user-defined functions within the class.
 
 ```
@@ -608,7 +635,7 @@ def validate_input(self, data):
     return True
 ```
 
-#### globalCode
+##### globalCode
 An **array** of code that is appended to the **end** of the class file, allowing global functions to be defined for use by the class.
 
 ```
@@ -628,9 +655,9 @@ def utility_function(param):
 GLOBAL_CONSTANT = 'MyClass_Config'
 ```
 
-### Code Element Usage Patterns
+#### Code Element Usage Patterns
 
-#### Multi-line Code Blocks
+##### Multi-line Code Blocks
 Each line of code should be a separate `piValueA` entry:
 ```
 piValueA MyClass.piBody:piClassGC:strCode "def __str__(self):"
@@ -640,7 +667,7 @@ piValueA MyClass.piBody:piClassGC:strCode "        result += ' (active)'"
 piValueA MyClass.piBody:piClassGC:strCode "    return result"
 ```
 
-#### Empty Lines
+##### Empty Lines
 Use empty strings for blank lines in code:
 ```
 piValueA MyClass.piBody:piClassGC:classDefCode "def method1(self):"
@@ -650,7 +677,7 @@ piValueA MyClass.piBody:piClassGC:classDefCode "def method2(self):"
 piValueA MyClass.piBody:piClassGC:classDefCode "    return 'method2'"
 ```
 
-#### Code Comments and Docstrings
+##### Code Comments and Docstrings
 Include proper Python documentation:
 ```
 piValueA MyClass.piBody:piClassGC:classDefCode "def complex_method(self, data):"
@@ -675,7 +702,7 @@ piSeed files should be named with a three-digit sequence number:
 - `piSeed015_piClassGC_<name>.pi` - Class generation configs
 - `piSeed044_piDefGC_<name>.pi` - Function definition file generation configs
 
-## 4. piDefGC Generation (NEW)
+## 4. piDefGC Generation
 
 piDefGC files define Python function definition file generation configurations. These are similar to piClassGC but generate standalone Python files containing only function definitions, stored in the piDefs directory.
 
@@ -711,6 +738,54 @@ piValueA <fileName>.piBody:piDefGC:functionDefs "    return 'Hello World'"
 ```
 piValue <fileName>.piBody:piDefGC:fileName <outputFileName>
 ```
+
+#### File Directory (NEW)
+The `fileDirectory` field allows you to specify a custom destination directory for the generated Python file. This provides flexible control over where your function definition files are saved.
+
+```
+piValue <fileName>.piBody:piDefGC:fileDirectory <directoryPath>
+```
+
+**Directory Resolution (Three-Tier System):**
+
+1. **Custom fileDirectory** (highest priority)
+   - If `fileDirectory` is specified and non-empty, use that path
+   - Supports both relative and absolute paths
+   - Relative paths are resolved from current working directory
+
+2. **RC Default** (medium priority)
+   - If `fileDirectory` is empty, use `piDefGCDir` from RC configuration file
+   - Default RC value: `"piDefGCDir": "./piDefs"`
+   - Configurable by editing `.pigencoderc`
+
+3. **Legacy Fallback** (lowest priority)
+   - If no RC configuration, fall back to original behavior
+   - Uses `piScratchDir` parent directory + "piDefs"
+
+**Examples:**
+
+```
+# Use RC default (./piDefs)
+piValue utilities.piBody:piDefGC:fileDirectory ""
+piValue utilities.piBody:piDefGC:fileName utilities
+# → Creates: ./piDefs/utilities.py
+
+# Custom relative directory
+piValue utilities.piBody:piDefGC:fileDirectory "src/pigencode/utils"
+piValue utilities.piBody:piDefGC:fileName utilities
+# → Creates: src/pigencode/utils/utilities.py
+
+# Custom absolute directory
+piValue utilities.piBody:piDefGC:fileDirectory "/opt/myproject/functions"
+piValue utilities.piBody:piDefGC:fileName utilities
+# → Creates: /opt/myproject/functions/utilities.py
+```
+
+**Features:**
+- **Automatic Directory Creation**: Creates directories if they don't exist
+- **Path Validation**: Robust error handling for invalid paths
+- **Per-File Control**: Each piDefGC file can specify its own destination
+- **Backward Compatible**: Existing seed files work without modification
 
 #### Import Statements
 ```
@@ -765,6 +840,7 @@ piStructA00 utilities.piBody:piDefGC:fromImports
 piStructC01 fromImports pathlib.
 piValue utilities.piBody:piDefGC:fromImports:pathlib:from "pathlib"
 piValue utilities.piBody:piDefGC:fromImports:pathlib:import "Path"
+piValue utilities.piBody:piDefGC:fileDirectory ""
 piValue utilities.piBody:piDefGC:fileName utilities
 piValueA utilities.piBody:piDefGC:constants "DEFAULT_ENCODING = 'utf-8'"
 piStructA00 utilities.piBody:piDefGC:functionDefs
@@ -812,7 +888,7 @@ def clean_string(text: str) -> str:
 piSeed files should be named with a three-digit sequence number followed by a descriptive name:
 
 - `piSeed000_piStruct_<name>.pi` - Structure definitions
-- `piSeed001_piStruct_<name>.pi` - More structures  
+- `piSeed001_piStruct_<name>.pi` - More structures
 - `piSeed015_piClassGC_<name>.pi` - Class generation configs
 - `piSeed044_piDefGC_<name>.pi` - Function definition file generation configs
 

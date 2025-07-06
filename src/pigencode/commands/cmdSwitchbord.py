@@ -17,7 +17,7 @@ def cmdSwitchbord(argParse: ArgParse):
         if len(sys.argv) > 1:
             if len(sys.argv) > 2:
                 switchFlagChk = sys.argv[2]
-                if len(sys.argv) == 3 and switchFlagChk[0] in '-+?':
+                if len(sys.argv) == 3 and switchFlagChk[0] in '-+?' and not switchFlagChk.startswith('--'):
                     if switchFlagChk[1:] in switchFlags.keys():
                         print(f'00001: {switchFlagChk}')
                         cmdOptSwitchbord(switchFlagChk, switchFlags)

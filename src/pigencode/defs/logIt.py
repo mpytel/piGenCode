@@ -28,6 +28,7 @@ class color():
         "IMPORT: ": UNDERLINE,
         "RESET": RESET,
         "File Not Found: ": YELLOW,
+        "Directory Not Found: ": YELLOW,
         "FAIL: ": RED,
         "Useage: ": WHITE,
         "DELETE: ": YELLOW,
@@ -61,6 +62,7 @@ class lable():
     IMPORT = "IMPORT: "
     RESET = "RESET"
     FileNotFound = "File Not Found: "
+    DirNotFound = "Directory Not Found: "
     FAIL = "FAIL: "
     Useage = "Useage: "
     MKDIR = "MKDIR: "

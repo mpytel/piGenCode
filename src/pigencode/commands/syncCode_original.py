@@ -5,155 +5,6 @@ from ..classes.argParse import ArgParse
 from ..defs.logIt import printIt, lable
 from ..defs.piRCFile import getKeyItem
 
-# Intelligent pattern detection functions
-def isDefaultStrCode(methodCode: List[str], className: str, initArgs: Dict) -> bool:
-    """Check if __str__ method is just the default generated pattern"""
-    if not methodCode or not initArgs:
-        return True
-    
-    # Instead of exact matching, check for standard patterns
-    codeStr = '\n'.join(methodCode)
-    
-    # Must start with def __str__(self):
-    if not codeStr.startswith('def __str__(self):'):
-        return False
-    
-    # Must contain standard elements for all init args
-    argNames = list(initArgs.keys())
-    for argName in argNames:
-        if f'self.{argName}' not in codeStr:
-            return False  # Missing expected field
-    
-    # Check for custom logic indicators (excluding the method definition itself)
-    # Remove the first line to avoid false positives from the method definition
-    codeLines = methodCode[1:]  # Skip 'def __str__(self):'
-    bodyStr = '\n'.join(codeLines)
-    
-    customIndicators = [
-        'if ', 'for ', 'while ', 'try:', 'except:', 'with ',
-        'import ', 'def ', 'class ', 'lambda', '@',
-        'print(', 'input(', 'open(', 'file(', 'read(', 'write('
-    ]
-    
-    for indicator in customIndicators:
-        if indicator in bodyStr:
-            return False  # Contains custom logic
-    
-    # Check if it's just a simple string formatting pattern
-    hasRtnStr = 'rtnStr' in codeStr
-    hasReturn = 'return' in codeStr
-    hasFormatting = ('{' in codeStr and '}' in codeStr) or ('f"' in codeStr or "f'" in codeStr)
-    
-    # If it has the basic structure and no custom logic, consider it default
-    return hasRtnStr and hasReturn and hasFormatting
-
-def isDefaultJsonCode(methodCode: List[str], className: str, initArgs: Dict) -> bool:
-    """Check if json() method is just the default generated pattern"""
-    if not methodCode or not initArgs:
-        return True
-    
-    codeStr = '\n'.join(methodCode)
-    
-    # Must start with def json(self) -> dict:
-    if not codeStr.startswith('def json(self) -> dict:'):
-        return False
-    
-    # Must contain standard elements for all init args
-    argNames = list(initArgs.keys())
-    for argName in argNames:
-        if f'self.{argName}' not in codeStr:
-            return False  # Missing expected field
-    
-    # Check for custom logic indicators (excluding the method definition itself)
-    codeLines = methodCode[1:]  # Skip 'def json(self) -> dict:'
-    bodyStr = '\n'.join(codeLines)
-    
-    customIndicators = [
-        'if ', 'for ', 'while ', 'try:', 'except:', 'with ',
-        'import ', 'def ', 'class ', 'lambda', '@',
-        'print(', 'input(', 'open(', 'file(', 'read(', 'write(',
-        'datetime', 'json.', 'str(', 'int(', 'float(', 'bool('
-    ]
-    
-    for indicator in customIndicators:
-        if indicator in bodyStr:
-            return False  # Contains custom logic
-    
-    # Check if it's just a simple dict return pattern
-    hasRtnDict = 'rtnDict' in codeStr or 'return {' in codeStr
-    hasReturn = 'return' in codeStr
-    
-    # If it has the basic structure and no custom logic, consider it default
-    return hasRtnDict and hasReturn
-
-def isDefaultInitAppendCode(codeLines: List[str], initArgs: Dict) -> bool:
-    """Check if initAppendCode is just standard parameter assignments"""
-    if not codeLines:
-        return True
-    
-    # Check if all lines are just standard self.param = param assignments
-    standardAssignments = 0
-    totalLines = 0
-    
-    for line in codeLines:
-        stripped = line.strip()
-        if stripped:
-            totalLines += 1
-            # Skip constructor signature lines
-            if ':' in stripped and '=' in stripped and ('str' in stripped or 'int' in stripped or 'bool' in stripped):
-                continue
-            # Check for standard assignment pattern
-            if stripped.startswith('self.') and '=' in stripped and len(stripped.split('=')) == 2:
-                standardAssignments += 1
-    
-    # If most lines are standard assignments, consider it default
-    return totalLines > 0 and standardAssignments >= (totalLines * 0.8)
-
-def hasElegantValueReferences(seedContent: str, className: str) -> bool:
-    """Check if the seed file uses elegant pi.piBase:field references"""
-    lines = seedContent.split('\n')
-    argValuePattern = rf'^piValue\s+{re.escape(className)}\.piBody:piClassGC:initArguments:\w+:value\s+pi\.'
-    
-    for line in lines:
-        if re.match(argValuePattern, line):
-            return True  # Found elegant reference
-    
-    return False
-
-def extractInitArgsFromSeed(seedContent: str, className: str) -> Dict[str, str]:
-    """Extract initArguments from seed content for pattern matching"""
-    lines = seedContent.split('\n')
-    initArgs = {}
-    
-    argPattern = rf'^piStructC01\s+argument\s+(\w+)\.\s*$'
-    
-    for line in lines:
-        match = re.match(argPattern, line)
-        if match:
-            argName = match.group(1)
-            initArgs[argName] = 'str'  # Default type
-    
-    return initArgs
-
-def shouldPreserveElegantPattern(seedContent: str, className: str, codeType: str, codeLines: List[str]) -> bool:
-    """Determine if we should preserve elegant piSeed patterns instead of syncing"""
-    
-    # For initAppendCode, don't sync if it's just default assignments
-    if codeType == 'initAppendCode':
-        initArgs = extractInitArgsFromSeed(seedContent, className)
-        return isDefaultInitAppendCode(codeLines, initArgs)
-    
-    # For strCode/jsonCode, don't sync if they're default patterns
-    if codeType == 'strCode':
-        initArgs = extractInitArgsFromSeed(seedContent, className)
-        return isDefaultStrCode(codeLines, className, initArgs)
-    
-    if codeType == 'jsonCode':
-        initArgs = extractInitArgsFromSeed(seedContent, className)
-        return isDefaultJsonCode(codeLines, className, initArgs)
-    
-    return False
-
 def syncCode(argParse: ArgParse):
     """
     Synchronize changes from modified Python files back to their corresponding piSeed files.
@@ -399,12 +250,11 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
                         methodName = item.name
                         
                         if methodName == '__init__':
-                            # Special handling for __init__ method - only sync if truly custom
+                            # Special handling for __init__ method
                             initCodeElements = extractInitCode(pythonContent, item, className)
                             
                             for codeType, codeLines in initCodeElements.items():
-                                # Only sync if not a default pattern
-                                if codeLines and not shouldPreserveElegantPattern(seedContent, className, codeType, codeLines):
+                                if codeLines:
                                     newSeedContent, changed = updateSeedCodeElement(
                                         seedContent, className, codeType, codeLines
                                     )
@@ -412,9 +262,9 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
                                         seedContent = newSeedContent
                                         changes.append(f"{codeType}")
                             
-                            # Extract and sync initArguments only if no elegant references exist
+                            # Extract and sync initArguments from __init__ method
                             initArgs = extractInitArguments(item)
-                            if initArgs and not hasElegantValueReferences(seedContent, className):
+                            if initArgs:
                                 newSeedContent, changed = updateSeedInitArguments(
                                     seedContent, className, initArgs
                                 )
@@ -427,19 +277,11 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
                             if codeElementName:
                                 methodCode = extractMethodCode(pythonContent, item)
                                 
-                                # Only sync if not a default pattern
-                                if methodCode and not shouldPreserveElegantPattern(seedContent, className, codeElementName, methodCode):
-                                    if codeElementName == 'classDefCode':
-                                        # Special handling for classDefCode - it's a dictionary of methods
-                                        newSeedContent, changed = updateSeedClassDefCode(
-                                            seedContent, className, methodName, methodCode
-                                        )
-                                    else:
-                                        # Regular code elements (strCode, jsonCode, etc.)
-                                        newSeedContent, changed = updateSeedCodeElement(
-                                            seedContent, className, codeElementName, methodCode
-                                        )
-                                    
+                                if methodCode:
+                                    # Update piSeed file with new method code
+                                    newSeedContent, changed = updateSeedCodeElement(
+                                        seedContent, className, codeElementName, methodCode
+                                    )
                                     if changed:
                                         seedContent = newSeedContent
                                         changes.append(f"{codeElementName} ({methodName})")
@@ -695,124 +537,6 @@ def extractMethodCode(pythonContent: str, methodNode: ast.FunctionDef) -> List[s
     except Exception as e:
         printIt(f"Error extracting method code: {e}", lable.ERROR)
         return []
-
-def updateSeedClassDefCode(seedContent: str, className: str, methodName: str, methodCode: List[str]) -> Tuple[str, bool]:
-    """
-    Update classDefCode in the piSeed file content.
-    classDefCode should be structured as:
-    piStructA00 className.piBody:piClassGC:classDefCode
-    piStructL01 methodName 'Method description'
-    piValueA className.piBody:piClassGC:classDefCode:methodName "code line 1"
-    piValueA className.piBody:piClassGC:classDefCode:methodName "code line 2"
-    Returns (updated_content, was_changed)
-    """
-    try:
-        lines = seedContent.split('\n')
-        newLines = []
-        changed = False
-        
-        # Check if classDefCode structure exists
-        structPattern = rf'^piStructA00\s+{re.escape(className)}\.piBody:piClassGC:classDefCode\s*$'
-        methodStructPattern = rf'^piStructL01\s+{re.escape(methodName)}\s+'
-        methodValuePattern = rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:classDefCode:{re.escape(methodName)}\s+'
-        
-        hasStructure = False
-        hasMethod = False
-        i = 0
-        
-        while i < len(lines):
-            line = lines[i]
-            
-            # Check for classDefCode structure
-            if re.match(structPattern, line):
-                hasStructure = True
-                newLines.append(line)
-                i += 1
-                continue
-            
-            # Check for method structure
-            elif re.match(methodStructPattern, line):
-                hasMethod = True
-                newLines.append(line)
-                i += 1
-                
-                # Skip existing method code lines
-                while i < len(lines) and re.match(methodValuePattern, lines[i]):
-                    i += 1
-                
-                # Add new method code
-                for codeLine in methodCode:
-                    escapedCode = codeLine.replace('"', '\\"')
-                    newLines.append(f'piValueA {className}.piBody:piClassGC:classDefCode:{methodName} "{escapedCode}"')
-                changed = True
-                continue
-            
-            # Skip old-style classDefCode entries (without method name)
-            elif re.match(rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:classDefCode\s+".*def {re.escape(methodName)}\(', line):
-                # Skip all lines for this method in old format
-                while i < len(lines) and re.match(rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:classDefCode\s+', lines[i]):
-                    nextLine = lines[i]
-                    # Check if this is the start of a different method
-                    if 'def ' in nextLine and f'def {methodName}(' not in nextLine:
-                        break
-                    i += 1
-                changed = True
-                continue
-            
-            else:
-                newLines.append(line)
-                i += 1
-        
-        # If structure doesn't exist, add it
-        if not hasStructure:
-            # Find a good place to insert (after piClassName)
-            insertIndex = len(newLines)
-            classNamePattern = rf'^piValue\s+{re.escape(className)}\.piBody:piClassGC:piClassName\s+'
-            
-            for idx in range(len(newLines)):
-                if re.match(classNamePattern, newLines[idx]):
-                    insertIndex = idx + 1
-                    break
-            
-            # Add structure
-            newLines.insert(insertIndex, f'piStructA00 {className}.piBody:piClassGC:classDefCode')
-            insertIndex += 1
-            newLines.insert(insertIndex, f'piStructL01 {methodName} \'Custom method {methodName}\'')
-            insertIndex += 1
-            
-            # Add method code
-            for codeLine in methodCode:
-                escapedCode = codeLine.replace('"', '\\"')
-                newLines.insert(insertIndex, f'piValueA {className}.piBody:piClassGC:classDefCode:{methodName} "{escapedCode}"')
-                insertIndex += 1
-            
-            changed = True
-        
-        # If structure exists but method doesn't, add method
-        elif hasStructure and not hasMethod:
-            # Find where to insert the method (after piStructA00 line)
-            insertIndex = len(newLines)
-            for idx in range(len(newLines)):
-                if re.match(structPattern, newLines[idx]):
-                    insertIndex = idx + 1
-                    break
-            
-            # Add method structure and code
-            newLines.insert(insertIndex, f'piStructL01 {methodName} \'Custom method {methodName}\'')
-            insertIndex += 1
-            
-            for codeLine in methodCode:
-                escapedCode = codeLine.replace('"', '\\"')
-                newLines.insert(insertIndex, f'piValueA {className}.piBody:piClassGC:classDefCode:{methodName} "{escapedCode}"')
-                insertIndex += 1
-            
-            changed = True
-        
-        return '\n'.join(newLines), changed
-        
-    except Exception as e:
-        printIt(f"Error updating seed classDefCode: {e}", lable.ERROR)
-        return seedContent, False
 
 def updateSeedCodeElement(seedContent: str, className: str, codeElementName: str, methodCode: List[str]) -> Tuple[str, bool]:
     """
@@ -1467,19 +1191,6 @@ def updateDefSeedHeaders(seedContent: str, defName: str, headers: List[str]) -> 
         # Pattern to match headers
         headerPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:headers\s+'
         
-        # First, extract existing headers for comparison
-        existingHeaders = []
-        for line in lines:
-            if re.match(headerPattern, line):
-                # Extract the quoted content - use greedy match to handle escaped quotes
-                match = re.search(r'"(.*)"$', line)
-                if match:
-                    existingHeaders.append(match.group(1))
-        
-        # Compare existing with new headers
-        if existingHeaders != headers:
-            changed = True
-        
         i = 0
         foundHeaders = False
         
@@ -1489,17 +1200,11 @@ def updateDefSeedHeaders(seedContent: str, defName: str, headers: List[str]) -> 
             if re.match(headerPattern, line):
                 if not foundHeaders:
                     foundHeaders = True
-                    # Replace with new headers only if changed
-                    if changed:
-                        for header in headers:
-                            escapedHeader = header.replace('"', '\\"')
-                            newLines.append(f'piValueA {defName}.piBody:piDefGC:headers "{escapedHeader}"')
-                    else:
-                        # Keep existing content
-                        temp_i = i
-                        while temp_i < len(lines) and re.match(headerPattern, lines[temp_i]):
-                            newLines.append(lines[temp_i])
-                            temp_i += 1
+                    # Replace with new headers
+                    for header in headers:
+                        escapedHeader = header.replace('"', '\\"')
+                        newLines.append(f'piValueA {defName}.piBody:piDefGC:headers "{escapedHeader}"')
+                    changed = True
                 
                 # Skip all existing header lines
                 while i < len(lines) and re.match(headerPattern, lines[i]):
@@ -1525,22 +1230,6 @@ def updateDefSeedFileComments(seedContent: str, defName: str, fileComments: List
         # Pattern to match file comments
         commentPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:fileComment\s+'
         
-        # First, extract existing file comments for comparison
-        existingComments = []
-        for line in lines:
-            if re.match(commentPattern, line):
-                # Extract the quoted content - use greedy match to handle escaped quotes
-                match = re.search(r'"(.*)"$', line)
-                if match:
-                    existingComments.append(match.group(1))
-        
-        # Filter new comments to only include non-empty ones (like the original logic)
-        filteredComments = [comment.strip() for comment in fileComments if comment.strip()]
-        
-        # Compare existing with new file comments
-        if existingComments != filteredComments:
-            changed = True
-        
         i = 0
         foundComments = False
         
@@ -1550,18 +1239,12 @@ def updateDefSeedFileComments(seedContent: str, defName: str, fileComments: List
             if re.match(commentPattern, line):
                 if not foundComments:
                     foundComments = True
-                    # Replace with new comments only if changed
-                    if changed:
-                        for comment in fileComments:
-                            if comment.strip():
-                                escapedComment = comment.strip().replace('"', '\\"')
-                                newLines.append(f'piValueA {defName}.piBody:piDefGC:fileComment "{escapedComment}"')
-                    else:
-                        # Keep existing content
-                        temp_i = i
-                        while temp_i < len(lines) and re.match(commentPattern, lines[temp_i]):
-                            newLines.append(lines[temp_i])
-                            temp_i += 1
+                    # Replace with new comments
+                    for comment in fileComments:
+                        if comment.strip():
+                            escapedComment = comment.strip().replace('"', '\\"')
+                            newLines.append(f'piValueA {defName}.piBody:piDefGC:fileComment "{escapedComment}"')
+                    changed = True
                 
                 # Skip all existing comment lines
                 while i < len(lines) and re.match(commentPattern, lines[i]):
@@ -1587,19 +1270,8 @@ def updateDefSeedImports(seedContent: str, defName: str, imports: List[str]) -> 
         # Pattern to match imports
         importPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:imports\s+'
         
-        # First, extract existing imports for comparison
+        # Extract existing imports for comparison
         existingImports = []
-        for line in lines:
-            if re.match(importPattern, line):
-                # Extract the import name (everything after the pattern)
-                match = re.match(rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:imports\s+(.+)$', line)
-                if match:
-                    existingImports.append(match.group(1))
-        
-        # Compare existing with new imports (order doesn't matter for imports)
-        if set(existingImports) != set(imports):
-            changed = True
-        
         i = 0
         foundImports = False
         
@@ -1609,21 +1281,29 @@ def updateDefSeedImports(seedContent: str, defName: str, imports: List[str]) -> 
             if re.match(importPattern, line):
                 if not foundImports:
                     foundImports = True
-                    # Replace with new imports only if changed
-                    if changed:
+                    # Extract existing import lines
+                    while i < len(lines) and re.match(importPattern, lines[i]):
+                        # Extract the import name
+                        match = re.match(rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:imports\s+(.+)$', lines[i])
+                        if match:
+                            existingImports.append(match.group(1))
+                        i += 1
+                    
+                    # Compare existing imports with new imports
+                    if set(existingImports) != set(imports):
+                        # Imports are different, replace with new imports
                         for imp in imports:
                             newLines.append(f'piValueA {defName}.piBody:piDefGC:imports {imp}')
+                        changed = True
                     else:
-                        # Keep existing content
-                        temp_i = i
-                        while temp_i < len(lines) and re.match(importPattern, lines[temp_i]):
-                            newLines.append(lines[temp_i])
-                            temp_i += 1
-                
-                # Skip all existing import lines
-                while i < len(lines) and re.match(importPattern, lines[i]):
+                        # Imports are the same, keep existing imports
+                        for imp in existingImports:
+                            newLines.append(f'piValueA {defName}.piBody:piDefGC:imports {imp}')
+                    continue
+                else:
+                    # Skip remaining import lines (already processed above)
                     i += 1
-                continue
+                    continue
             else:
                 newLines.append(line)
                 i += 1
@@ -1647,39 +1327,6 @@ def updateDefSeedFromImports(seedContent: str, defName: str, fromImports: Dict[s
         importFromPattern = rf'^piValue\s+{re.escape(defName)}\.piBody:piDefGC:fromImports:(\w+):from\s+'
         importImportPattern = rf'^piValue\s+{re.escape(defName)}\.piBody:piDefGC:fromImports:(\w+):import\s+'
         
-        # First, extract existing from imports for comparison
-        existingFromImports = {}
-        for line in lines:
-            fromMatch = re.match(importFromPattern, line)
-            importMatch = re.match(importImportPattern, line)
-            
-            if fromMatch:
-                module_key = fromMatch.group(1)
-                # Extract the quoted content - use greedy match to handle escaped quotes
-                contentMatch = re.search(r'"(.*)"$', line)
-                if contentMatch:
-                    if module_key not in existingFromImports:
-                        existingFromImports[module_key] = {}
-                    existingFromImports[module_key]['from'] = contentMatch.group(1)
-            elif importMatch:
-                module_key = importMatch.group(1)
-                # Extract the quoted content - use greedy match to handle escaped quotes
-                contentMatch = re.search(r'"(.*)"$', line)
-                if contentMatch:
-                    if module_key not in existingFromImports:
-                        existingFromImports[module_key] = {}
-                    existingFromImports[module_key]['import'] = contentMatch.group(1)
-        
-        # Convert new fromImports to the same format for comparison
-        newFromImportsForComparison = {}
-        for module_name, import_info in fromImports.items():
-            clean_module = module_name.replace('.', '_').replace('-', '_')
-            newFromImportsForComparison[clean_module] = import_info
-        
-        # Compare existing with new from imports
-        if existingFromImports != newFromImportsForComparison:
-            changed = True
-        
         i = 0
         foundFromImports = False
         
@@ -1702,29 +1349,17 @@ def updateDefSeedFromImports(seedContent: str, defName: str, fromImports: Dict[s
                     else:
                         break
                 
-                # Add new from import definitions only if changed
-                if changed:
-                    for module_name, import_info in fromImports.items():
-                        clean_module = module_name.replace('.', '_').replace('-', '_')
-                        newLines.append(f'piStructC01 fromImports {clean_module}.')
-                    
-                    for module_name, import_info in fromImports.items():
-                        clean_module = module_name.replace('.', '_').replace('-', '_')
-                        newLines.append(f'piValue {defName}.piBody:piDefGC:fromImports:{clean_module}:from "{import_info["from"]}"')
-                        newLines.append(f'piValue {defName}.piBody:piDefGC:fromImports:{clean_module}:import "{import_info["import"]}"')
-                else:
-                    # Keep existing content - need to reconstruct the skipped lines
-                    temp_i = i - 1  # Go back to where we started skipping
-                    while temp_i < len(lines):
-                        line = lines[temp_i]
-                        if (re.match(importStructPattern, line) or 
-                            re.match(importFromPattern, line) or 
-                            re.match(importImportPattern, line)):
-                            newLines.append(line)
-                            temp_i += 1
-                        else:
-                            break
+                # Add new from import definitions
+                for module_name, import_info in fromImports.items():
+                    clean_module = module_name.replace('.', '_').replace('-', '_')
+                    newLines.append(f'piStructC01 fromImports {clean_module}.')
                 
+                for module_name, import_info in fromImports.items():
+                    clean_module = module_name.replace('.', '_').replace('-', '_')
+                    newLines.append(f'piValue {defName}.piBody:piDefGC:fromImports:{clean_module}:from "{import_info["from"]}"')
+                    newLines.append(f'piValue {defName}.piBody:piDefGC:fromImports:{clean_module}:import "{import_info["import"]}"')
+                
+                changed = True
                 continue
             else:
                 newLines.append(line)
@@ -1746,19 +1381,6 @@ def updateDefSeedConstants(seedContent: str, defName: str, constants: List[str])
         # Pattern to match constants
         constantPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:constants\s+'
         
-        # First, extract existing constants for comparison
-        existingConstants = []
-        for line in lines:
-            if re.match(constantPattern, line):
-                # Extract the quoted content - use greedy match to handle escaped quotes
-                match = re.search(r'"(.*)"$', line)
-                if match:
-                    existingConstants.append(match.group(1))
-        
-        # Compare existing with new constants
-        if existingConstants != constants:
-            changed = True
-        
         i = 0
         foundConstants = False
         
@@ -1768,17 +1390,11 @@ def updateDefSeedConstants(seedContent: str, defName: str, constants: List[str])
             if re.match(constantPattern, line):
                 if not foundConstants:
                     foundConstants = True
-                    # Replace with new constants only if changed
-                    if changed:
-                        for constant in constants:
-                            escapedConstant = constant.replace('"', '\\"')
-                            newLines.append(f'piValueA {defName}.piBody:piDefGC:constants "{escapedConstant}"')
-                    else:
-                        # Keep existing content
-                        temp_i = i
-                        while temp_i < len(lines) and re.match(constantPattern, lines[temp_i]):
-                            newLines.append(lines[temp_i])
-                            temp_i += 1
+                    # Replace with new constants
+                    for constant in constants:
+                        escapedConstant = constant.replace('"', '\\"')
+                        newLines.append(f'piValueA {defName}.piBody:piDefGC:constants "{escapedConstant}"')
+                    changed = True
                 
                 # Skip all existing constant lines
                 while i < len(lines) and re.match(constantPattern, lines[i]):
@@ -1805,62 +1421,6 @@ def updateDefSeedFunctionDefs(seedContent: str, defName: str, functionDefs: Dict
         structPattern = rf'^piStructA00\s+{re.escape(defName)}\.piBody:piDefGC:functionDefs\s*$'
         funcStructPattern = rf'^piStructL01\s+(\w+)\s+'
         funcDefPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:functionDefs:(\w+)\s+'
-        
-        # First, extract existing function definitions for comparison
-        existingFunctionDefs = {}
-        for line in lines:
-            match = re.match(funcDefPattern, line)
-            if match:
-                funcName = match.group(1)
-                if funcName not in existingFunctionDefs:
-                    existingFunctionDefs[funcName] = []
-                
-                # Extract the quoted content - use greedy match to handle escaped quotes
-                contentMatch = re.search(r'"(.*)"$', line)
-                if contentMatch:
-                    existingFunctionDefs[funcName].append(contentMatch.group(1))
-        
-        # Normalize content by removing trailing empty strings and fix docstring quotes
-        def normalize_content(content_list):
-            if not content_list:
-                return []
-            # Make a copy and normalize docstring quotes and escaped quotes
-            normalized = []
-            for line in content_list:
-                # Convert ''' to '''' for consistent comparison
-                if line.strip() == "'''":
-                    normalized_line = "''''"
-                else:
-                    normalized_line = line
-                # Unescape quotes for consistent comparison
-                normalized_line = normalized_line.replace('\\"', '"')
-                normalized.append(normalized_line)
-            # Remove trailing empty strings
-            while normalized and not normalized[-1].strip():
-                normalized.pop()
-            return normalized
-        
-        # Compare existing with new function definitions
-        for funcName, newFuncCode in functionDefs.items():
-            existingFuncCode = existingFunctionDefs.get(funcName, [])
-            
-            existing_normalized = normalize_content(existingFuncCode[:])  # Make copy
-            new_normalized = normalize_content(newFuncCode[:])  # Make copy
-            
-            if existing_normalized != new_normalized:
-                changed = True
-                break
-        
-        # Check if any functions were removed
-        if not changed:
-            for funcName in existingFunctionDefs:
-                if funcName not in functionDefs:
-                    changed = True
-                    break
-        
-        # Only update if there are actual changes
-        if not changed:
-            return seedContent, False
         
         i = 0
         foundFunctionDefs = False
@@ -1896,6 +1456,7 @@ def updateDefSeedFunctionDefs(seedContent: str, defName: str, functionDefs: Dict
                             escapedLine = funcLine.replace('"', '\\"')
                         newLines.append(f'piValueA {defName}.piBody:piDefGC:functionDefs:{funcName} "{escapedLine}"')
                 
+                changed = True
                 continue
             else:
                 newLines.append(line)
@@ -1917,47 +1478,6 @@ def updateDefSeedGlobalCode(seedContent: str, defName: str, globalCode: List[str
         # Pattern to match global code
         globalPattern = rf'^piValueA\s+{re.escape(defName)}\.piBody:piDefGC:globalCode\s+'
         
-        # First, extract existing global code for comparison
-        existingGlobalCode = []
-        for line in lines:
-            if re.match(globalPattern, line):
-                # Extract the quoted content - use greedy match to handle escaped quotes
-                match = re.search(r'"(.*)"$', line)
-                if match:
-                    existingGlobalCode.append(match.group(1))
-                else:
-                    # Handle unquoted content (shouldn't happen but be safe)
-                    parts = line.split(None, 2)
-                    if len(parts) > 2:
-                        existingGlobalCode.append(parts[2])
-        
-        # Normalize both lists by removing trailing empty strings and fix docstring quotes
-        def normalize_content(content_list):
-            if not content_list:
-                return []
-            # Make a copy and normalize docstring quotes and escaped quotes
-            normalized = []
-            for line in content_list:
-                # Convert ''' to '''' for consistent comparison
-                if line.strip() == "'''":
-                    normalized_line = "''''"
-                else:
-                    normalized_line = line
-                # Unescape quotes for consistent comparison
-                normalized_line = normalized_line.replace('\\"', '"')
-                normalized.append(normalized_line)
-            # Remove trailing empty strings
-            while normalized and not normalized[-1].strip():
-                normalized.pop()
-            return normalized
-        
-        existing_normalized = normalize_content(existingGlobalCode[:])  # Make copy
-        new_normalized = normalize_content(globalCode[:])  # Make copy
-        
-        # Only proceed if content is actually different
-        if existing_normalized != new_normalized:
-            changed = True
-        
         i = 0
         foundGlobalCode = False
         
@@ -1967,17 +1487,11 @@ def updateDefSeedGlobalCode(seedContent: str, defName: str, globalCode: List[str
             if re.match(globalPattern, line):
                 if not foundGlobalCode:
                     foundGlobalCode = True
-                    # Replace with new global code only if changed
-                    if changed:
-                        for codeLine in globalCode:
-                            escapedCode = codeLine.replace('"', '\\"')
-                            newLines.append(f'piValueA {defName}.piBody:piDefGC:globalCode "{escapedCode}"')
-                    else:
-                        # Keep existing content - add back the lines we're skipping
-                        temp_i = i
-                        while temp_i < len(lines) and re.match(globalPattern, lines[temp_i]):
-                            newLines.append(lines[temp_i])
-                            temp_i += 1
+                    # Replace with new global code
+                    for codeLine in globalCode:
+                        escapedCode = codeLine.replace('"', '\\"')
+                        newLines.append(f'piValueA {defName}.piBody:piDefGC:globalCode "{escapedCode}"')
+                    changed = True
                 
                 # Skip all existing global code lines
                 while i < len(lines) and re.match(globalPattern, lines[i]):

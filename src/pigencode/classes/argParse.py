@@ -1,6 +1,10 @@
-import os, sys, argparse, shlex
+import os
+import sys
+import argparse
+import shlex
 from ..defs.logIt import color, cStr
 from ..commands.commands import Commands, cmdDescriptionTagStr
+
 
 class PiHelpFormatter(argparse.RawTextHelpFormatter):
     # Corrected _max_action_length for the indenting of subactions
@@ -16,7 +20,7 @@ class PiHelpFormatter(argparse.RawTextHelpFormatter):
                 added_indent = 'x'*indent_chg
                 print('added_indent', added_indent)
                 invocations.append(added_indent+get_invocation(subaction))
-            #print('inv', invocations)
+            # print('inv', invocations)
 
             # update the maximum item length
             invocation_length = max([len(s) for s in invocations])
@@ -27,6 +31,7 @@ class PiHelpFormatter(argparse.RawTextHelpFormatter):
             # add the item to the list
             self._add_item(self._format_action, [action])
 
+
 def str_or_int(arg):
     try:
         return int(arg)  # try convert to int
@@ -36,19 +41,24 @@ def str_or_int(arg):
         return arg
     raise argparse.ArgumentTypeError("arguments must be an integer or string")
 
+
 class ArgParse():
 
     def __init__(self):
+        # Parse command-specific options (double hyphen) before main parsing
+        self.cmd_options = {}
+        self.filtered_args = self._extract_cmd_options(sys.argv[1:])
         if not sys.stdin.isatty():
             self.parser = argparse.ArgumentParser(add_help=False)
             self.parser.add_argument('commands', nargs=1)
             self.parser.add_argument('arguments', nargs='*')
-            self.args = self.parser.parse_args(sys.argv[1:])
+            self.args = self.parser.parse_args(self.filtered_args)
         else:
             _, tCols = os.popen('stty size', 'r').read().split()
             tCols = int(tCols)
             indentPad = 8
-            formatter_class=lambda prog: PiHelpFormatter(prog, max_help_position=8,width=tCols)
+            def formatter_class(prog): return PiHelpFormatter(
+                prog, max_help_position=8, width=tCols)
             commandsHelp = ""
             argumentsHelp = ""
             theCmds = Commands()
@@ -61,19 +71,23 @@ class ArgParse():
                 argumentsHelp += cStr(cmdName, color.YELLOW) + ': \n'
                 for argName in arguments:
                     if argName[-len(cmdDescriptionTagStr):] == cmdDescriptionTagStr:
-                        cmdHelp = cStr(cmdName, color.YELLOW) + ': ' + f'{arguments[argName]}'
+                        cmdHelp = cStr(cmdName, color.YELLOW) + \
+                            ': ' + f'{arguments[argName]}'
                         if len(cmdHelp) > tCols:
                             indentPad = len(cmdName) + 2
-                            cmdHelp = formatHelpWidth(cmdHelp, tCols, indentPad)
+                            cmdHelp = formatHelpWidth(
+                                cmdHelp, tCols, indentPad)
                         else:
                             cmdHelp += '\n'
                         commandsHelp += cmdHelp
                         needCmdDescription = False
                     else:
-                        argHelp = cStr(f'  <{argName}> ', color.CYAN) + f'{arguments[argName]}'
+                        argHelp = cStr(
+                            f'  <{argName}> ', color.CYAN) + f'{arguments[argName]}'
                         if len(argHelp) > tCols:
                             indentPad = len(argName) + 5
-                            argHelp = ' ' + formatHelpWidth(argHelp, tCols, indentPad)
+                            argHelp = ' ' + \
+                                formatHelpWidth(argHelp, tCols, indentPad)
                         else:
                             argHelp += '\n'
                         argumentsHelp += argHelp
@@ -86,32 +100,56 @@ class ArgParse():
             #   commandsHelp = commandsHelp[:-1]
 
             self.parser = argparse.ArgumentParser(
-                description = "pi pip package pip package pip package",
+                description="pi pip package pip package pip package",
                 epilog="Have Fun!", formatter_class=formatter_class)
 
             self.parser.add_argument("commands",
-                type=str,
-                nargs=1,
-                metavar= f'{cStr(cStr("Commands", color.YELLOW), color.UNDERLINE)}:',
-                help=commandsHelp)
+                                     type=str,
+                                     nargs=1,
+                                     metavar=f'{cStr(cStr("Commands", color.YELLOW), color.UNDERLINE)}:',
+                                     help=commandsHelp)
 
             self.parser.add_argument("arguments",
-                type=str_or_int,
-                nargs="*",
-                metavar= f'{cStr(cStr("Arguments", color.CYAN), color.UNDERLINE)}:',
-                #metavar="arguments:",
-                help=argumentsHelp)
+                                     type=str_or_int,
+                                     nargs="*",
+                                     metavar=f'{cStr(cStr("Arguments", color.CYAN), color.UNDERLINE)}:',
+                                     # metavar="arguments:",
+                                     help=argumentsHelp)
 
             for optFlag in switchFlag:
                 flagHelp = switchFlag[optFlag]
-                self.parser.add_argument(f'-{optFlag}', action='store_true', help=flagHelp)
-            self.args = self.parser.parse_args()
+                self.parser.add_argument(
+                    f'-{optFlag}', action='store_true', help=flagHelp)
+            self.args = self.parser.parse_args(self.filtered_args)
+
+    def _extract_cmd_options(self, args):
+        '''Extract command-specific options(--option) from arguments'''
+        filtered_args = []
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg.startswith('--'):
+                # Handle command-specific options
+                option_name = arg[2:]  # Remove --
+                if i + 1 < len(args) and not args[i + 1].startswith('-'):
+                    # Option with value
+                    self.cmd_options[option_name] = args[i + 1]
+                    i += 2  # Skip both option and value
+                else:
+                    # Option without value (flag)
+                    self.cmd_options[option_name] = True
+                    i += 1
+            else:
+                filtered_args.append(arg)
+                i += 1
+        return filtered_args
+
 
 def formatHelpWidth(theText, tCols, indentPad=1) -> str:
     # this uses the screen with to estabhish tCols
 
-    #tCols = int(tCols) - 20
-    #print(tCols)
+    # tCols = int(tCols) - 20
+    # print(tCols)
     # tCols = 60
     spPaddingStr = ' '*indentPad
     rtnStr = ''
@@ -130,7 +168,7 @@ def formatHelpWidth(theText, tCols, indentPad=1) -> str:
                 print(f'here with long match.group():\n{token}')
                 exit()
                 chkStr = token
-                while len(chkStr) > tCols: # a single word may be larger the tCols
+                while len(chkStr) > tCols:  # a single word may be larger the tCols
                     outLine += chkStr[:tCols]
                     chkStr = f'\n{chkStr[tCols:]}'
                 outLine += chkStr
@@ -138,5 +176,5 @@ def formatHelpWidth(theText, tCols, indentPad=1) -> str:
                 rtnStr += outLine
                 outLine = f'\n{spPaddingStr}{token} '
     rtnStr += f'{outLine}\n'
-    #rtnStr = rtnStr[:-1]
+    # rtnStr = rtnStr[:-1]
     return rtnStr

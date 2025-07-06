@@ -1,7 +1,52 @@
 # piGenCode
-Generate Python classes and function definition files from germinated piSeed files. Each line of a piSeed file is a piSeed, an instance of a piBase dictionary.
+## Introduction
+**piGenCode** - a Python code generation system that creates classes and function definition files from "piSeed" text files. A piSeeds directory contains these files is a specific order to allow users to construct new computer system architectures. The system uses a structured approach where:
 
-piSeeds are tuples of information used to generate Python code. We are developing an obsolete idea that uses three strings called a pi to represent a particle of Pertinent Information, composed of a type, title and short description (SD). This is the piBase dictionary containing three elements: piType, piTitle, piSD as keys. When representing a piSeed these elements represent a piSeedType, piSeedKey, and the piSeedValue.
+• **piSeed files** contain tuples of information (type, title, short description) call a **pi**
+• Each piSeed is a line of text and an instances of a **pi** (<piSeedType> <piSeedKey> <piSeedValue>)
+• These get processed or germinated into JSON files stored in the piGerms directory
+• Which then generate Python code in piClasses and piDefs directories
+
+There are 8 different piSeedTypes including piStruct (for JSON structure definition), piClassGC (for class definition), piDefGC (for function definition), and others.
+
+**piGenCode** provides commands like germSeed, genCode, syncCode, and reorderSeeds for managing the workflow.
+
+TODO:
+• Work on broken syncCode functionality
+• Develop techniques to create a templates to generate various specific piSeed file types
+• Troubleshooting and improve the code quality of germSeed and genCode processing
+
+## Table of Contents
+
+- [piGenCode](#pigencode)
+  - [Introduction](#introduction)
+  - [Table of Contents](#table-of-contents)
+  - [A vission for piGenCode, an instance of pi](#a-vission-for-pigencode-an-instance-of-pi)
+  - [Directory Structure](#directory-structure)
+  - [Commands](#commands)
+    - [germSeed](#germseed)
+    - [genCode](#gencode)
+    - [rmGC](#rmgc)
+    - [syncCode](#synccode)
+    - [reorderSeeds](#reorderseeds)
+  - [piSeed Types](#piseed-types)
+    - [piStruct](#pistruct)
+    - [piClassGC](#piclassgc)
+    - [piDefGC](#pidefgc)
+    - [piValuesSetD](#pivaluessetd)
+    - [piValue / piValueA](#pivalue--pivaluea)
+  - [Example Workflow](#example-workflow)
+  - [Example piSeed Files](#example-piseed-files)
+    - [piStruct Example (piSeed001\_piStruct\_piBase.pi)](#pistruct-example-piseed001_pistruct_pibasepi)
+    - [piDefGC Example (piSeed045\_piDefGC\_utilities.pi)](#pidefgc-example-piseed045_pidefgc_utilitiespi)
+  - [Generated Output](#generated-output)
+    - [Python Classes (piClasses/)](#python-classes-piclasses)
+    - [Python Functions (piDefs/)](#python-functions-pidefs)
+  - [Configuration](#configuration)
+  - [Processing Order](#processing-order)
+
+## A vission for piGenCode, an instance of pi
+We are developing an idea that uses three string (tokens) called a pi to represent a particle of Pertinent Information, composed of a type, title and short description (SD). This is the dictionary piBase, containing three keys: piType, piTitle, and piSD. When representing a piSeed these elements represent a piSeedType, piSeedKey, and the piSeedValue.
 
 Each piSeedType is an instruction for ***piGenCode*** to perform different operations. Currently there are 8 piSeedTypes:
 - piScratchDir
@@ -9,46 +54,10 @@ Each piSeedType is an instruction for ***piGenCode*** to perform different opera
 - piValuesSetD
 - piValue
 - piClassGC
-- piDefGC (NEW - for function definitions)
+- piDefGC
 - piValueA
 - piType
 - piIndexer
-
-## Table of Contents
-
-- [Directory Structure](#directory-structure)
-- [Commands](#commands)
-  - [germSeed](#germseed)
-  - [genCode](#gencode)
-  - [rmGC](#rmgc)
-  - [syncCode](#synccode)
-    - [Usage](#usage)
-    - [How it works](#how-it-works)
-    - [What gets synchronized](#what-gets-synchronized)
-    - [Code Element Mapping](#code-element-mapping)
-    - [Example Workflows](#example-workflows)
-    - [Features](#features)
-    - [Use Cases](#use-cases)
-  - [reorderSeeds](#reorderseeds)
-    - [Usage](#usage-1)
-    - [Examples](#examples)
-    - [How it works](#how-it-works-1)
-    - [Features](#features-1)
-- [piSeed Types](#piseed-types)
-  - [piStruct](#pistruct)
-  - [piClassGC](#piclassgc)
-  - [piDefGC (NEW)](#pidefgc-new)
-  - [piValuesSetD](#pivaluesssetd)
-  - [piValue / piValueA](#pivalue--pivaluea)
-- [Example Workflow](#example-workflow)
-- [Example piSeed Files](#example-piseed-files)
-  - [piStruct Example](#pistruct-example)
-  - [piDefGC Example](#pidefgc-example)
-- [Generated Output](#generated-output)
-  - [Python Classes (piClasses/)](#python-classes-piclasses)
-  - [Python Functions (piDefs/)](#python-functions-pidefs)
-- [Configuration](#configuration)
-- [Processing Order](#processing-order)
 
 ## Directory Structure
 
@@ -59,9 +68,9 @@ piGenCode/
 │   ├── piStruct/         # Structure definitions
 │   ├── piValuesSetD/     # Default values
 │   ├── piClassGC/        # Class generation configs
-│   └── piDefGC/          # Function definition configs (NEW)
+│   └── piDefGC/          # Function definition configs
 ├── piClasses/            # Generated Python classes
-└── piDefs/               # Generated Python function files (NEW)
+└── piDefs/               # Generated Python function files
 ```
 
 ## Commands
@@ -105,7 +114,7 @@ piGenCode rmGC
 
 **What it removes:**
 - **piGerms/**: Generated JSON configuration files
-- **piClasses/**: Generated Python class files  
+- **piClasses/**: Generated Python class files
 - **piDefs/**: Generated Python function definition files
 
 **Features:**
@@ -117,7 +126,7 @@ piGenCode rmGC
 **Example Output:**
 ```
 INFO: Removed directory: piGerms
-INFO: Removed directory: piClasses  
+INFO: Removed directory: piClasses
 INFO: Removed directory: piDefs
 INFO: Successfully removed 3 directories: piGerms, piClasses, piDefs
 INFO: Clean-up complete. Ready for fresh generation.
@@ -312,7 +321,7 @@ Defines data structures for generating Python classes.
 ### piClassGC
 Generates Python class files with methods, properties, and inheritance.
 
-### piDefGC (NEW)
+### piDefGC
 Generates Python function definition files with:
 - Import statements
 - Module-level constants

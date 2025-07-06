@@ -72,3 +72,9 @@ target/
 
 # pyenv
 .python-version
+debug_patterns.py
+.gitignore
+
+# q test files
+syncCode_patch.py
+test_patterns.py
