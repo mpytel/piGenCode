@@ -18,6 +18,13 @@ class PiGenCode():
         #print(json.dumps(self.pi_piClassGC,indent=2))
         #exit()
         self.piClassGC = self.pi_piClassGC["piBody"]["piClassGC"]
+        
+        try: self.fileDirectory = self.piClassGC["fileDirectory"]
+        except: self.fileDirectory = ""
+        
+        try: self.fileName = self.piClassGC["fileName"]
+        except: self.fileName = ""
+        
         try: self.headers = self.piClassGC["headers"]
         except: self.headers = []
         try: self.imports = self.piClassGC["imports"]
@@ -539,27 +546,88 @@ class PiGenCode():
                 rtnLines += f'{globalCode}\n'
         return rtnLines
     def __setPiClassDir(self):
-        piClassDir = readRC(PiSeedTypes[0])
-        piClassDir = Path(piClassDir).parent.joinpath("piClasses")
+        """Set up the piClasses directory for output files"""
+        # Check if fileDirectory is specified in the piClassGC configuration
+        if self.fileDirectory:
+            # Use the specified fileDirectory (can be relative or absolute)
+            piClassDir = Path(self.fileDirectory)
+            if not piClassDir.is_absolute():
+                # If relative, make it relative to current working directory
+                piClassDir = Path.cwd() / piClassDir
+        else:
+            # Fall back to configured piClassGCDir from .pigencoderc
+            piClassGCDir = readRC("piClassGCDir")
+            if piClassGCDir:
+                # Use the RC configured directory
+                piClassDir = Path(piClassGCDir)
+                if not piClassDir.is_absolute():
+                    piClassDir = Path.cwd() / piClassDir
+            else:
+                # Ultimate fallback to old behavior for backward compatibility
+                piClassDir = readRC(PiSeedTypes[0])
+                piClassDir = Path(piClassDir).parent.joinpath("piClasses")
+        
         if not piClassDir.is_dir():
             logIt(f'Make direcory: {piClassDir}')
             piClassDir.mkdir(mode=511,parents=True,exist_ok=True)
         self.piClassDir =  piClassDir
+    
+    def __updatePiClassTrackingFile(self, fileName):
+        """Update the .piclass tracking file with generated filenames"""
+        # Place tracking file in the same directory as the generated file
+        trackingFile = os.path.join(self.piClassDir, ".piclass")
+        generatedFiles = set()
+        
+        # Read existing tracking file if it exists
+        if os.path.isfile(trackingFile):
+            try:
+                with open(trackingFile, 'r') as f:
+                    # Skip comment lines starting with #
+                    generatedFiles = set(line.strip() for line in f if line.strip() and not line.strip().startswith('#'))
+            except Exception as e:
+                logIt(f'Warning: Could not read tracking file {trackingFile}: {e}')
+        
+        # Add the new file (just the filename, not full path)
+        generatedFiles.add(os.path.basename(fileName))
+        
+        # Write updated tracking file with metadata
+        try:
+            with open(trackingFile, 'w') as f:
+                # Add header comment with directory info
+                f.write(f"# piGenCode tracking file for directory: {self.piClassDir}\n")
+                f.write(f"# Generated files in this directory:\n")
+                for filename in sorted(generatedFiles):
+                    f.write(f"{filename}\n")
+        except Exception as e:
+            logIt(f'Warning: Could not update tracking file {trackingFile}: {e}')
+    
     def __savePiClass(self, piClassLines,verbose=False):
-        fileName = os.path.join(self.piClassDir, self.pi_piClassGC["piBase"]["piTitle"]+".py")
+        # Use fileName field if specified, otherwise fall back to piTitle
+        if self.fileName:
+            baseFileName = self.fileName
+        else:
+            baseFileName = self.pi_piClassGC["piBase"]["piTitle"]
+        
+        fileName = os.path.join(self.piClassDir, f"{baseFileName}.py")
+        
         if os.path.isfile(fileName):
             if verbose: printIt(f'{fileName}',lable.REPLACED)
         else:
             if verbose: printIt(f'{fileName}',lable.SAVED)
         with open(fileName, 'w') as f:
             f.write(piClassLines)
-        self.savedCodeFiles[self.pi_piClassGC["piBase"]["piTitle"]] = fileName
+        
+        # Update tracking file
+        self.__updatePiClassTrackingFile(fileName)
+        
+        # Use the base filename for the saved files dictionary
+        self.savedCodeFiles[baseFileName] = fileName
     def __genPiClass(self, piJsonFileName, verbose = False) -> None:
         self.pi_piClassGC = readJson(piJsonFileName)
         self.PiFileName = piJsonFileName
         # printIt(f'piJsonFileName: {piJsonFileName}',lable.WARN)
-        self.__setPiClassDir()
         self.__setPiPiGCAtters()
+        self.__setPiClassDir()
         piClassLines = self.__genClassLines()
         piClassLines = self.__genAboveClassLines() + piClassLines + self.__genBellowClassLines()
         piClassLines += f'\n{self.piClassName}_PI = ' + json.dumps(self.pi_piClassGC,indent=4)

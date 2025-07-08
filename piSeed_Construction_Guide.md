@@ -28,6 +28,7 @@
       - [piStructA00, piStructC01 (for nested structures)](#pistructa00-pistructc01-for-nested-structures)
     - [Key piClassGC Sections:](#key-piclassgc-sections)
       - [Class Definition](#class-definition)
+      - [File Directory and Name](#file-directory-and-name)
       - [Import Statements](#import-statements)
       - [Constructor Arguments](#constructor-arguments)
       - [Method Code](#method-code)
@@ -80,7 +81,8 @@
     - [1. Structure Dependencies](#1-structure-dependencies)
     - [2. Default Values](#2-default-values)
     - [3. Code Organization](#3-code-organization)
-    - [4. Quoting Rules](#4-quoting-rules)
+    - [4. File Placement Strategy](#4-file-placement-strategy)
+    - [5. Quoting Rules](#5-quoting-rules)
   - [Common Patterns](#common-patterns)
     - [Simple Data Class](#simple-data-class)
     - [Class with Methods](#class-with-methods)
@@ -286,6 +288,55 @@ piValue <className>.piBody:piClassGC:initArguments:<argName>:value "default"
 piValue <className>.piBody:piClassGC:piClassName <PythonClassName>
 ```
 
+#### File Directory and Name
+The `fileDirectory` and `fileName` fields provide flexible control over where and how your generated Python class files are saved.
+
+```
+piValue <className>.piBody:piClassGC:fileDirectory <directoryPath>
+piValue <className>.piBody:piClassGC:fileName <outputFileName>
+```
+
+**Directory Resolution (Three-Tier System):**
+
+1. **Custom fileDirectory** (highest priority)
+   - If `fileDirectory` is specified and non-empty, use that path
+   - Supports both relative and absolute paths
+   - Relative paths are resolved from current working directory
+
+2. **RC Default** (medium priority)
+   - If `fileDirectory` is empty, use `piClassGCDir` from RC configuration file
+   - Default RC value: `"piClassGCDir": "./piClasses"`
+   - Configurable by editing `.pigencoderc`
+
+3. **Legacy Fallback** (lowest priority)
+   - If no RC configuration, fall back to original behavior
+   - Uses `piScratchDir/../piClasses`
+
+**Examples:**
+
+```
+# Use RC default (./piClasses)
+piValue MyClass.piBody:piClassGC:fileDirectory ""
+piValue MyClass.piBody:piClassGC:fileName MyClass
+# → Creates: ./piClasses/MyClass.py
+
+# Custom relative directory
+piValue MyClass.piBody:piClassGC:fileDirectory "src/models"
+piValue MyClass.piBody:piClassGC:fileName UserModel
+# → Creates: src/models/UserModel.py
+
+# Custom absolute directory
+piValue MyClass.piBody:piClassGC:fileDirectory "/opt/myproject/classes"
+piValue MyClass.piBody:piClassGC:fileName BaseClass
+# → Creates: /opt/myproject/classes/BaseClass.py
+```
+
+**Features:**
+- **Distributed Placement**: Place class files anywhere in your project structure
+- **Custom Naming**: Override default piTitle-based naming
+- **Automatic Tracking**: Generated files are tracked for selective cleanup via rmGC
+- **Directory Creation**: Target directories are created automatically if they don't exist
+
 #### Import Statements
 ```
 piValueA <className>.piBody:piClassGC:imports datetime
@@ -316,6 +367,8 @@ piValue piBase.piProlog pi.piProlog
 piValue piBase.piBase:piType piClassGC
 piValue piBase.piBase:piTitle piBase
 piValue piBase.piBase:piSD 'Class to generate piBase objects for pis'
+piValue piBase.piBody:piClassGC:fileDirectory "src/models"
+piValue piBase.piBody:piClassGC:fileName PiBase
 piValueA piBase.piBody:piClassGC:headers "# PiBase generated from piSeed"
 piValueA piBase.piBody:piClassGC:imports datetime
 piValue piBase.piBody:piClassGC:piClassName PiBase
@@ -869,12 +922,14 @@ def clean_string(text: str) -> str:
 | Feature | piClassGC | piDefGC |
 |---------|-----------|---------|
 | Output | Class-based Python files | Function-based Python files |
-| Directory | `piClasses/` | `piDefs/` |
+| Directory | `piClasses/` (configurable) | `piDefs/` (configurable) |
 | Structure | Class with methods | Standalone functions |
 | Constructor | `initArguments` | Not applicable |
 | Methods | `classDefCode`, `strCode`, `jsonCode` | `functionDefs` |
 | Properties | `genProps` | Not applicable |
 | Constants | `globals` (class-level) | `constants` (module-level) |
+| File Placement | `fileDirectory` and `fileName` supported | `fileDirectory` and `fileName` supported |
+| Tracking | `.piclass` tracking files | `.pidefs` tracking files |
 
 ## Processing Order
 
@@ -935,7 +990,36 @@ piValueA myClass.piBody:piClassGC:strCode "def __str__(self):"
 piValueA myClass.piBody:piClassGC:strCode "    return f'{self.__class__.__name__}'"
 ```
 
-### 4. Quoting Rules
+### 4. File Placement Strategy
+Use `fileDirectory` and `fileName` to organize generated files effectively:
+
+```
+# Domain-driven organization
+piValue UserModel.piBody:piClassGC:fileDirectory "src/domain/models"
+piValue UserModel.piBody:piClassGC:fileName User
+
+piValue UserService.piBody:piClassGC:fileDirectory "src/domain/services"
+piValue UserService.piBody:piClassGC:fileName UserService
+
+# API versioning
+piValue APIv1Controller.piBody:piClassGC:fileDirectory "src/api/v1/controllers"
+piValue APIv1Controller.piBody:piClassGC:fileName UserController
+
+# Utility functions by category
+piValue StringUtils.piBody:piDefGC:fileDirectory "src/utils/text"
+piValue StringUtils.piBody:piDefGC:fileName string_utilities
+
+piValue DatabaseUtils.piBody:piDefGC:fileDirectory "src/utils/database"
+piValue DatabaseUtils.piBody:piDefGC:fileName db_helpers
+```
+
+**Benefits:**
+- **Organized Structure**: Keep related files together
+- **Clear Separation**: Separate concerns by directory
+- **Scalable Architecture**: Support complex project structures
+- **Team Collaboration**: Consistent file organization across team
+
+### 5. Quoting Rules
 - Use single quotes for descriptions: `'This is a description'`
 - Use double quotes for code strings: `"def method(self):"`
 - Escape quotes when needed: `"return 'Hello World'"`
@@ -953,6 +1037,8 @@ piValue Person.name ''
 piValue Person.email ''
 
 piClassGC Person 'Person class generator'
+piValue Person.piBody:piClassGC:fileDirectory "src/models"
+piValue Person.piBody:piClassGC:fileName Person
 piValue Person.piBody:piClassGC:piClassName Person
 piStructA00 Person.piBody:piClassGC:initArguments
 piStructC01 argument name.
@@ -963,6 +1049,10 @@ piValue Person.piBody:piClassGC:initArguments:name:value Person.name
 
 ### Class with Methods
 ```
+piClassGC Calculator 'Calculator class with mathematical operations'
+piValue Calculator.piBody:piClassGC:fileDirectory "src/utils"
+piValue Calculator.piBody:piClassGC:fileName Calculator
+piValue Calculator.piBody:piClassGC:piClassName Calculator
 piValueA Calculator.piBody:piClassGC:classDefCode "def add(self, a, b):"
 piValueA Calculator.piBody:piClassGC:classDefCode "    return a + b"
 piValueA Calculator.piBody:piClassGC:classDefCode ""

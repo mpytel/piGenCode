@@ -16,16 +16,17 @@
     "argName": "Optional names of argument to remove.v It is and I am both pi."
   },
   "germSeed": {
-    "piGermSeed_description": "Germinate a set of piSeeds.",
-    "seedFile": "Name of text file containg piSeeds."
+    "piGermSeed_description": "Germinate piSeed files to generate JSON configurations. Supports integer shortcuts and file names. Examples: 'germSeed 45' (process piSeed045), 'germSeed piSeed045_piDefGC_utilities.pi' (specific file), 'germSeed' (process all files).",
+    "seedFile": "Integer number (e.g., 45 for piSeed045), specific piSeed filename (e.g., piSeed045_piDefGC_utilities.pi), or leave empty to process all piSeed files in sequence."
   },
   "genCode": {
-    "piGenCode_description": "Genarate code from piSeeds",
-    "filename": "Name of text file containing piCG piValue seed pis."
+    "piGenCode_description": "Generate Python code from JSON germ files. Supports powerful shortcut syntax with types and number patterns. Examples: 'genCode piClass 21' (single file), 'genCode piDef 1-3' (range), 'genCode piClass 5 7 21' (multiple), 'genCode piClass 2 8 14-21' (combination).",
+    "fileType": "File type: 'piClass' for piClassGC files, 'piDef' for piDefGC files, or leave empty to generate all files.",
+    "numbers": "Number patterns: single numbers (21), ranges (4-16), multiple numbers (5 7 21), or combinations (2 8 14-21). Maps to piClassGC### or piDefGC### germ files."
   },
   "syncCode": {
-    "syncCode_description": "Synchronize changes from modified Python files back to their corresponding piSeed files. Supports both piClassGC (classes) and piDefGC (function definitions).",
-    "filename": "Name of modified Python file to sync back to piSeed, or leave empty to sync all changed files in piClasses and piDefs directories"
+    "syncCode_description": "Synchronize changes from modified Python files back to their corresponding piSeed files. Reads from configurable directories specified in .pigencoderc (piClassGCDir and piDefGCDir). Supports both piClassGC (classes) and piDefGC (function definitions).",
+    "filename": "Name of modified Python file to sync back to piSeed (searches in configured piClassGCDir and piDefGCDir), or leave empty to sync all changed files in both directories."
   },
   "reorderSeeds": {
     "reorderSeeds_description": "Move a piSeed file to a different position and renumber all affected files to maintain processing order. Supports both file paths and integer shortcuts.",
@@ -33,6 +34,6 @@
     "targetFile": "Target position with desired filename (e.g., piSeeds/piSeed009_piStruct_piDefGC.pi) OR integer number (e.g., 9)"
   },
   "rmGC": {
-    "rmGC_description": "Remove generated directories (piGerms, piClasses, piDefs) to clean up all generated files for a fresh start."
+    "rmGC_description": "Remove generated files to clean up for a fresh start. Uses advanced selective removal: removes entire piGerms directory (volatile), recursively searches for .piclass and .pidefs tracking files throughout configured directories and subdirectories, removes only tracked generated files. Supports distributed file placement via fileDirectory field. Preserves all user files and directory structures."
   }
 }

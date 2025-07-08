@@ -9,19 +9,14 @@
 
 There are 8 different piSeedTypes including piStruct (for JSON structure definition), piClassGC (for class definition), piDefGC (for function definition), and others.
 
-**piGenCode** provides commands like germSeed, genCode, syncCode, and reorderSeeds for managing the workflow.
-
-TODO:
-• Work on broken syncCode functionality
-• Develop techniques to create a templates to generate various specific piSeed file types
-• Troubleshooting and improve the code quality of germSeed and genCode processing
+**piGenCode** provides commands like germSeed, genCode, syncCode, rmGC, and reorderSeeds for managing the workflow. The system supports distributed file placement, allowing generated files to be placed in any directory structure while maintaining precise tracking and cleanup capabilities.
 
 ## Table of Contents
 
 - [piGenCode](#pigencode)
   - [Introduction](#introduction)
   - [Table of Contents](#table-of-contents)
-  - [A vission for piGenCode, an instance of pi](#a-vission-for-pigencode-an-instance-of-pi)
+  - [A vision for piGenCode, an instance of pi](#a-vision-for-pigencode-an-instance-of-pi)
   - [Directory Structure](#directory-structure)
   - [Commands](#commands)
     - [germSeed](#germseed)
@@ -45,7 +40,7 @@ TODO:
   - [Configuration](#configuration)
   - [Processing Order](#processing-order)
 
-## A vission for piGenCode, an instance of pi
+## A vision for piGenCode, an instance of pi
 We are developing an idea that uses three string (tokens) called a pi to represent a particle of Pertinent Information, composed of a type, title and short description (SD). This is the dictionary piBase, containing three keys: piType, piTitle, and piSD. When representing a piSeed these elements represent a piSeedType, piSeedKey, and the piSeedValue.
 
 Each piSeedType is an instruction for ***piGenCode*** to perform different operations. Currently there are 8 piSeedTypes:
@@ -64,14 +59,21 @@ Each piSeedType is an instruction for ***piGenCode*** to perform different opera
 ```
 piGenCode/
 ├── piSeeds/               # Seed files (numbered piSeed000.pi to piSeedNNN.pi)
-├── piGerms/              # Generated JSON configurations
+├── piGerms/              # Generated JSON configurations (configurable via piScratchDir)
 │   ├── piStruct/         # Structure definitions
 │   ├── piValuesSetD/     # Default values
 │   ├── piClassGC/        # Class generation configs
 │   └── piDefGC/          # Function definition configs
-├── piClasses/            # Generated Python classes
-└── piDefs/               # Generated Python function files
+├── piClasses/            # Generated Python classes (configurable via piClassGCDir)
+└── piDefs/               # Generated Python function files (configurable via piDefGCDir)
 ```
+
+**Configurable Directories:**
+The system supports flexible directory configuration through `.pigencoderc`:
+- **piScratchDir**: Location for temporary JSON germ files
+- **piClassGCDir**: Base directory for generated Python classes
+- **piDefGCDir**: Base directory for generated Python function files
+- **Distributed Placement**: Individual files can be placed in custom subdirectories using `fileDirectory` field
 
 ## Commands
 
@@ -101,35 +103,58 @@ piGenCode genCode
 # Generate from specific JSON file
 piGenCode genCode piGerms/piClassGC/piClassGC001_piBase.json
 piGenCode genCode piGerms/piDefGC/piDefGC001_utilities.json
+
+# Generate using powerful shortcut syntax
+piGenCode genCode piClass 21                    # Single piClass file
+piGenCode genCode piDef 1-3                     # Range of piDef files
+piGenCode genCode piClass 5 7 21                # Multiple specific piClass files
+piGenCode genCode piClass 2 8 14-21             # Combination of individual and range
 ```
 
 ### rmGC
-Remove all generated directories to clean up for a fresh start.
+Remove generated files to clean up for a fresh start.
 
 **Usage:**
 ```bash
-# Remove all generated directories (piGerms, piClasses, piDefs)
+# Remove generated files while preserving user files
 piGenCode rmGC
 ```
 
-**What it removes:**
-- **piGerms/**: Generated JSON configuration files
-- **piClasses/**: Generated Python class files
-- **piDefs/**: Generated Python function definition files
+**How it works:**
+- **piGerms/**: Removes entire directory (volatile temporary files)
+- **piClasses/**: Recursively searches for `.piclass` tracking files and removes only tracked generated files
+- **piDefs/**: Recursively searches for `.pidefs` tracking files and removes only tracked generated files
+- **User File Safety**: Preserves all user files in configured directories
+- **Distributed Support**: Handles files placed in any subdirectory via `fileDirectory` field
 
 **Features:**
-- **Safe Operation**: Only removes the three specific directories
-- **Status Reporting**: Shows which directories were removed or not found
-- **Error Handling**: Graceful handling of permission issues or missing directories
-- **Clean Output**: Clear success/failure messages
+- **Selective Removal**: Only removes files that were generated by piGenCode
+- **Tracking Files**: Uses `.piclass` and `.pidefs` files to track generated files
+- **Recursive Search**: Finds tracking files throughout entire directory trees
+- **Status Reporting**: Shows which files were removed vs preserved
+- **Error Handling**: Graceful handling of permission issues or missing files
+- **Directory Preservation**: Maintains all directory structures and user files
 
 **Example Output:**
 ```
-INFO: Removed directory: piGerms
-INFO: Removed directory: piClasses
-INFO: Removed directory: piDefs
-INFO: Successfully removed 3 directories: piGerms, piClasses, piDefs
-INFO: Clean-up complete. Ready for fresh generation.
+INFO: Removed directory: piGerms (piGerms)
+INFO: Found 3 tracking files in piClasses (src/pigencode/piClasses)
+DEBUG: Processing tracking file: src/pigencode/piClasses/models/.piclass
+DEBUG: Removed generated file: src/pigencode/piClasses/models/GeneratedModel.py
+DEBUG: Preserved 2 user files in src/pigencode/piClasses/models
+
+INFO: Removed directories:
+  • piGerms (piGerms)
+
+INFO: Removed generated files:
+  • 5 piClass files from 3 locations under src/pigencode/piClasses
+  • 3 piDef files from 2 locations under src/pigencode/piDefs
+
+INFO: Preserved user files:
+  • 8 user files preserved under src/pigencode/piClasses
+  • 4 user files preserved under src/pigencode/piDefs
+
+INFO: Clean-up complete. Generated files removed, user files preserved.
 ```
 
 ### syncCode
@@ -156,6 +181,7 @@ piGenCode syncCode utilities
 - **Bidirectional Sync**: Maintains synchronization between generated code and seed definitions
 - **Automatic Detection**: Finds corresponding piSeed files automatically for both piClassGC and piDefGC
 - **Safe Updates**: Preserves existing piSeed structure while updating modified elements
+- **Configurable Directories**: Reads from configured directories specified in .pigencoderc (piClassGCDir and piDefGCDir)
 
 **What gets synchronized:**
 
@@ -319,14 +345,22 @@ INFO: Successfully reordered piSeed files
 Defines data structures for generating Python classes.
 
 ### piClassGC
-Generates Python class files with methods, properties, and inheritance.
+Generates Python class files with methods, properties, and inheritance. Supports distributed file placement through `fileDirectory` and custom naming through `fileName` fields.
+
+**Key Features:**
+- Custom directory placement via `fileDirectory` field
+- Custom filename specification via `fileName` field  
+- Automatic tracking for selective cleanup
+- Full inheritance and method support
 
 ### piDefGC
-Generates Python function definition files with:
+Generates Python function definition files with distributed placement support through `fileDirectory` field:
 - Import statements
 - Module-level constants
 - Function definitions with docstrings
 - Global code blocks
+- Custom directory placement via `fileDirectory` field
+- Custom filename specification via `fileName` field
 
 ### piValuesSetD
 Defines default values for structures.
@@ -357,6 +391,7 @@ piStructS00 piSD 'piStruct child of pi storing a short description of the pi.'
 ```
 piDefGC utilities 'Utility functions for common operations'
 piValue utilities.piBody:piDefGC:fileName utilities
+piValue utilities.piBody:piDefGC:fileDirectory 'src/utils'
 piValueA utilities.piBody:piDefGC:imports os
 piValueA utilities.piBody:piDefGC:imports sys
 piValueA utilities.piBody:piDefGC:constants "DEFAULT_ENCODING = 'utf-8'"
@@ -388,7 +423,26 @@ Generated from piDefGC configurations, these are Python modules with:
 
 ## Configuration
 
-The system uses a `.pigencoderc` file to store configuration settings like the piScratchDir location.
+The system uses a `.pigencoderc` file to store configuration settings for directory locations and other options.
+
+**Example .pigencoderc:**
+```json
+{
+  "piSeedsDir": "piSeeds",
+  "piScratchDir": "./piGerms",
+  "piDefGCDir": "./src/pigencode/piDefs",
+  "piClassGCDir": "./src/pigencode/piClasses"
+}
+```
+
+**Configuration Options:**
+- **piSeedsDir**: Directory containing piSeed files
+- **piScratchDir**: Location for temporary JSON germ files
+- **piDefGCDir**: Base directory for generated Python function files
+- **piClassGCDir**: Base directory for generated Python class files
+
+**Distributed File Placement:**
+Individual files can override the base directories using the `fileDirectory` field in piSeed configurations, allowing for complex project structures while maintaining organized code generation.
 
 ## Processing Order
 

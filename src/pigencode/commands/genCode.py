@@ -1,4 +1,5 @@
-import os, traceback
+import os, traceback, re
+from pathlib import Path
 from ..classes.argParse import ArgParse
 from ..defs.logIt import printIt, lable
 from ..classes.piGenCode import genPiPiClass
@@ -7,12 +8,141 @@ from ..classes.piGenDefCode import genPiDefCode
 def genCode(argParse: ArgParse):
     args = argParse.parser.parse_args()
     theArgs = args.arguments
-    fileName = ""
-    if theArgs:
+    
+    if not theArgs:
+        # No arguments - process all files
+        savedCodeFiles = genCodeFile("")
+    elif len(theArgs) == 1:
+        # Single argument - could be filename or old syntax
         fileName = theArgs[0]
-    savedCodeFiles = genCodeFile(fileName)
+        savedCodeFiles = genCodeFile(fileName)
+    else:
+        # Multiple arguments - new shortcut syntax
+        savedCodeFiles = processShortcutSyntax(theArgs)
+    
     for savedCodeFile in savedCodeFiles:
-        printIt(f'{savedCodeFile} generated',lable.INFO)
+        printIt(f'{savedCodeFile} generated', lable.INFO)
+
+def processShortcutSyntax(args: list) -> dict:
+    """
+    Process shortcut syntax like: 
+    - piClass 21 (single file)
+    - piDef 2 (single file)
+    - piClass 4-16 (range)
+    - piClass 5 7 21 (multiple files)
+    - piClass 2 8 14-21 (combination)
+    """
+    savedCodeFiles: dict = {}
+    
+    if len(args) < 2:
+        printUsageHelp()
+        return savedCodeFiles
+    
+    fileType = args[0].lower()
+    numberArgs = args[1:]
+    
+    # Validate file type
+    if fileType not in ['piclass', 'pidef']:
+        printIt(f"Invalid file type '{args[0]}'. Use 'piClass' or 'piDef'", lable.ERROR)
+        printUsageHelp()
+        return savedCodeFiles
+    
+    # Parse number arguments and expand ranges
+    numbers = parseNumberArguments(numberArgs)
+    
+    if not numbers:
+        printIt("No valid numbers found in arguments", lable.ERROR)
+        printUsageHelp()
+        return savedCodeFiles
+    
+    printIt(f"Processing {fileType} files: {sorted(numbers)}", lable.INFO)
+    
+    # Generate files for each number
+    successCount = 0
+    for number in sorted(numbers):
+        fileName = findGermFile(fileType, number)
+        if fileName:
+            try:
+                if fileType == 'piclass':
+                    files = genPiPiClass(fileName, False)
+                else:  # pidef
+                    files = genPiDefCode(fileName, False)
+                savedCodeFiles.update(files)
+                successCount += 1
+            except Exception as e:
+                printIt(f"Error processing {fileName}: {e}", lable.ERROR)
+        else:
+            printIt(f"Germ file not found for {fileType} {number:03d}", lable.WARN)
+    
+    if successCount > 0:
+        printIt(f"Successfully processed {successCount} germ files", lable.INFO)
+    
+    return savedCodeFiles
+
+def printUsageHelp():
+    """Print usage help for the shortcut syntax"""
+    printIt("Usage examples:", lable.INFO)
+    printIt("  piGenCode genCode piClass 21          # Generate from piClassGC021", lable.INFO)
+    printIt("  piGenCode genCode piDef 2             # Generate from piDefGC002", lable.INFO)
+    printIt("  piGenCode genCode piClass 4-16        # Generate from piClassGC004 to piClassGC016", lable.INFO)
+    printIt("  piGenCode genCode piClass 5 7 21      # Generate from piClassGC005, 007, and 021", lable.INFO)
+    printIt("  piGenCode genCode piClass 2 8 14-21   # Generate from piClassGC002, 008, and 014-021", lable.INFO)
+
+def parseNumberArguments(args: list) -> set:
+    """Parse number arguments supporting ranges (4-16) and individual numbers (5 7 21)"""
+    numbers = set()
+    
+    for arg in args:
+        # Convert to string if it's not already
+        arg_str = str(arg)
+        
+        if '-' in arg_str and not arg_str.startswith('-'):
+            # Range format: 4-16
+            try:
+                start, end = arg_str.split('-', 1)
+                start_num = int(start)
+                end_num = int(end)
+                if start_num <= end_num:
+                    numbers.update(range(start_num, end_num + 1))
+                else:
+                    printIt(f"Invalid range '{arg_str}': start must be <= end", lable.WARN)
+            except ValueError:
+                printIt(f"Invalid range format '{arg_str}': use format like '4-16'", lable.WARN)
+        else:
+            # Individual number
+            try:
+                numbers.add(int(arg_str))
+            except ValueError:
+                printIt(f"Invalid number '{arg_str}': must be an integer", lable.WARN)
+    
+    return numbers
+
+def findGermFile(fileType: str, number: int) -> str:
+    """Find the germ file for the given type and number"""
+    try:
+        # Determine the subdirectory and pattern
+        if fileType == 'piclass':
+            subdir = 'piClassGC'
+            pattern = f'piClassGC{number:03d}_*.json'
+        else:  # pidef
+            subdir = 'piDefGC'
+            pattern = f'piDefGC{number:03d}_*.json'
+        
+        # Look in piGerms subdirectory
+        germDir = Path('piGerms') / subdir
+        if not germDir.exists():
+            return ""
+        
+        # Find matching files
+        matchingFiles = list(germDir.glob(pattern))
+        if matchingFiles:
+            return str(matchingFiles[0])  # Return first match
+        
+        return ""
+        
+    except Exception as e:
+        printIt(f"Error finding germ file for {fileType} {number}: {e}", lable.ERROR)
+        return ""
 
 def genCodeFile(fileName="", verbose=False) -> dict:
     savedCodeFiles: dict = {}

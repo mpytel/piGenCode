@@ -5,6 +5,7 @@ piSeeds/
 piGerms/
 piClasses/
 piDefs/
+devDocs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -223,6 +223,34 @@ class PiGenDefCode():
             piDefDir.mkdir(mode=0o755, parents=True, exist_ok=True)
         self.piDefDir = piDefDir
     
+    def __updatePiDefTrackingFile(self, fileName):
+        """Update the .pidefs tracking file with generated filenames"""
+        # Place tracking file in the same directory as the generated file
+        trackingFile = os.path.join(self.piDefDir, ".pidefs")
+        generatedFiles = set()
+        
+        # Read existing tracking file if it exists
+        if os.path.isfile(trackingFile):
+            try:
+                with open(trackingFile, 'r') as f:
+                    generatedFiles = set(line.strip() for line in f if line.strip())
+            except Exception as e:
+                logIt(f'Warning: Could not read tracking file {trackingFile}: {e}')
+        
+        # Add the new file (just the filename, not full path)
+        generatedFiles.add(os.path.basename(fileName))
+        
+        # Write updated tracking file with metadata
+        try:
+            with open(trackingFile, 'w') as f:
+                # Add header comment with directory info
+                f.write(f"# piGenCode tracking file for directory: {self.piDefDir}\n")
+                f.write(f"# Generated files in this directory:\n")
+                for filename in sorted(generatedFiles):
+                    f.write(f"{filename}\n")
+        except Exception as e:
+            logIt(f'Warning: Could not update tracking file {trackingFile}: {e}')
+    
     def __savePiDefFile(self, piDefLines, verbose=False):
         """Save the generated Python file"""
         fileName = os.path.join(self.piDefDir, f"{self.fileName}.py")
@@ -235,6 +263,9 @@ class PiGenDefCode():
         
         with open(fileName, 'w') as f:
             f.write(piDefLines)
+        
+        # Update tracking file
+        self.__updatePiDefTrackingFile(fileName)
         
         self.savedCodeFiles[self.fileName] = fileName
     

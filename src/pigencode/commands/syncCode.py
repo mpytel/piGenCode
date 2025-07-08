@@ -175,16 +175,29 @@ def syncSingleFile(fileName: str):
     try:
         filePath = Path(fileName)
         if not filePath.exists():
-            # Try looking in piClasses directory first
-            piClassesDir = Path("piClasses")
+            # Try looking in configurable piClassGCDir first
+            piClassesDir = Path(getKeyItem("piClassGCDir", "piClasses"))
             if piClassesDir.exists():
                 filePath = piClassesDir / fileName
                 if not filePath.exists():
                     filePath = piClassesDir / f"{fileName}.py"
+                
+                # Also search in piClasses subdirectories
+                if not filePath.exists():
+                    for subdir in piClassesDir.iterdir():
+                        if subdir.is_dir():
+                            candidate = subdir / fileName
+                            if candidate.exists():
+                                filePath = candidate
+                                break
+                            candidate = subdir / f"{fileName}.py"
+                            if candidate.exists():
+                                filePath = candidate
+                                break
             
-            # If not found in piClasses, try piDefs directory
+            # If not found in piClasses, try configurable piDefGCDir
             if not filePath.exists():
-                piDefsDir = Path("piDefs")
+                piDefsDir = Path(getKeyItem("piDefGCDir", "piDefs"))
                 if piDefsDir.exists():
                     filePath = piDefsDir / fileName
                     if not filePath.exists():
@@ -232,13 +245,13 @@ def syncSingleFile(fileName: str):
         printIt(f'syncSingleFile error:\n{tb_str}', lable.ERROR)
 
 def syncAllChangedFiles():
-    """Sync all changed files in the piClasses and piDefs directories"""
+    """Sync all changed files in the configurable piClassGCDir and piDefGCDir directories"""
     try:
         totalChanges = 0
         processedFiles = 0
         
-        # Process piClasses directory (existing logic)
-        piClassesDir = Path("piClasses")
+        # Process configurable piClassGCDir directory
+        piClassesDir = Path(getKeyItem("piClassGCDir", "piClasses"))
         if piClassesDir.exists():
             pythonFiles = list(piClassesDir.glob("*.py"))
             
@@ -255,8 +268,8 @@ def syncAllChangedFiles():
                 else:
                     printIt(f"No piClassGC piSeed file found for {className}", lable.DEBUG)
         
-        # Process piDefs directory (NEW)
-        piDefsDir = Path("piDefs")
+        # Process configurable piDefGCDir directory
+        piDefsDir = Path(getKeyItem("piDefGCDir", "piDefs"))
         if piDefsDir.exists():
             pythonFiles = list(piDefsDir.glob("*.py"))
             
@@ -274,7 +287,7 @@ def syncAllChangedFiles():
                     printIt(f"No piDefGC piSeed file found for {defName}", lable.DEBUG)
         
         if processedFiles == 0:
-            printIt("No Python files found in piClasses or piDefs directories", lable.WARN)
+            printIt(f"No Python files found in {piClassesDir} or {piDefsDir} directories", lable.WARN)
         else:
             printIt(f"Processed {processedFiles} files, made {totalChanges} total changes", lable.INFO)
         
