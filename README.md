@@ -11,6 +11,8 @@ There are 8 different piSeedTypes including piStruct (for JSON structure definit
 
 **piGenCode** provides commands like germSeed, genCode, syncCode, rmGC, and reorderSeeds for managing the workflow. The system supports distributed file placement, allowing generated files to be placed in any directory structure while maintaining precise tracking and cleanup capabilities.
 
+**Enhanced syncCode** includes powerful Auto-Creation capabilities that can automatically generate piSeed files for existing Python code, making it easy to integrate legacy codebases or manually created files into the piGenCode ecosystem.
+
 ## Table of Contents
 
 - [piGenCode](#pigencode)
@@ -158,9 +160,9 @@ INFO: Clean-up complete. Generated files removed, user files preserved.
 ```
 
 ### syncCode
-Synchronize changes from modified Python files back to their corresponding piSeed files. This command enables reverse-engineering workflow where you can modify generated Python classes and function definition files, then automatically update the piSeed definitions.
+Synchronize changes from modified Python files back to their corresponding piSeed files. This enhanced command enables reverse-engineering workflow where you can modify generated Python classes and function definition files, then automatically update the piSeed definitions. **Now includes powerful Auto-Creation feature for integrating existing Python code.**
 
-**Usage:**
+**Enhanced Usage:**
 ```bash
 # Sync all changed files in piClasses and piDefs directories
 piGenCode syncCode
@@ -173,15 +175,44 @@ piGenCode syncCode piBase.py
 piGenCode syncCode utilities.py
 piGenCode syncCode piBase
 piGenCode syncCode utilities
+
+# Enhanced options (parsed internally)
+piGenCode syncCode --dry-run                    # Preview changes without making them
+piGenCode syncCode --create-missing             # Auto-create piSeed files for orphaned Python files
+piGenCode syncCode --stats                      # Show detailed statistics
+piGenCode syncCode --validate                   # Validate sync results
+piGenCode syncCode --filter genclass            # Only sync piGenClass files
+piGenCode syncCode --exclude-pattern "test_*"   # Skip test files
 ```
+
+**🚀 Auto-Creation Feature:**
+The `--create-missing` option automatically generates piSeed files for Python files that don't have corresponding piSeeds:
+
+```bash
+# Auto-create piSeeds for all orphaned Python files
+piGenCode syncCode --create-missing
+
+# Example output:
+# "Creating new piGenClass piSeed file for: api_models"
+# "Creating new piDefGC piSeed file for: utilities" 
+# "Created piSeed files: 8"
+```
+
+**Intelligent Type Detection:**
+- **Multiple classes** → piGenClass
+- **Single class with inheritance/complexity** → piGenClass  
+- **Only functions** → piDefGC
+- **Simple single class** → piClassGC
 
 **How it works:**
 - **AST Analysis**: Parses Python files using Abstract Syntax Tree (AST) to extract code elements
 - **Intelligent Mapping**: Maps Python methods and code to corresponding piSeed elements
 - **Bidirectional Sync**: Maintains synchronization between generated code and seed definitions
-- **Automatic Detection**: Finds corresponding piSeed files automatically for both piClassGC and piDefGC
+- **Automatic Detection**: Finds corresponding piSeed files automatically for piClassGC, piDefGC, and piGenClass
 - **Safe Updates**: Preserves existing piSeed structure while updating modified elements
-- **Configurable Directories**: Reads from configured directories specified in .pigencoderc (piClassGCDir and piDefGCDir)
+- **Auto-Creation**: Generates complete piSeed files for existing Python code
+- **Enhanced Discovery**: Searches multiple directories and subdirectories
+- **Configurable Directories**: Reads from configured directories specified in .pigencoderc
 
 **What gets synchronized:**
 
@@ -258,6 +289,42 @@ piGenCode syncCode utilities.py
 
 # 4. Regenerate to verify
 piGenCode genCode piGerms/piDefGC/piDefGC012_utilities.json
+```
+
+**Auto-Creation Workflow (NEW):**
+```bash
+# 1. You have existing Python files without piSeeds
+# Files: src/models/user.py, src/utils/helpers.py, src/api/endpoints.py
+
+# 2. Auto-create piSeeds for all orphaned files
+piGenCode syncCode --create-missing --stats
+
+# Output example:
+# "Creating new piGenClass piSeed file for: user"
+# "Creating new piDefGC piSeed file for: helpers"
+# "Creating new piGenClass piSeed file for: endpoints"
+# "Created piSeed files: 3"
+
+# 3. Review and refine generated piSeeds
+# Edit piSeed087_piGenClass_user.pi as needed
+
+# 4. Regenerate to test integration
+piGenCode genCode piGenClass 87-89
+
+# 5. Your existing code is now fully integrated into piGenCode!
+```
+
+**Legacy Code Integration:**
+```bash
+# Integrate entire directories of existing Python code
+piGenCode syncCode legacy_code/ --create-missing --validate
+
+# Filter by file type for selective integration
+piGenCode syncCode --create-missing --filter genclass  # Only multi-class files
+piGenCode syncCode --create-missing --filter def       # Only function files
+
+# Preview what would be created before committing
+piGenCode syncCode --create-missing --dry-run
 ```
 
 **Features:**

@@ -107,7 +107,7 @@ class PiSeeds():
             #raise StopIteration
         return rtnPi
 
-PiSeedTypes = ["piScratchDir", "piStruct", "piValuesSetD", "piValue", "piClassGC", "piValueA", "piType", "piIndexer", "piDefGC"]
+PiSeedTypes = ["piScratchDir", "piStruct", "piValuesSetD", "piValue", "piClassGC", "piValueA", "piType", "piIndexer", "piDefGC", "piGenClass"]
 PiSeedTypeVarTypes = ["B", "I", "S", "F", "D", "L", "C", "A"]
 PiSeedTypeVarTypesStr = ''.join(PiSeedTypeVarTypes)
 PiSeedTypeVarValues = {
@@ -130,6 +130,7 @@ PiSeedTypeREs = {
     PiSeedTypes[6]: reCompile('(piType)'),
     PiSeedTypes[7]: reCompile('(piIndexer)'),
     PiSeedTypes[8]: reCompile('(piDefGC)'),
+    PiSeedTypes[9]: reCompile('(piGenClass)'),
     'default': reCompile('(.+)') # this last one returns the input string
 } # example piStrucD00
 PiFunctionsTokens = ["getPiIDMD5", "getPiMD5", "getMD5"]

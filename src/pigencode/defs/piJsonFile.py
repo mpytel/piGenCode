@@ -236,6 +236,102 @@ class PiDefGCFiles():
         return rtnDict
 
 
+class PiGenClassFiles():
+    def __init__(self) -> None:
+        piScratchPath = Path(getKeyItem("piScratchDir"))
+        self.fileDirName = piScratchPath.joinpath("piGenClass")
+        self.fileDirName.mkdir(mode=0o755, parents=True, exist_ok=True)
+        self.baseMaxFileInt = self._getBaseMaxFileInt()
+        self.maxFileInt = self.baseMaxFileInt
+        self.lastLineNumber = 0
+        self.genClassFilePaths = []
+    
+    def _getPiGenClassFiles(self):
+        # Pattern for piGenClass files: piGenClass001_filename.json
+        genclass_pattern = reCompile(r'piGenClass(\d{3})_(.+)\.json')
+        return [p.name for p in self.fileDirName.iterdir() if p.is_file() and genclass_pattern.match(p.name)]
+    
+    def _getBaseMaxFileInt(self):
+        rtnInt = 1
+        PiGenClassFiles = self._getPiGenClassFiles()
+        if PiGenClassFiles:
+            PiGenClassFiles.sort()
+            genclass_pattern = reCompile(r'piGenClass(\d{3})_(.+)\.json')
+            fileMatch = genclass_pattern.match(str(PiGenClassFiles[-1]))
+            if fileMatch:
+                fileParts = fileMatch.groups()
+                rtnInt = int(fileParts[0]) + 1
+        return rtnInt
+
+    def _shiftFilesUpOneFromBaseMaxFileInt(self, pad=3):
+        PiGenClassFiles = self._getPiGenClassFiles()
+        if PiGenClassFiles:
+            PiGenClassFiles.sort(reverse=True)
+            genclass_pattern = reCompile(r'piGenClass(\d{3})_(.+)\.json')
+            for PiGenClassFile in PiGenClassFiles:
+                fileMatch = genclass_pattern.match(PiGenClassFile)
+                if fileMatch:
+                    fileParts = fileMatch.groups()
+                    fileInt = int(fileParts[0])
+                    if fileInt >= self.baseMaxFileInt:
+                        newName = self.fileDirName.joinpath(f'piGenClass{str(int(fileParts[0])+1).zfill(pad)}_{fileParts[1]}.json')
+                        oldName = self.fileDirName.joinpath(PiGenClassFile)
+                        self.fileDirName.joinpath(PiGenClassFile).rename(newName)
+
+    def _chkForExistingFile(self, piTitle):
+        fileInt = 0
+        PiGenClassFiles = self._getPiGenClassFiles()
+        if PiGenClassFiles:
+            PiGenClassFiles.sort()
+            genclass_pattern = reCompile(r'piGenClass(\d{3})_(.+)\.json')
+            for PiGenClassFile in PiGenClassFiles:
+                fileMatch = genclass_pattern.match(PiGenClassFile)
+                if fileMatch:
+                    fileParts = fileMatch.groups()
+                    if fileParts[0].isnumeric():
+                        chkFileName = fileParts[1]
+                        if chkFileName == piTitle:
+                            fileInt = int(fileParts[0])
+                            break
+        return fileInt
+
+    def _getFileIntZFill(self, piTitle: str, lineNumber, pad=3) -> str:
+        fileInt = self._chkForExistingFile(piTitle)
+        if not fileInt:
+            if not self.lastLineNumber:
+                self.lastLineNumber = lineNumber
+            if lineNumber < self.lastLineNumber:
+                self._shiftFilesUpOneFromBaseMaxFileInt(pad)
+                fileInt = self.baseMaxFileInt
+            else:
+                self.lastLineNumber = lineNumber
+                fileInt = self.maxFileInt
+            self.maxFileInt += 1
+        else:
+            print(">>>", piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exists')
+        return str(fileInt).zfill(3)
+
+    def _getPiGenClassFileName(self, piType, piTitle, lineNumber=0) -> str:
+        makedirs(self.fileDirName, exist_ok=True)
+        fileIntStr = self._getFileIntZFill(piTitle, lineNumber)
+        fileName = self.fileDirName.joinpath(f'{piType}{fileIntStr}_{piTitle}.json')
+        return str(fileName)
+
+    def writePiGenClass(self, piType, piTitle, lineNumber, aDict: dict, verbose=True) -> bool:
+        piStrucFileName = self._getPiGenClassFileName(piType, piTitle, lineNumber)
+        rtnBool = writeJson(piStrucFileName, aDict, verbose)
+        if rtnBool: 
+            self.genClassFilePaths.append(piStrucFileName)
+        if rtnBool and verbose: 
+            printIt(piStrucFileName, lable.SAVED)
+        return rtnBool
+
+    def readPiGenClass(self, piType, piTitle, verbose=True) -> dict:
+        piStrucFileName = self._getPiGenClassFileName(piType, piTitle)
+        rtnDict = readJson(piStrucFileName, verbose)
+        return rtnDict
+
+
 class PiClassGCFiles():
     def __init__(self) -> None:
         piScratchPath = Path(getKeyItem("piScratchDir"))

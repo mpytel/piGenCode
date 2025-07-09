@@ -1,0 +1,6 @@
+{
+  "piClassGCDir": "piClasses",
+  "piDefGCDir": "piDefs",
+  "piSeedsDir": "piSeeds",
+  "piScratchDir": "./piGerms"
+}

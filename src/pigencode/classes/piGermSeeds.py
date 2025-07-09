@@ -1,6 +1,6 @@
 import os, datetime, copy, json, re, traceback
 from ..defs.piRCFile import readRC, writeRC
-from ..defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles
+from ..defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles, PiGenClassFiles
 from ..defs.piID import getPiMD5, getPiID
 from ..defs.logIt import logIt, printIt, germDbug, lable
 from .piSeeds import PiSeeds, PiSeedTypes, piSeedTitelSplit
@@ -21,6 +21,7 @@ class PiGermSeeds():
         self.piDictSourceTypes = ["piStructs","piDefault", "piStruc"]
         self.piClassGCFiles = PiClassGCFiles()
         self.piDefGCFiles = PiDefGCFiles()
+        self.piGenClassFiles = PiGenClassFiles()
         self.classDefCodeDescrtion = {}
 
         # find and write structures to files
@@ -103,7 +104,7 @@ class PiGermSeeds():
             targetPi["piIndexer"]["piMD5"] = piMD5
             targetPi["piID"] = getPiID()
             self.piStructs[self.seeds.currPi.piTitle] = targetPi
-            writePi(targetPi,False)
+            writePi(targetPi, verbose = False)
             self.seeds.next()
     def germinate_any(self):
         if self.seeds.currPi.piType:
@@ -118,7 +119,7 @@ class PiGermSeeds():
             targetPi["piIndexer"]["piMD5"] = piMD5
             targetPi["piID"] = getPiID()
             self.piStructs[self.seeds.currPi.piTitle] = targetPi
-            writePi(targetPi,False)
+            writePi(targetPi, verbose=False)
             self.seeds.next()
     def germinate_piClassGC(self):
         # print('in germinate_piClassGC"',self.seeds.currPi)
@@ -201,6 +202,47 @@ class PiGermSeeds():
             printIt(tb_str,lable.ERROR)
             exit()
 
+    def germinate_piGenClass(self):
+        # print('in germinate_piGenClass"',self.seeds.currPi)
+        try:
+            while self.seeds.currIndex < self.seeds.seedCount:
+                if self.seeds.currPi.piSeedType == PiSeedTypes[9]:  # piGenClass is now index 9
+                    lastSeed = False
+                    baseType = "piGenClass"  # Use piGenClass as the structure type
+                    baseTitle = self.seeds.currPi.piTitle
+                    baseLineNumber = int(self.seeds.currPi.lineNumber)
+                    targetPi = self.getTargetPi(baseType, source=self.piDictSourceTypes[2])
+                    targetPi["piBase"]["piTitle"] = baseTitle
+                    targetPi["piBase"]["piSD"] = self.seeds.currPi.piSD
+                    piMD5 = getPiMD5(targetPi["piIndexer"])
+                    targetPi["piIndexer"]["piMD5"] = piMD5
+                    targetPi["piID"] = "TBD"
+                    self.piStructs[self.seeds.currPi.piTitle] = targetPi
+                    if self.seeds.nextPi == None:
+                        self.piGenClassFiles.writePiGenClass(baseType, baseTitle, baseLineNumber, targetPi, False)
+                    self.seeds.next()
+                else:
+                    self.germinateSeeds()
+                    self.piGenClassFiles.writePiGenClass(baseType, baseTitle, baseLineNumber, targetPi, False)
+                    if lastSeed: break # last seed run.
+                    if self.seeds.nextPi == None:
+                        lastSeed = True # Run the last piSeed
+
+        except piIncorectPiValuePath:
+            printIt(f'{self.seeds.currPi.piTitle}', lable.IncorectPiValuePath)
+            exit()
+        except piPiStrucNotFound:
+            printIt("germinate_piGenClass", lable.DEBUG)
+            raise piPiStrucNotFound
+        except StopIteration:
+            # print("germinate_piGenClass", "StopIteration")
+            pass
+        except Exception as e:
+            printIt(f'germinate_piGenClass\\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(tb_str,lable.ERROR)
+            exit()
+
     def germinate_piValueA(self):
         try:
             #piValueA piDates.piBody:piClassGC:imports datetime
@@ -225,27 +267,27 @@ class PiGermSeeds():
                                         if piExDefDictKey not in aDict:
                                             aDict[piExDefDictKey] = {}
                                         aDict = aDict[piExDefDictKey]
-                                    
+
                                     # Handle the final key
                                     final_key = piExDefDictKeys[-1]
-                                    
+
                                     # Special handling for classDefCode structure
                                     if len(piExDefDictKeys) >= 2 and piExDefDictKeys[-2] == 'classDefCode':
                                         # This is a method within classDefCode, ensure classDefCode is a dict
                                         parent_dict = aDict
                                         parent_key = piExDefDictKeys[-2]
-                                        
+
                                         # Ensure classDefCode exists as a dictionary
                                         if parent_key not in parent_dict:
                                             parent_dict[parent_key] = {}
                                         elif not isinstance(parent_dict[parent_key], dict):
                                             # Convert to dict if it's not already
                                             parent_dict[parent_key] = {}
-                                        
+
                                         # Ensure the method key exists as a list
                                         if final_key not in parent_dict[parent_key]:
                                             parent_dict[parent_key][final_key] = []
-                                        
+
                                         # Add to the method's list
                                         method_list = parent_dict[parent_key][final_key]
                                         if len(method_list) == 1:
@@ -259,7 +301,7 @@ class PiGermSeeds():
                                         # Regular handling for other structures
                                         if final_key not in aDict:
                                             aDict[final_key] = []
-                                        
+
                                         # Only proceed if the target is a list (not a dict)
                                         if isinstance(aDict[final_key], list):
                                             if len(aDict[final_key])==1:
@@ -868,6 +910,11 @@ def handle_piValueA(germ_seeds_instance):
 def handle_piDefGC(germ_seeds_instance):
     """Handler for piDefGC seed type"""
     germ_seeds_instance.germinate_piDefGC()
+
+@register_pi_seed_handler("piGenClass")
+def handle_piGenClass(germ_seeds_instance):
+    """Handler for piGenClass seed type"""
+    germ_seeds_instance.germinate_piGenClass()
 
 # Note: piType and piIndexer handlers are not registered here because
 # their corresponding germinate methods don't exist in the class.
