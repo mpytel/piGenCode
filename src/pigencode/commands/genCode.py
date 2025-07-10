@@ -2,12 +2,42 @@ import os, traceback, re
 from pathlib import Path
 from ..classes.argParse import ArgParse
 from ..defs.logIt import printIt, lable
+from ..defs.piRCFile import getKeyItem
 from ..classes.piGenCode import genPiPiClass
 from ..classes.piGenDefCode import genPiDefCode
 from ..classes.piGenClassCode import genPiGenClass
 
+def checkPiGermsDirectory():
+    """Check if piGerms directory exists and provide helpful error message if not"""
+    piGermsDir = Path(getKeyItem("piScratchDir", "piGerms"))
+    
+    if not piGermsDir.exists():
+        printIt("ERROR: piGerms directory not found", lable.ERROR)
+        printIt(f"Expected location: {piGermsDir}", lable.ERROR)
+        printIt("", lable.INFO)
+        printIt("The piGerms directory contains the JSON configuration files needed for code generation.", lable.INFO)
+        printIt("This directory is created when piSeed files are processed with 'germSeed'.", lable.INFO)
+        printIt("", lable.INFO)
+        printIt("To fix this issue:", lable.INFO)
+        printIt("  1. Run 'pigencode germSeed' to process all piSeed files", lable.INFO)
+        printIt("  2. Or run 'pigencode germSeed <number>' to process a specific piSeed file", lable.INFO)
+        printIt("  3. Then run 'pigencode genCode' again", lable.INFO)
+        printIt("", lable.INFO)
+        printIt("Examples:", lable.INFO)
+        printIt("  pigencode germSeed           # Process all piSeed files", lable.INFO)
+        printIt("  pigencode germSeed 21        # Process piSeed021", lable.INFO)
+        printIt("  pigencode genCode piClass 21 # Generate code after germSeed", lable.INFO)
+        return False
+    
+    return True
+
 def genCode(argParse: ArgParse):
-    args = argParse.parser.parse_args()
+    # Check if piGerms directory exists before proceeding
+    if not checkPiGermsDirectory():
+        return
+    
+    # Use the already parsed arguments from ArgParse.__init__
+    args = argParse.args
     theArgs = args.arguments
     
     if not theArgs:
@@ -204,8 +234,18 @@ def findGermFile(fileType: str, number: int) -> str:
             pattern = f'piGenClass{number:03d}_*.json'
         
         # Look in piGerms subdirectory
-        germDir = Path('piGerms') / subdir
+        piGermsDir = Path(getKeyItem("piScratchDir", "piGerms"))
+        germDir = piGermsDir / subdir
+        
+        if not piGermsDir.exists():
+            printIt(f"piGerms directory not found: {piGermsDir}", lable.ERROR)
+            printIt("Run 'pigencode germSeed' first to create germ files", lable.INFO)
+            return ""
+        
         if not germDir.exists():
+            printIt(f"Germ subdirectory not found: {germDir}", lable.WARN)
+            printIt(f"No {fileType} files have been processed yet", lable.INFO)
+            printIt(f"Run 'pigencode germSeed' to process piSeed files", lable.INFO)
             return ""
         
         # Find matching files
@@ -213,6 +253,9 @@ def findGermFile(fileType: str, number: int) -> str:
         if matchingFiles:
             return str(matchingFiles[0])  # Return first match
         
+        # File not found - provide helpful message
+        printIt(f"Germ file not found: {germDir}/{pattern}", lable.WARN)
+        printIt(f"Make sure piSeed{number:03d}_*.pi exists and has been processed with 'germSeed'", lable.INFO)
         return ""
         
     except Exception as e:
@@ -255,17 +298,29 @@ def processAllPiGenClassFiles(verbose=False) -> dict:
     """Process all piGenClass JSON files in the piGerms directory"""
     savedCodeFiles = {}
     try:
-        from ..defs.piRCFile import getKeyItem
-        
         # Get piGerms directory
         piGermsDir = Path(getKeyItem("piScratchDir", "piGerms"))
         piGenClassDir = piGermsDir / "piGenClass"
         
+        if not piGermsDir.exists():
+            printIt(f"piGerms directory not found: {piGermsDir}", lable.WARN)
+            printIt("Run 'pigencode germSeed' first to create germ files", lable.INFO)
+            return savedCodeFiles
+        
         if not piGenClassDir.exists():
+            if verbose:
+                printIt(f"piGenClass directory not found: {piGenClassDir}", lable.DEBUG)
+                printIt("No piGenClass files to process", lable.DEBUG)
             return savedCodeFiles
         
         # Find all piGenClass JSON files
-        for json_file in piGenClassDir.glob("piGenClass*.json"):
+        json_files = list(piGenClassDir.glob("piGenClass*.json"))
+        if not json_files:
+            if verbose:
+                printIt("No piGenClass JSON files found", lable.DEBUG)
+            return savedCodeFiles
+        
+        for json_file in json_files:
             if verbose:
                 printIt(f"Processing piGenClass file: {json_file}", lable.DEBUG)
             

@@ -124,6 +124,15 @@ class ArgParse():
 
     def _extract_cmd_options(self, args):
         '''Extract command-specific options(--option) from arguments'''
+        
+        # Define which options are flags (no value) vs options that take values
+        flag_options = {
+            'dry-run', 'create-missing', 'validate', 'stats', 'force', 'help'
+        }
+        value_options = {
+            'filter', 'exclude-pattern'
+        }
+        
         filtered_args = []
         i = 0
         while i < len(args):
@@ -131,14 +140,30 @@ class ArgParse():
             if arg.startswith('--'):
                 # Handle command-specific options
                 option_name = arg[2:]  # Remove --
-                if i + 1 < len(args) and not args[i + 1].startswith('-'):
-                    # Option with value
-                    self.cmd_options[option_name] = args[i + 1]
-                    i += 2  # Skip both option and value
-                else:
-                    # Option without value (flag)
+                
+                if option_name in flag_options:
+                    # This is a flag option (no value)
                     self.cmd_options[option_name] = True
                     i += 1
+                elif option_name in value_options:
+                    # This option takes a value
+                    if i + 1 < len(args) and not args[i + 1].startswith('-'):
+                        self.cmd_options[option_name] = args[i + 1]
+                        i += 2  # Skip both option and value
+                    else:
+                        # Missing value, treat as flag
+                        self.cmd_options[option_name] = True
+                        i += 1
+                else:
+                    # Unknown option - use the old logic as fallback
+                    if i + 1 < len(args) and not args[i + 1].startswith('-'):
+                        # Option with value
+                        self.cmd_options[option_name] = args[i + 1]
+                        i += 2  # Skip both option and value
+                    else:
+                        # Option without value (flag)
+                        self.cmd_options[option_name] = True
+                        i += 1
             else:
                 filtered_args.append(arg)
                 i += 1

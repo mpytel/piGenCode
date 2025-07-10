@@ -12,7 +12,7 @@ def rmGC(argParse: ArgParse):
     - piGerms (piScratchDir): Removes entire directory (volatile temp files)
     - piClasses (piClassGCDir): Recursively searches for .piclass tracking files and removes tracked files
     - piDefs (piDefGCDir): Recursively searches for .pidefs tracking files and removes tracked files
-    
+
     This approach supports distributed file placement via fileDirectory and preserves user files.
     Empty directories are removed after cleanup.
     """
@@ -44,7 +44,7 @@ def rmGC(argParse: ArgParse):
         if preserved_count > 0:
             preserved_files.append(f"{preserved_count} user files preserved under {piClassesDir}")
 
-        # 3. Handle piDefs (piDefGCDir) - Recursive search for .pidefs files  
+        # 3. Handle piDefs (piDefGCDir) - Recursive search for .pidefs files
         piDefsDir = Path(getKeyItem("piDefGCDir", "piDefs"))
         removed_count, preserved_count, tracking_files_found = removeTrackedFilesRecursive(
             piDefsDir, ".pidefs", "piDefs"
@@ -71,7 +71,7 @@ def rmGC(argParse: ArgParse):
                 printIt(f"  • {file_info}", lable.INFO)
 
         if not_found_items:
-            printIt(f"Items not found (already clean):", lable.DirNotFound)
+            # printIt(f"Items not found (already clean):", lable.DirNotFound)
             for item_info in not_found_items:
                 printIt(f"  • {item_info}", lable.DirNotFound)
 
@@ -89,36 +89,37 @@ def removeTrackedFilesRecursive(rootDirectory: Path, trackingFileName: str, disp
     Recursively search for tracking files and remove tracked files throughout directory tree.
     If no tracking files are found in the configured directory, expand search to find
     files placed via custom fileDirectory paths.
-    
+
     Args:
         rootDirectory: Root directory to search recursively
         trackingFileName: Name of tracking file (.piclass or .pidefs)
         displayName: Display name for logging
-        
+
     Returns:
         tuple: (total_removed_count, total_preserved_count, tracking_files_found)
     """
     total_removed_count = 0
     total_preserved_count = 0
     tracking_files_found = 0
-    
+
     tracking_files = []
-    
+
     # First, try to find tracking files in the configured directory (if it exists)
     if rootDirectory.exists():
         tracking_files = list(rootDirectory.rglob(trackingFileName))
     else:
-        printIt(f"Configured directory not found: {displayName} ({rootDirectory})", lable.DEBUG)
-    
+        pass
+        # printIt(f"Configured directory not found: {displayName} ({rootDirectory})", lable.DEBUG)
+
     # If no tracking files found in configured directory, expand search scope
     if not tracking_files:
         # Search from current working directory to catch custom fileDirectory placements
         expanded_search_root = Path.cwd()
-        printIt(f"No tracking files found in configured {displayName} directory, expanding search scope", lable.DEBUG)
-        
+        # printIt(f"No tracking files found in configured {displayName} directory, expanding search scope", lable.DEBUG)
+
         # Find all tracking files of this type in the entire project
         all_tracking_files = list(expanded_search_root.rglob(trackingFileName))
-        
+
         # Filter to only include tracking files that are relevant to this file type
         # by checking if they're in directories that could contain the expected files
         for tracking_file in all_tracking_files:
@@ -128,9 +129,9 @@ def removeTrackedFilesRecursive(rootDirectory: Path, trackingFileName: str, disp
                 continue
             if trackingFileName == ".piclass" and "piDefs" in str(tracking_file):
                 continue
-                
+
             tracking_files.append(tracking_file)
-    
+
     if not tracking_files:
         # No tracking files found anywhere
         if rootDirectory.exists():
@@ -143,10 +144,10 @@ def removeTrackedFilesRecursive(rootDirectory: Path, trackingFileName: str, disp
         else:
             printIt(f"No tracking files found for {displayName} anywhere in project", lable.INFO)
         return 0, total_preserved_count, 0
-    
+
     tracking_files_found = len(tracking_files)
     printIt(f"Found {tracking_files_found} tracking files for {displayName}", lable.INFO)
-    
+
     # Process each tracking file
     for tracking_file in tracking_files:
         directory = tracking_file.parent
@@ -155,7 +156,7 @@ def removeTrackedFilesRecursive(rootDirectory: Path, trackingFileName: str, disp
         )
         total_removed_count += removed_count
         total_preserved_count += preserved_count
-    
+
     return total_removed_count, total_preserved_count, tracking_files_found
 
 
@@ -163,20 +164,20 @@ def removeTrackedFilesInDirectory(directory: Path, trackingFile: Path, displayNa
     """
     Remove tracked files in a specific directory based on its tracking file.
     If directory becomes empty after cleanup, remove the directory as well.
-    
+
     Args:
         directory: Directory containing files and tracking file
         trackingFile: Path to the tracking file
         displayName: Display name for logging
-        
+
     Returns:
         tuple: (removed_count, preserved_count)
     """
     removed_count = 0
     preserved_count = 0
-    
-    printIt(f"Processing tracking file: {trackingFile}", lable.DEBUG)
-    
+
+    printIt(f"Processing tracking file: {trackingFile}", lable.INFO)
+
     # Read tracking file to get list of generated files
     try:
         with open(trackingFile, 'r') as f:
@@ -185,10 +186,10 @@ def removeTrackedFilesInDirectory(directory: Path, trackingFile: Path, displayNa
     except Exception as e:
         printIt(f"Error reading tracking file {trackingFile}: {e}", lable.ERROR)
         return 0, 0
-    
+
     # Get all Python files in this specific directory (not recursive)
     all_python_files = set(f.name for f in directory.glob("*.py"))
-    
+
     # Remove tracked files
     for filename in tracked_files:
         file_path = directory / filename
@@ -196,42 +197,43 @@ def removeTrackedFilesInDirectory(directory: Path, trackingFile: Path, displayNa
             try:
                 file_path.unlink()
                 removed_count += 1
-                printIt(f"Removed generated file: {file_path}", lable.DEBUG)
             except Exception as e:
                 printIt(f"Error removing file {file_path}: {e}", lable.ERROR)
         else:
-            printIt(f"Tracked file not found: {file_path}", lable.DEBUG)
-    
+            printIt(f"Tracked file not found: {file_path}", lable.WARN)
+    printIt(f"Removed {removed_count} generated from: {directory}", lable.INFO)
+
     # Count preserved files (Python files not in tracking list)
     preserved_files = all_python_files - tracked_files
     preserved_count = len(preserved_files)
-    
+
     if preserved_count > 0:
-        printIt(f"Preserved {preserved_count} user files in {directory}", lable.DEBUG)
-    
+        printIt(
+            f"Preserved {preserved_count} user files in {directory}", lable.INFO)
+
     # Remove tracking file itself
     try:
         trackingFile.unlink()
-        printIt(f"Removed tracking file: {trackingFile}", lable.DEBUG)
+        printIt(f"Removed tracking file: {trackingFile}", lable.INFO)
     except Exception as e:
         printIt(f"Error removing tracking file {trackingFile}: {e}", lable.ERROR)
-    
+
     # Check if directory is empty after cleanup and remove if so
     try:
         # Get all remaining files and directories in the directory
         remaining_items = list(directory.iterdir())
-        
+
         if not remaining_items:
             # Directory is completely empty, remove it
             directory.rmdir()
-            printIt(f"Removed empty directory: {directory}", lable.DEBUG)
+            printIt(f"Removed empty directory: {directory}", lable.INFO)
         else:
             # Check if only hidden files or __pycache__ remain
             significant_items = [
-                item for item in remaining_items 
+                item for item in remaining_items
                 if not item.name.startswith('.') and item.name != '__pycache__'
             ]
-            
+
             if not significant_items:
                 # Only hidden files or __pycache__ remain, consider removing
                 # But be conservative - only remove __pycache__ directories
@@ -243,14 +245,14 @@ def removeTrackedFilesInDirectory(directory: Path, trackingFile: Path, displayNa
                             printIt(f"Removed __pycache__ directory: {item}", lable.DEBUG)
                         except Exception as e:
                             printIt(f"Could not remove __pycache__ directory {item}: {e}", lable.DEBUG)
-                
+
                 # Check again if directory is now empty
                 remaining_items = list(directory.iterdir())
                 if not remaining_items:
                     directory.rmdir()
                     printIt(f"Removed empty directory: {directory}", lable.DEBUG)
-                
+
     except Exception as e:
         printIt(f"Could not check/remove directory {directory}: {e}", lable.DEBUG)
-    
+
     return removed_count, preserved_count

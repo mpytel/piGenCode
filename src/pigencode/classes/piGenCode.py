@@ -18,13 +18,13 @@ class PiGenCode():
         #print(json.dumps(self.pi_piClassGC,indent=2))
         #exit()
         self.piClassGC = self.pi_piClassGC["piBody"]["piClassGC"]
-        
+
         try: self.fileDirectory = self.piClassGC["fileDirectory"]
         except: self.fileDirectory = ""
-        
+
         try: self.fileName = self.piClassGC["fileName"]
         except: self.fileName = ""
-        
+
         try: self.headers = self.piClassGC["headers"]
         except: self.headers = []
         try: self.imports = self.piClassGC["imports"]
@@ -370,7 +370,115 @@ class PiGenCode():
                 exit()
 
         return rtnLines
+    def __genFromPiClassesLines(self, iniLevel=0) -> str:
+        """Generate DEFAULT fromPiClasses imports when none exist"""
+        if not self.initArguments:
+            return ""
+
+        # Analyze initArguments to determine what Pi classes need to be imported
+        imports = []
+        for argName, argData in self.initArguments.items():
+            argType = argData.get('type', '')
+            if argType.startswith('Pi') and argType not in ['str', 'int', 'float', 'bool', 'dict', 'list']:
+                # Convert PiUserProfile -> piUserProfile for import path
+                importPath = argType[2:3].lower() + argType[3:] if len(argType) > 2 else argType.lower()
+                imports.append(f'from .{importPath} import {argType}')
+
+        return '\n'.join(imports) + '\n' if imports else ""
+
+    def __addFromPiClassesLines(self, iniLevel=0) -> str:
+        """Use CUSTOM fromPiClasses imports"""
+        rtnLines = ""
+        for fromPiClass in self.fromPiClasses:
+            rtnLines += fromPiClass + '\n'
+        return rtnLines
+
+    def __genGlobalsLines(self, iniLevel=0) -> str:
+        """Generate DEFAULT globals when none exist"""
+        # Most classes don't need default globals
+        return ""
+
+    def __addGlobalsLines(self, iniLevel=0) -> str:
+        """Use CUSTOM globals"""
+        rtnLines = ""
+        for globalLine in self.globals:
+            rtnLines += globalLine + '\n'
+        return rtnLines
+
+    def __genClassCommentLines(self, iniLevel=0) -> str:
+        """Generate DEFAULT class comment when none exists"""
+        # Generate a simple default docstring
+        indent = self.indent
+        return f'{indent * iniLevel}"""\n{indent * iniLevel}{self.piClassName} class\n{indent * iniLevel}"""\n'
+
+    def __addClassCommentLines(self, iniLevel=0) -> str:
+        """Use CUSTOM class comment"""
+        rtnLines = ""
+        for commentLine in self.classComment:
+            rtnLines += self.__appednCodeLine(commentLine, iniLevel)
+        return rtnLines
+
+    def __genPreSuperInitCodeLines(self, iniLevel=0) -> str:
+        """Generate DEFAULT preSuperInitCode when none exists"""
+        # Most classes don't need default pre-super init code
+        return ""
+
+    def __addPreSuperInitCodeLines(self, iniLevel=0) -> str:
+        """Use CUSTOM preSuperInitCode"""
+        rtnLines = ""
+        for preSuperInitCodeLine in self.preSuperInitCode:
+            rtnLines += self.__appednCodeLine(preSuperInitCodeLine, iniLevel)
+        return rtnLines
+
+    def __genPostSuperInitCodeLines(self, iniLevel=0) -> str:
+        """Generate DEFAULT postSuperInitCode when none exists"""
+        # Most classes don't need default post-super init code
+        return ""
+
+    def __addPostSuperInitCodeLines(self, iniLevel=0) -> str:
+        """Use CUSTOM postSuperInitCode"""
+        rtnLines = ""
+        for postSuperInitCodeLine in self.postSuperInitCode:
+            rtnLines += self.__appednCodeLine(postSuperInitCodeLine, iniLevel)
+        return rtnLines
+
+    def __genInitAppendCodeLines(self, iniLevel=0) -> str:
+        """Generate DEFAULT initAppendCode when none exists"""
+        # Most classes don't need default init append code
+        return ""
+
+    def __addInitAppendCodeLines(self, iniLevel=0) -> str:
+        """Use CUSTOM initAppendCode"""
+        rtnLines = ""
+        for initAppendCodeLine in self.initAppendCode:
+            rtnLines += self.__appednCodeLine(initAppendCodeLine, iniLevel)
+        return rtnLines
+
+    def __genGenPropsLines(self, iniLevel=0) -> str:
+        """Generate DEFAULT genProps when none exists"""
+        # Most classes don't need default generated properties
+        return ""
+
+    def __addGenPropsLines(self, iniLevel=0) -> str:
+        """Use CUSTOM genProps"""
+        if self.genProps:
+            return self.genProps + '\n'
+        return ""
+
+    def __genGlobalCodeLines(self, iniLevel=0) -> str:
+        """Generate DEFAULT globalCode when none exists"""
+        # Most classes don't need default global code
+        return ""
+
+    def __addGlobalCodeLines(self, iniLevel=0) -> str:
+        """Use CUSTOM globalCode"""
+        rtnLines = ""
+        for globalCodeLine in self.globalCode:
+            rtnLines += self.__appednCodeLine(globalCodeLine, iniLevel)
+        return rtnLines
+
     def __addJsonCodeLines(self, iniLevel=0):
+        """Use CUSTOM jsonCode"""
         indent = self.indent
         rtnLines = ""
         for JsonCodeLine in self.jsonCode:
@@ -427,7 +535,8 @@ class PiGenCode():
                 else:
                     rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + '{}'
             else:
-                printIt(f'{param} {paramType} from {self.PiFileName} not defined01.',lable.ERROR)
+                pass
+                # printIt(f'{param} {paramType} from {self.PiFileName} not defined01.',lable.ERROR)
         rtnLines += '):\n'
         if len(self.initArguments) == 0:
             if not (self.preSuperInitCode or \
@@ -455,14 +564,20 @@ class PiGenCode():
         # else: rtnLines += indent*iniLevel + "pass\n"
         return rtnLines
     def __genClassLines(self, indent=4, iniLevel=0):
+        """Main class generation using unified element-based architecture"""
         rtnLines = self.__genClassLine(iniLevel)
         iniLevel += 1
-        rtnLines += self.__genClassCommentLines(iniLevel)
-        rtnLines += self.__genInitLines(iniLevel)
-        if self.strCode: rtnLines += self.__addStrCodeLines(iniLevel)
-        else: rtnLines += self.__genStrCodeLines(iniLevel)
-        rtnLines += self.__genJsonCodeLines(iniLevel)
-        if len(self.classDefCode) > 0: rtnLines += self.__addDefCodeLines(iniLevel)
+
+        # Use unified element-based generation for all elements
+        rtnLines += self.__generateElementCode('classComment', iniLevel)
+        rtnLines += self.__genInitLines(iniLevel)  # Init is complex, keep existing logic for now
+        rtnLines += self.__generateElementCode('strCode', iniLevel)
+        rtnLines += self.__generateElementCode('jsonCode', iniLevel)
+
+        # Handle classDefCode (custom methods) - keep existing logic for now
+        if len(self.classDefCode) > 0:
+            rtnLines += self.__addDefCodeLines(iniLevel)
+
         return rtnLines
     def __genAboveClassLines(self) -> str:
         indent = self.indent
@@ -566,18 +681,18 @@ class PiGenCode():
                 # Ultimate fallback to old behavior for backward compatibility
                 piClassDir = readRC(PiSeedTypes[0])
                 piClassDir = Path(piClassDir).parent.joinpath("piClasses")
-        
+
         if not piClassDir.is_dir():
             logIt(f'Make direcory: {piClassDir}')
             piClassDir.mkdir(mode=511,parents=True,exist_ok=True)
         self.piClassDir =  piClassDir
-    
+
     def __updatePiClassTrackingFile(self, fileName):
         """Update the .piclass tracking file with generated filenames"""
         # Place tracking file in the same directory as the generated file
         trackingFile = os.path.join(self.piClassDir, ".piclass")
         generatedFiles = set()
-        
+
         # Read existing tracking file if it exists
         if os.path.isfile(trackingFile):
             try:
@@ -586,10 +701,10 @@ class PiGenCode():
                     generatedFiles = set(line.strip() for line in f if line.strip() and not line.strip().startswith('#'))
             except Exception as e:
                 logIt(f'Warning: Could not read tracking file {trackingFile}: {e}')
-        
+
         # Add the new file (just the filename, not full path)
         generatedFiles.add(os.path.basename(fileName))
-        
+
         # Write updated tracking file with metadata
         try:
             with open(trackingFile, 'w') as f:
@@ -600,26 +715,26 @@ class PiGenCode():
                     f.write(f"{filename}\n")
         except Exception as e:
             logIt(f'Warning: Could not update tracking file {trackingFile}: {e}')
-    
+
     def __savePiClass(self, piClassLines,verbose=False):
         # Use fileName field if specified, otherwise fall back to piTitle
         if self.fileName:
             baseFileName = self.fileName
         else:
             baseFileName = self.pi_piClassGC["piBase"]["piTitle"]
-        
+
         fileName = os.path.join(self.piClassDir, f"{baseFileName}.py")
-        
+
         if os.path.isfile(fileName):
             if verbose: printIt(f'{fileName}',lable.REPLACED)
         else:
             if verbose: printIt(f'{fileName}',lable.SAVED)
         with open(fileName, 'w') as f:
             f.write(piClassLines)
-        
+
         # Update tracking file
         self.__updatePiClassTrackingFile(fileName)
-        
+
         # Use the base filename for the saved files dictionary
         self.savedCodeFiles[baseFileName] = fileName
     def __genPiClass(self, piJsonFileName, verbose = False) -> None:
@@ -646,6 +761,40 @@ class PiGenCode():
                 piJsonFileName = os.path.join(piJsonGCDir, piJsonGCFilename)
                 self.__genPiClass(piJsonFileName)
 ##### Public Functions
+    def __generateElementCode(self, elementName: str, iniLevel: int = 0) -> str:
+        """Unified element code generation - determines if custom or default code should be used"""
+        elementData = getattr(self, elementName, None)
+
+        # Check if custom code exists and has content
+        hasCustomCode = False
+        if elementData:
+            if isinstance(elementData, list) and len(elementData) > 0:
+                hasCustomCode = True
+            elif isinstance(elementData, dict) and len(elementData) > 0:
+                hasCustomCode = True
+            elif isinstance(elementData, str) and elementData.strip():
+                hasCustomCode = True
+
+        if hasCustomCode:
+            # Custom code exists - use it
+            methodName = f'__add{elementName.capitalize()}Lines'
+            if hasattr(self, methodName):
+                return getattr(self, methodName)(iniLevel)
+
+        # No custom code - generate default
+        methodName = f'__gen{elementName.capitalize()}Lines'
+        if hasattr(self, methodName):
+            return getattr(self, methodName)(iniLevel)
+
+        return ""
+
+    def getDefaultElementCode(self, elementName: str, iniLevel: int = 0) -> str:
+        """Get what the default code should be for a given element - used by syncCode for comparison"""
+        methodName = f'__gen{elementName.capitalize()}Lines'
+        if hasattr(self, methodName):
+            return getattr(self, methodName)(iniLevel)
+        return ""
+
 #[ genPiPiClass, genPiPisFromSeedPiPiGCFile ]
 def genPiPiClass(genFileName='', verbose = False) -> dict:
     '''Generate python file with genFileName piClassGC file.
