@@ -149,12 +149,12 @@ class PiDefGCFiles():
         self.maxFileInt = self.baseMaxFileInt
         self.lastLineNumber = 0
         self.defGCFilePaths = []
-    
+
     def _getPiDefGCFiles(self):
         # Pattern for piDefGC files: piDefGC001_filename.json
         defgc_pattern = reCompile(r'piDefGC(\d{3})_(.+)\.json')
         return [p.name for p in self.fileDirName.iterdir() if p.is_file() and defgc_pattern.match(p.name)]
-    
+
     def _getBaseMaxFileInt(self):
         rtnInt = 1
         PiDefGCFiles = self._getPiDefGCFiles()
@@ -212,7 +212,8 @@ class PiDefGCFiles():
                 fileInt = self.maxFileInt
             self.maxFileInt += 1
         else:
-            print(">>>", piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exists')
+            pass
+            #print(">>>", piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exists')
         return str(fileInt).zfill(3)
 
     def _getPiDefGCFileName(self, piType, piTitle, lineNumber=0) -> str:
@@ -224,9 +225,9 @@ class PiDefGCFiles():
     def writePiDefGC(self, piType, piTitle, lineNumber, aDict: dict, verbose=True) -> bool:
         piStrucFileName = self._getPiDefGCFileName(piType, piTitle, lineNumber)
         rtnBool = writeJson(piStrucFileName, aDict, verbose)
-        if rtnBool: 
+        if rtnBool:
             self.defGCFilePaths.append(piStrucFileName)
-        if rtnBool and verbose: 
+        if rtnBool and verbose:
             printIt(piStrucFileName, lable.SAVED)
         return rtnBool
 
@@ -245,12 +246,12 @@ class PiGenClassFiles():
         self.maxFileInt = self.baseMaxFileInt
         self.lastLineNumber = 0
         self.genClassFilePaths = []
-    
+
     def _getPiGenClassFiles(self):
         # Pattern for piGenClass files: piGenClass001_filename.json
         genclass_pattern = reCompile(r'piGenClass(\d{3})_(.+)\.json')
         return [p.name for p in self.fileDirName.iterdir() if p.is_file() and genclass_pattern.match(p.name)]
-    
+
     def _getBaseMaxFileInt(self):
         rtnInt = 1
         PiGenClassFiles = self._getPiGenClassFiles()
@@ -308,7 +309,8 @@ class PiGenClassFiles():
                 fileInt = self.maxFileInt
             self.maxFileInt += 1
         else:
-            print(">>>", piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exists')
+            pass
+            # print(">>>", piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exists')
         return str(fileInt).zfill(3)
 
     def _getPiGenClassFileName(self, piType, piTitle, lineNumber=0) -> str:
@@ -320,9 +322,9 @@ class PiGenClassFiles():
     def writePiGenClass(self, piType, piTitle, lineNumber, aDict: dict, verbose=True) -> bool:
         piStrucFileName = self._getPiGenClassFileName(piType, piTitle, lineNumber)
         rtnBool = writeJson(piStrucFileName, aDict, verbose)
-        if rtnBool: 
+        if rtnBool:
             self.genClassFilePaths.append(piStrucFileName)
-        if rtnBool and verbose: 
+        if rtnBool and verbose:
             printIt(piStrucFileName, lable.SAVED)
         return rtnBool
 
@@ -409,7 +411,8 @@ class PiClassGCFiles():
                 fileInt = self.maxFileInt
             self.maxFileInt += 1
         else:
-            print(">>>",piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exits')
+            pass
+            # print(">>>",piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exits')
         return str(fileInt).zfill(3)
 
     def _getPiClassGCFileName(self, piType, piTitle, lineNumber = 0) -> str:
