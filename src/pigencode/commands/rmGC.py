@@ -102,12 +102,13 @@ def removeTrackedFilesRecursive(rootDirectory: Path, trackingFileName: str, disp
     total_preserved_count = 0
     tracking_files_found = 0
     
-    if not rootDirectory.exists():
-        printIt(f"Directory not found: {displayName} ({rootDirectory})", lable.ABORTPRT)
-        return 0, 0, 0
+    tracking_files = []
     
-    # First, try to find tracking files in the configured directory
-    tracking_files = list(rootDirectory.rglob(trackingFileName))
+    # First, try to find tracking files in the configured directory (if it exists)
+    if rootDirectory.exists():
+        tracking_files = list(rootDirectory.rglob(trackingFileName))
+    else:
+        printIt(f"Configured directory not found: {displayName} ({rootDirectory})", lable.DEBUG)
     
     # If no tracking files found in configured directory, expand search scope
     if not tracking_files:
@@ -131,16 +132,20 @@ def removeTrackedFilesRecursive(rootDirectory: Path, trackingFileName: str, disp
             tracking_files.append(tracking_file)
     
     if not tracking_files:
-        # No tracking files found anywhere - count all Python files as preserved user files
-        python_files = list(rootDirectory.rglob("*.py"))
-        total_preserved_count = len(python_files)
-        if total_preserved_count > 0:
-            printIt(f"No tracking files found in {displayName} ({rootDirectory})", lable.INFO)
-            printIt(f"Preserved {total_preserved_count} existing Python files", lable.INFO)
+        # No tracking files found anywhere
+        if rootDirectory.exists():
+            # Count all Python files as preserved user files
+            python_files = list(rootDirectory.rglob("*.py"))
+            total_preserved_count = len(python_files)
+            if total_preserved_count > 0:
+                printIt(f"No tracking files found in {displayName} ({rootDirectory})", lable.INFO)
+                printIt(f"Preserved {total_preserved_count} existing Python files", lable.INFO)
+        else:
+            printIt(f"No tracking files found for {displayName} anywhere in project", lable.INFO)
         return 0, total_preserved_count, 0
     
     tracking_files_found = len(tracking_files)
-    printIt(f"Found {tracking_files_found} tracking files in {displayName} ({rootDirectory})", lable.INFO)
+    printIt(f"Found {tracking_files_found} tracking files for {displayName}", lable.INFO)
     
     # Process each tracking file
     for tracking_file in tracking_files:

@@ -271,8 +271,10 @@ class PiGermSeeds():
                                     # Handle the final key
                                     final_key = piExDefDictKeys[-1]
 
-                                    # Special handling for classDefCode structure
-                                    if len(piExDefDictKeys) >= 2 and piExDefDictKeys[-2] == 'classDefCode':
+                                    # Special handling for classDefCode structure - DISABLED
+                                    # The nested classDefCode issue is caused by incorrect special handling
+                                    # Let the normal structure handling take care of classDefCode
+                                    if False and len(piExDefDictKeys) >= 2 and piExDefDictKeys[-2] == 'classDefCode':
                                         # This is a method within classDefCode, ensure classDefCode is a dict
                                         parent_dict = aDict
                                         parent_key = piExDefDictKeys[-2]

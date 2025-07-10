@@ -14,15 +14,76 @@ def genCode(argParse: ArgParse):
         # No arguments - process all files
         savedCodeFiles = genCodeFile("")
     elif len(theArgs) == 1:
-        # Single argument - could be filename or old syntax
-        fileName = theArgs[0]
-        savedCodeFiles = genCodeFile(fileName)
+        # Single argument - could be filename, number shortcut, or old syntax
+        arg = theArgs[0]
+        
+        # Check if argument is a number (shortcut syntax)
+        if isinstance(arg, int) or (isinstance(arg, str) and arg.isdigit()):
+            number = int(arg)
+            savedCodeFiles = processNumberShortcut(number)
+        else:
+            # Treat as filename
+            savedCodeFiles = genCodeFile(arg)
     else:
         # Multiple arguments - new shortcut syntax
         savedCodeFiles = processShortcutSyntax(theArgs)
     
     for savedCodeFile in savedCodeFiles:
         printIt(f'{savedCodeFile} generated', lable.INFO)
+
+def processNumberShortcut(number: int) -> dict:
+    """
+    Process number-only shortcut like 'genCode 31'
+    Automatically detects file type by searching for germ files
+    """
+    savedCodeFiles: dict = {}
+    
+    # Search for germ files with this number in all subdirectories
+    fileTypes = ['piclass', 'pidef', 'pigenclass']
+    foundFiles = []
+    
+    for fileType in fileTypes:
+        fileName = findGermFile(fileType, number)
+        if fileName:
+            foundFiles.append((fileType, fileName))
+    
+    if not foundFiles:
+        printIt(f"No germ files found for number {number:03d}", lable.ERROR)
+        printIt("Searched for:", lable.INFO)
+        printIt(f"  • piGerms/piClassGC/piClassGC{number:03d}_*.json", lable.INFO)
+        printIt(f"  • piGerms/piDefGC/piDefGC{number:03d}_*.json", lable.INFO)
+        printIt(f"  • piGerms/piGenClass/piGenClass{number:03d}_*.json", lable.INFO)
+        return savedCodeFiles
+    
+    if len(foundFiles) > 1:
+        printIt(f"Multiple germ files found for number {number:03d}:", lable.WARN)
+        for fileType, fileName in foundFiles:
+            printIt(f"  • {fileType}: {fileName}", lable.WARN)
+        printIt("Using the first one found. Use explicit syntax to specify type:", lable.WARN)
+        printIt(f"  piGenCode genCode piClass {number}", lable.WARN)
+        printIt(f"  piGenCode genCode piDef {number}", lable.WARN)
+        printIt(f"  piGenCode genCode piGenClass {number}", lable.WARN)
+    
+    # Process the first (or only) found file
+    fileType, fileName = foundFiles[0]
+    printIt(f"Processing {fileType} file: {fileName}", lable.INFO)
+    
+    try:
+        if fileType == 'piclass':
+            files = genPiPiClass(fileName, False)
+        elif fileType == 'pidef':
+            files = genPiDefCode(fileName, False)
+        else:  # pigenclass
+            result = genPiGenClass(fileName)
+            if result:
+                files = {result: fileName}
+            else:
+                files = {}
+        savedCodeFiles.update(files)
+    except Exception as e:
+        printIt(f"Error processing {fileName}: {e}", lable.ERROR)
+    
+    return savedCodeFiles
 
 def processShortcutSyntax(args: list) -> dict:
     """

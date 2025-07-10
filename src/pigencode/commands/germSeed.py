@@ -52,11 +52,11 @@ def germSeed(argParse: ArgParse):
                         for savedCodeFile in savedCodeFiles:
                             printIt(f'{savedCodeFile} generated',lable.INFO)
                 argIndex += 1
-    if piGermSeeds:
-        for piGermSeed in piGermSeeds.piClassGCFiles.classGCFilePaths:
-            printIt(f'classGCFile created: {piGermSeed}',lable.INFO)
-        for piGermSeed in piGermSeeds.piDefGCFiles.defGCFilePaths:
-            printIt(f'defGCFile created: {piGermSeed}',lable.INFO)
+        if piGermSeeds:
+            for piGermSeed in piGermSeeds.piClassGCFiles.classGCFilePaths:
+                printIt(f'classGCFile created: {piGermSeed}',lable.INFO)
+            for piGermSeed in piGermSeeds.piDefGCFiles.defGCFilePaths:
+                printIt(f'defGCFile created: {piGermSeed}',lable.INFO)
 
 def getSeedFileName(fileIntStr) -> str:
     fileName = ''
