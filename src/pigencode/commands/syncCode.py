@@ -485,87 +485,93 @@ def extractInitArgsFromSeedDetailed(seedContent: str, className: str) -> Dict[st
     return initArgs
 
 def shouldPreserveElegantPattern(seedContent: str, className: str, codeType: str, codeLines: List[str], options: dict = None) -> bool:
-    """Determine if we should preserve elegant piSeed patterns instead of syncing - TARGETED IDEMPOTENCY FIX"""
+    """Determine if we should preserve elegant piSeed patterns instead of syncing - IMPROVED CHANGE DETECTION"""
     
-    # If force option is enabled, always sync (don't preserve patterns)
-    if options and options.get('force', False):
-        if options.get('stats', False):
-            printIt(f"FORCE: Syncing {codeType} for {className} (force mode enabled)", lable.DEBUG)
-        return False
+    # IMPROVED LOGIC: Only preserve patterns if they are truly default/generated and haven't been meaningfully modified
+    # The default behavior is now to always detect real changes and sync them
     
-    # TARGETED IDEMPOTENCY FIX: Prevent specific problematic syncs that cause persistent changes
-    
-    # For ANY code type that already exists in the seed, ALWAYS preserve it
-    if f'{className}.piBody:piClassGC:{codeType}' in seedContent:
-        if options and options.get('stats', False):
-            printIt(f"PRESERVE: {codeType} for {className} - section already exists", lable.DEBUG)
-        return True
-    
-    # TARGETED FIX 1: Never sync strCode if it looks like default generated pattern
+    # TARGETED FIX 1: Only preserve strCode if it's truly a default generated pattern
     if codeType == 'strCode':
-        # Check if this is a default generated __str__ method
+        # Check if this is a default generated __str__ method that hasn't been customized
         if codeLines and len(codeLines) > 0:
             codeStr = '\n'.join(codeLines)
-            # If it contains the default pattern, preserve (don't sync)
+            # Only preserve if it's the exact default pattern
             if (f'rtnStr = "{className} = ' in codeStr and 
                 'return rtnStr' in codeStr and 
-                'rtnStr +=' in codeStr):
+                'rtnStr +=' in codeStr and
+                len([line for line in codeLines if line.strip()]) <= 5):  # Very simple default pattern
                 if options and options.get('stats', False):
-                    printIt(f"PRESERVE: {codeType} for {className} - detected default generated pattern", lable.DEBUG)
+                    printIt(f"PRESERVE: {codeType} for {className} - exact default pattern", lable.DEBUG)
                 return True
+        # For any other strCode, sync it (user has customized it)
+        return False
     
-    # TARGETED FIX 2: Never sync fromImports for auto-generated imports
+    # TARGETED FIX 2: Only preserve fromImports if they are clearly auto-generated
     if codeType == 'fromImports':
-        # Check if these are auto-generated imports (common patterns)
+        # Only preserve if ALL imports look auto-generated
         if codeLines:
+            autoGenCount = 0
+            totalCount = len(codeLines)
             for line in codeLines:
                 lineStr = str(line).strip()
-                # If it's importing from a pi class, it's likely auto-generated
-                if ('from' in lineStr and 'import' in lineStr and 
-                    ('pi' in lineStr.lower() or className.lower() in lineStr.lower())):
-                    if options and options.get('stats', False):
-                        printIt(f"PRESERVE: {codeType} for {className} - detected auto-generated import", lable.DEBUG)
-                    return True
+                # Check for very specific auto-generated patterns
+                if ('from .pi' in lineStr or 'from pi.' in lineStr or 
+                    lineStr.startswith('from .') and 'import Pi' in lineStr):
+                    autoGenCount += 1
+            
+            # Only preserve if ALL imports are clearly auto-generated
+            if autoGenCount == totalCount and totalCount > 0:
+                if options and options.get('stats', False):
+                    printIt(f"PRESERVE: {codeType} for {className} - all imports auto-generated", lable.DEBUG)
+                return True
+        # For any other imports, sync them (user has customized them)
+        return False
     
-    # For initAppendCode, be conservative
-    if codeType == 'initAppendCode':
-        # If postSuperInitCode already exists in seed, don't add initAppendCode
-        if 'postSuperInitCode' in seedContent:
-            if options and options.get('stats', False):
-                printIt(f"PRESERVE: {codeType} for {className} - postSuperInitCode exists, avoiding duplication", lable.DEBUG)
-            return True
-        
-        # Only sync initAppendCode if it contains significant custom logic
-        initArgs = extractInitArgsFromSeed(seedContent, className)
-        isDefault = isDefaultInitAppendCode(codeLines, initArgs)
-        
-        if options and options.get('stats', False):
-            if isDefault:
-                printIt(f"PRESERVE: {codeType} for {className} - detected default pattern", lable.DEBUG)
-            else:
-                printIt(f"SYNC: {codeType} for {className} - detected significant custom code", lable.DEBUG)
-        
-        return isDefault
-    
-    # For jsonCode, be conservative
+    # TARGETED FIX 3: Only preserve jsonCode if it's truly default
     if codeType == 'jsonCode':
-        initArgs = extractInitArgsFromSeed(seedContent, className)
-        isDefault = isDefaultJsonCode(codeLines, className, initArgs)
-        
-        if isDefault:
-            if options and options.get('stats', False):
-                printIt(f"PRESERVE: {codeType} for {className} - detected default pattern", lable.DEBUG)
+        if codeLines and len(codeLines) > 0:
+            codeStr = '\n'.join(codeLines)
+            # Only preserve if it's the exact default pattern
+            if ('def json(self):' in codeStr and 
+                'return {' in codeStr and 
+                len([line for line in codeLines if line.strip()]) <= 10):  # Simple default pattern
+                initArgs = extractInitArgsFromSeed(seedContent, className)
+                isDefault = isDefaultJsonCode(codeLines, className, initArgs)
+                if isDefault:
+                    if options and options.get('stats', False):
+                        printIt(f"PRESERVE: {codeType} for {className} - exact default pattern", lable.DEBUG)
+                    return True
+        # For any other jsonCode, sync it (user has customized it)
+        return False
+    
+    # TARGETED FIX 4: Be more selective about initAppendCode
+    if codeType == 'initAppendCode':
+        # Only preserve if it's truly default initialization
+        if codeLines:
+            initArgs = extractInitArgsFromSeed(seedContent, className)
+            isDefault = isDefaultInitAppendCode(codeLines, initArgs)
+            if isDefault:
+                if options and options.get('stats', False):
+                    printIt(f"PRESERVE: {codeType} for {className} - default initialization", lable.DEBUG)
+                return True
+        # For any other initAppendCode, sync it (user has customized it)
+        return False
+    
+    # For structural elements, be more permissive to allow real changes
+    if codeType in ['imports', 'constants', 'headers']:
+        # Only preserve if they are completely empty or clearly auto-generated
+        if not codeLines or len(codeLines) == 0:
             return True
+        # Otherwise, sync them to capture user changes
+        return False
     
-    # For other structural elements, be conservative
-    if codeType in ['imports', 'constants', 'headers', 'globalCode']:
-        if options and options.get('stats', False):
-            printIt(f"PRESERVE: {codeType} for {className} - preserving structural elements", lable.DEBUG)
-        return True
+    # For globalCode, always sync to capture user changes
+    if codeType == 'globalCode':
+        return False
     
-    # Default: allow syncing for other cases
+    # Default: allow syncing to capture real changes
     if options and options.get('stats', False):
-        printIt(f"SYNC: {codeType} for {className} - allowing sync", lable.DEBUG)
+        printIt(f"SYNC: {codeType} for {className} - allowing sync for real changes", lable.DEBUG)
     
     return False  # Allow syncing by default
 
@@ -581,7 +587,6 @@ def syncCode(argParse: ArgParse):
     - --stats: Show detailed statistics and change information
     - --filter <type>: Only sync specific file types (class|def|genclass)
     - --exclude-pattern <pattern>: Exclude files matching glob pattern
-    - --force: Force sync even for default/generated patterns
     """
     # Use the already parsed arguments from ArgParse.__init__
     args = argParse.args
@@ -594,7 +599,6 @@ def syncCode(argParse: ArgParse):
         'create_missing': 'create-missing' in cmd_options,
         'validate': 'validate' in cmd_options,
         'stats': 'stats' in cmd_options,
-        'force': 'force' in cmd_options,
         'filter_type': cmd_options.get('filter'),
         'exclude_pattern': cmd_options.get('exclude-pattern'),
         'target_file': None
@@ -645,6 +649,29 @@ def syncCode(argParse: ArgParse):
         # Sync all files with enhanced options
         syncAllFilesEnhanced(options)
 
+def findExistingPiSeedFile(className: str) -> tuple:
+    """
+    Find existing piSeed file for a class, checking all types.
+    Returns (piSeedFile_path, piSeed_type) or (None, None) if not found.
+    Priority: piClassGC -> piGenClass -> piDefGC
+    """
+    # Check piClassGC first (most common for single classes)
+    piSeedFile = findPiClassGCSeedFile(className)
+    if piSeedFile:
+        return piSeedFile, "piClassGC"
+    
+    # Check piGenClass second
+    piSeedFile = findPiGenClassSeedFile(className)
+    if piSeedFile:
+        return piSeedFile, "piGenClass"
+    
+    # Check piDefGC last (for function files)
+    piSeedFile = findPiDefGCSeedFile(className)
+    if piSeedFile:
+        return piSeedFile, "piDefGC"
+    
+    return None, None
+
 def syncSingleFileEnhanced(fileName: str, options: dict):
     """Enhanced single file sync with piGenClass support and additional options"""
     try:
@@ -663,11 +690,39 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
         if options.get('stats', False):
             printIt(f"Found file: {filePath}", lable.INFO)
         
-        # Determine file type using enhanced detection
-        file_type = determineOptimalPiSeedType(filePath)
+        className = filePath.stem
         
-        if options.get('stats', False):
-            printIt(f"Detected file type: {file_type}", lable.DEBUG)
+        # First, check for existing piSeed files of any type
+        existingPiSeedFile, existingType = findExistingPiSeedFile(className)
+        
+        if existingPiSeedFile:
+            # Use existing piSeed file type
+            file_type = existingType
+            piSeedFile = existingPiSeedFile
+            if options.get('stats', False):
+                printIt(f"Found existing {file_type} piSeed file: {piSeedFile.name}", lable.DEBUG)
+        else:
+            # No existing piSeed file, determine optimal type
+            file_type = determineOptimalPiSeedType(filePath)
+            if options.get('stats', False):
+                printIt(f"No existing piSeed file found, detected optimal type: {file_type}", lable.DEBUG)
+            
+            # Try to find or create piSeed file based on optimal type
+            if file_type == "piDefGC":
+                piSeedFile = findPiDefGCSeedFile(className)
+                if not piSeedFile and options.get('create_missing', False):
+                    printIt(f"Creating new piDefGC piSeed file for: {className}", lable.INFO)
+                    piSeedFile = createNewPiDefGCSeedFileEnhanced(className, filePath)
+            elif file_type == "piGenClass":
+                piSeedFile = findPiGenClassSeedFile(className)
+                if not piSeedFile and options.get('create_missing', False):
+                    printIt(f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
+                    piSeedFile = createNewPiGenClassSeedFile(className, filePath)
+            else:  # piClassGC
+                piSeedFile = findPiClassGCSeedFile(className)
+                if not piSeedFile and options.get('create_missing', False):
+                    printIt(f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
+                    piSeedFile = createNewPiClassGCSeedFileEnhanced(className, filePath)
         
         # Apply filter if specified
         if options.get('filter_type'):
@@ -685,71 +740,25 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                     printIt(f"Skipping {filePath.name} - matches exclude pattern", lable.DEBUG)
                 return
         
-        # Find or create piSeed file based on type
-        piSeedFile = None
-        changes = []
+        # Check if we have a piSeed file to work with
+        if not piSeedFile:
+            printIt(f"{file_type} piSeed file not found for: {className}", lable.WARN)
+            if not options.get('create_missing', False):
+                printIt("Use --create-missing to auto-create piSeed file", lable.INFO)
+            return
         
+        # Dry run check
+        if options.get('dry_run', False):
+            printIt(f"DRY RUN: Would sync {filePath.name} to {piSeedFile.name}", lable.INFO)
+            return
+        
+        # Sync based on the determined file type
+        changes = []
         if file_type == "piDefGC":
-            defName = filePath.stem
-            piSeedFile = findPiDefGCSeedFile(defName)
-            
-            if not piSeedFile and options.get('create_missing', False):
-                printIt(f"Creating new piDefGC piSeed file for: {defName}", lable.INFO)
-                piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, filePath)
-            
-            if not piSeedFile:
-                printIt(f"piDefGC piSeed file not found for: {defName}", lable.WARN)
-                if not options.get('create_missing', False):
-                    printIt("Use --create-missing to auto-create piSeed file", lable.INFO)
-                return
-            
-            # Dry run check
-            if options.get('dry_run', False):
-                printIt(f"DRY RUN: Would sync {filePath.name} to {piSeedFile.name}", lable.INFO)
-                return
-            
             changes = syncPythonDefToSeed(filePath, piSeedFile)
-            
         elif file_type == "piGenClass":
-            className = filePath.stem
-            piSeedFile = findPiGenClassSeedFile(className)
-            
-            if not piSeedFile and options.get('create_missing', False):
-                printIt(f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
-                piSeedFile = createNewPiGenClassSeedFile(className, filePath)
-            
-            if not piSeedFile:
-                printIt(f"piGenClass piSeed file not found for: {className}", lable.WARN)
-                if not options.get('create_missing', False):
-                    printIt("Use --create-missing to auto-create piSeed file", lable.INFO)
-                return
-            
-            # Dry run check
-            if options.get('dry_run', False):
-                printIt(f"DRY RUN: Would sync {filePath.name} to {piSeedFile.name}", lable.INFO)
-                return
-            
             changes = syncPythonGenClassToSeed(filePath, piSeedFile)
-            
         else:  # piClassGC
-            className = filePath.stem
-            piSeedFile = findPiClassGCSeedFile(className)
-            
-            if not piSeedFile and options.get('create_missing', False):
-                printIt(f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
-                piSeedFile = createNewPiClassGCSeedFileEnhanced(className, filePath)
-            
-            if not piSeedFile:
-                printIt(f"piClassGC piSeed file not found for class: {className}", lable.WARN)
-                if not options.get('create_missing', False):
-                    printIt("Use --create-missing to auto-create piSeed file", lable.INFO)
-                return
-            
-            # Dry run check
-            if options.get('dry_run', False):
-                printIt(f"DRY RUN: Would sync {filePath.name} to {piSeedFile.name}", lable.INFO)
-                return
-            
             changes = syncPythonClassToSeed(filePath, piSeedFile, options)
         
         # Validate results if requested
@@ -768,96 +777,6 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
     except Exception as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
         printIt(f'syncSingleFileEnhanced error:\n{tb_str}', lable.ERROR)
-    """Sync a single modified Python file back to its piSeed file"""
-    try:
-        filePath = Path(fileName)
-        if not filePath.exists():
-            # Try looking in configurable piClassGCDir first
-            piClassesDir = Path(getKeyItem("piClassGCDir", "piClasses"))
-            if piClassesDir.exists():
-                filePath = piClassesDir / fileName
-                if not filePath.exists():
-                    filePath = piClassesDir / f"{fileName}.py"
-                
-                # Also search in piClasses subdirectories
-                if not filePath.exists():
-                    for subdir in piClassesDir.iterdir():
-                        if subdir.is_dir():
-                            candidate = subdir / fileName
-                            if candidate.exists():
-                                filePath = candidate
-                                break
-                            candidate = subdir / f"{fileName}.py"
-                            if candidate.exists():
-                                filePath = candidate
-                                break
-            
-            # If not found in piClasses, try configurable piDefGCDir
-            if not filePath.exists():
-                piDefsDir = Path(getKeyItem("piDefGCDir", "piDefs"))
-                if piDefsDir.exists():
-                    filePath = piDefsDir / fileName
-                    if not filePath.exists():
-                        filePath = piDefsDir / f"{fileName}.py"
-        
-        if not filePath.exists():
-            printIt(f"File not found: {fileName}", lable.FileNotFound)
-            return
-        
-        if not filePath.suffix == '.py':
-            printIt(f"File must be a Python file: {fileName}", lable.ERROR)
-            return
-        
-        # Determine if this is a class file or def file based on analysis
-        # First check if it's in a known piDefs directory
-        piDefsDir = Path(getKeyItem("piDefGCDir", "piDefs"))
-        isDefFile = False
-        
-        try:
-            # Check if file is under piDefs directory
-            filePath.relative_to(piDefsDir)
-            isDefFile = True
-        except ValueError:
-            # Not under piDefs directory, check content to determine type
-            isDefFile = isPythonFileDefType(filePath)
-        
-        if isDefFile:
-            # Handle piDefGC file
-            defName = filePath.stem
-            piSeedFile = findPiDefGCSeedFile(defName)
-            if not piSeedFile:
-                printIt(f"piDefGC piSeed file not found for: {defName}", lable.WARN)
-                printIt(f"Creating new piDefGC piSeed file...", lable.INFO)
-                piSeedFile = createNewPiDefGCSeedFile(defName, filePath)
-                if not piSeedFile:
-                    printIt(f"Failed to create new piDefGC piSeed file for: {defName}", lable.ERROR)
-                    return
-            
-            changes = syncPythonDefToSeed(filePath, piSeedFile)
-        else:
-            # Handle piClassGC file
-            className = filePath.stem
-            piSeedFile = findPiClassGCSeedFile(className)
-            if not piSeedFile:
-                printIt(f"piClassGC piSeed file not found for class: {className}", lable.WARN)
-                printIt(f"Creating new piClassGC piSeed file...", lable.INFO)
-                piSeedFile = createNewPiClassGCSeedFile(className, filePath)
-                if not piSeedFile:
-                    printIt(f"Failed to create new piClassGC piSeed file for: {className}", lable.ERROR)
-                    return
-            
-            changes = syncPythonClassToSeed(filePath, piSeedFile, {})
-        
-        if changes:
-            printIt(f"Synced {len(changes)} changes from {filePath.name} to {piSeedFile.name}", lable.INFO)
-            for change in changes:
-                printIt(f"  Updated: {change}", lable.DEBUG)
-        else:
-            printIt(f"No changes needed for {filePath.name}", lable.INFO)
-            
-    except Exception as e:
-        tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(f'syncSingleFile error:\n{tb_str}', lable.ERROR)
 
 def isPythonFileDefType(filePath: Path) -> bool:
     """
@@ -2524,32 +2443,14 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict = No
                             initCodeElements = extractInitCodeWithComparison(pythonContent, item, className, seedContent)
                             
                             for codeType, codeLines in initCodeElements.items():
-                                # IDEMPOTENCY FIX: Skip problematic patterns that cause persistent changes
-                                if codeType in ['strCode', 'fromImports'] and not options.get('force', False):
-                                    if codeType == 'strCode':
-                                        # Skip if it looks like a default generated __str__ method
-                                        if isDefaultGeneratedStrCode(codeLines, className):
-                                            if options.get('stats', False):
-                                                printIt(f"SKIP: {codeType} for {className} - default generated pattern (idempotency)", lable.DEBUG)
-                                            continue  # Skip this sync entirely
-                                    
-                                    elif codeType == 'fromImports':
-                                        # Skip if it looks like auto-generated imports
-                                        if codeLines:
-                                            isAutoGenerated = False
-                                            for line in codeLines:
-                                                lineStr = str(line).strip()
-                                                if ('from' in lineStr and 'import' in lineStr and 
-                                                    ('pi' in lineStr.lower() or className.lower() in lineStr.lower())):
-                                                    isAutoGenerated = True
-                                                    break
-                                            if isAutoGenerated:
-                                                if options.get('stats', False):
-                                                    printIt(f"SKIP: {codeType} for {className} - auto-generated import (idempotency)", lable.DEBUG)
-                                                continue  # Skip this sync entirely
+                                # IMPROVED LOGIC: Use intelligent pattern detection instead of force flag
+                                if shouldPreserveElegantPattern(seedContent, className, codeType, codeLines, options):
+                                    if options.get('stats', False):
+                                        printIt(f"PRESERVE: Skipping {codeType} for {className} - preserving elegant pattern", lable.DEBUG)
+                                    continue
                                 
-                                # Only sync if not a default pattern
-                                if codeLines and not shouldPreserveElegantPattern(seedContent, className, codeType, codeLines, options):
+                                # Real changes detected - sync them
+                                if codeLines:
                                     newSeedContent, changed = updateSeedCodeElement(
                                         seedContent, className, codeType, codeLines
                                     )
@@ -2567,37 +2468,23 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict = No
                                     seedContent = newSeedContent
                                     changes.append("initArguments")
                         elif methodName == '__str__':
-                            # IDEMPOTENCY FIX: Use architecture-based detection
-                            if not options.get('force', False):
-                                # Extract the method code to check if it's default
-                                methodCode = extractMethodCode(pythonContent, item)
-                                if methodCode:
-                                    # Use new architecture-based detection
-                                    if not isCustomCodeUsingArchitecture('strCode', methodCode, className, seedContent):
-                                        if options.get('stats', False):
-                                            printIt(f"SKIP: strCode for {className} - default generated __str__ method (architecture-based)", lable.DEBUG)
-                                        # Skip this sync entirely
-                                        pass
-                                    else:
-                                        # Custom code - proceed with normal sync
-                                        strCodeLines = extractStrCodeWithComparison(pythonContent, item, className, seedContent)
-                                        if strCodeLines:
-                                            newSeedContent, changed = updateSeedCodeElement(
-                                                seedContent, className, 'strCode', strCodeLines
-                                            )
-                                            if changed:
-                                                seedContent = newSeedContent
-                                                changes.append("strCode (__str__)")
-                            else:
-                                # Force mode - always sync
-                                strCodeLines = extractStrCodeWithComparison(pythonContent, item, className, seedContent)
-                                if strCodeLines:
-                                    newSeedContent, changed = updateSeedCodeElement(
-                                        seedContent, className, 'strCode', strCodeLines
-                                    )
-                                    if changed:
-                                        seedContent = newSeedContent
-                                        changes.append("strCode (__str__)")
+                            # IMPROVED LOGIC: Always extract and check for real changes
+                            methodCode = extractMethodCode(pythonContent, item)
+                            if methodCode:
+                                # Use intelligent pattern detection
+                                if shouldPreserveElegantPattern(seedContent, className, 'strCode', methodCode, options):
+                                    if options.get('stats', False):
+                                        printIt(f"PRESERVE: strCode for {className} - preserving default pattern", lable.DEBUG)
+                                else:
+                                    # Real changes detected - sync them
+                                    strCodeLines = extractStrCodeWithComparison(pythonContent, item, className, seedContent)
+                                    if strCodeLines:
+                                        newSeedContent, changed = updateSeedCodeElement(
+                                            seedContent, className, 'strCode', strCodeLines
+                                        )
+                                        if changed:
+                                            seedContent = newSeedContent
+                                            changes.append("strCode (__str__)")
                         elif methodName == 'json':
                             # Special handling for json method - compare with expected default method from piGenCode
                             jsonCodeLines = extractJsonCodeWithComparison(pythonContent, item, className, seedContent)
@@ -2616,32 +2503,14 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict = No
                             if codeElementName:
                                 methodCode = extractMethodCode(pythonContent, item)
                                 
-                                # IDEMPOTENCY FIX: Skip problematic patterns that cause persistent changes
-                                if codeElementName in ['strCode', 'fromImports'] and not options.get('force', False):
-                                    if codeElementName == 'strCode':
-                                        # Skip if it looks like a default generated __str__ method
-                                        if isDefaultGeneratedStrCode(methodCode, className):
-                                            if options.get('stats', False):
-                                                printIt(f"SKIP: {codeElementName} for {className} - default generated pattern (idempotency)", lable.DEBUG)
-                                            continue  # Skip this sync entirely
-                                    
-                                    elif codeElementName == 'fromImports':
-                                        # Skip if it looks like auto-generated imports
-                                        if methodCode:
-                                            isAutoGenerated = False
-                                            for line in methodCode:
-                                                lineStr = str(line).strip()
-                                                if ('from' in lineStr and 'import' in lineStr and 
-                                                    ('pi' in lineStr.lower() or className.lower() in lineStr.lower())):
-                                                    isAutoGenerated = True
-                                                    break
-                                            if isAutoGenerated:
-                                                if options.get('stats', False):
-                                                    printIt(f"SKIP: {codeElementName} for {className} - auto-generated import (idempotency)", lable.DEBUG)
-                                                continue  # Skip this sync entirely
+                                # IMPROVED LOGIC: Use intelligent pattern detection for all methods
+                                if shouldPreserveElegantPattern(seedContent, className, codeElementName, methodCode, options):
+                                    if options.get('stats', False):
+                                        printIt(f"PRESERVE: {codeElementName} for {className} - preserving pattern", lable.DEBUG)
+                                    continue  # Skip this sync
                                 
-                                # Only sync if not a default pattern
-                                if methodCode and not shouldPreserveElegantPattern(seedContent, className, codeElementName, methodCode, options):
+                                # Real changes detected - sync them
+                                if methodCode:
                                     if codeElementName == 'classDefCode':
                                         # Special handling for classDefCode - it's a dictionary of methods
                                         newSeedContent, changed = updateSeedClassDefCode(
@@ -2662,35 +2531,20 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict = No
                 fromImports, regularImports = extractImportStatements(importStatements)
                 
                 if fromImports:
-                    # IDEMPOTENCY FIX: Skip auto-generated imports unless forced
-                    if not options.get('force', False):
-                        skipImports = False
-                        for module_name, import_info in fromImports.items():
-                            # Check if this looks like an auto-generated import
-                            module_lower = module_name.lower()
-                            import_lower = import_info.get('import', '').lower()
-                            from_lower = import_info.get('from', '').lower()
-                            
-                            if (('pi' in module_lower) or 
-                                ('pi' in import_lower) or 
-                                ('pi' in from_lower) or
-                                (className.lower() in module_lower) or
-                                (className.lower() in import_lower) or
-                                (className.lower() in from_lower)):
-                                skipImports = True
-                                if options.get('stats', False):
-                                    printIt(f"SKIP: fromImports for {className} - auto-generated import detected: {module_name} -> {import_info}", lable.DEBUG)
-                                break
-                        
-                        if not skipImports:
-                            newSeedContent, changed = updateSeedFromImports(
-                                seedContent, className, fromImports
-                            )
-                            if changed:
-                                seedContent = newSeedContent
-                                changes.append("fromImports")
+                    # IMPROVED LOGIC: Use intelligent pattern detection instead of force flag
+                    # Convert fromImports to a list format for shouldPreserveElegantPattern
+                    importLines = []
+                    for module_name, import_info in fromImports.items():
+                        from_part = import_info.get('from', '')
+                        import_part = import_info.get('import', '')
+                        if from_part and import_part:
+                            importLines.append(f"from {from_part} import {import_part}")
+                    
+                    if shouldPreserveElegantPattern(seedContent, className, 'fromImports', importLines, options):
+                        if options.get('stats', False):
+                            printIt(f"PRESERVE: fromImports for {className} - preserving auto-generated imports", lable.DEBUG)
                     else:
-                        # Force mode - always sync
+                        # Real changes detected - sync them
                         newSeedContent, changed = updateSeedFromImports(
                             seedContent, className, fromImports
                         )
@@ -5508,7 +5362,6 @@ OPTIONS:
     --create-missing       Auto-create piSeed files for orphaned Python files
     --validate             Validate sync results and show warnings
     --stats                Show detailed statistics and change information
-    --force                Force sync even for default/generated patterns
     --filter <type>        Only sync specific file types (class|def|genclass)
     --exclude-pattern <p>  Exclude files matching glob pattern
     --help                 Show this help message
