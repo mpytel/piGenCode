@@ -16,26 +16,21 @@ def reorderSeeds(argParse: ArgParse):
     Usage: 
         piGenCode reorderSeeds <source_file> <target_file>
         piGenCode reorderSeeds <source_number> <target_number>
+        piGenCode reorderSeeds                                    # Auto-compact gaps
     
     Examples:
         piGenCode reorderSeeds piSeeds/piSeed044_piStruct_piDefGC.pi piSeeds/piSeed009_piStruct_piDefGC.pi
         piGenCode reorderSeeds 44 9
+        piGenCode reorderSeeds                                    # Remove gaps in numbering
     
-    This will:
-    1. Move piSeed044 to position 009
-    2. Increment all files from 009-043 by 1 (009->010, 010->011, etc.)
-    3. Maintain the same processing order for all other files
+    Auto-compact mode (no arguments):
+    - Detects gaps in piSeed file numbering
+    - Renumbers files to collapse gaps (e.g., 000,001,003,005 -> 000,001,002,003)
+    - Preserves original order
+    - Skips compacting if highest number is >10 numbers away (indicates intentional offset)
     """
     args = argParse.parser.parse_args()
     theArgs = args.arguments
-    
-    if len(theArgs) != 2:
-        printIt("Usage: piGenCode reorderSeeds <source_file> <target_file>", lable.ERROR)
-        printIt("   OR: piGenCode reorderSeeds <source_number> <target_number>", lable.ERROR)
-        printIt("Examples:", lable.INFO)
-        printIt("  piGenCode reorderSeeds piSeeds/piSeed044_piStruct_piDefGC.pi piSeeds/piSeed009_piStruct_piDefGC.pi", lable.INFO)
-        printIt("  piGenCode reorderSeeds 44 9", lable.INFO)
-        return
     
     # Get piSeeds directory first
     seeds_dir = getSeedPath()
@@ -45,6 +40,20 @@ def reorderSeeds(argParse: ArgParse):
     
     # Get all piSeed files for reference
     all_seed_files = getAllSeedFiles(seeds_dir)
+    
+    # Auto-compact mode when no arguments provided
+    if len(theArgs) == 0:
+        return autoCompactSeeds(seeds_dir, all_seed_files)
+    
+    if len(theArgs) != 2:
+        printIt("Usage: piGenCode reorderSeeds <source_file> <target_file>", lable.ERROR)
+        printIt("   OR: piGenCode reorderSeeds <source_number> <target_number>", lable.ERROR)
+        printIt("   OR: piGenCode reorderSeeds                                    # Auto-compact gaps", lable.ERROR)
+        printIt("Examples:", lable.INFO)
+        printIt("  piGenCode reorderSeeds piSeeds/piSeed044_piStruct_piDefGC.pi piSeeds/piSeed009_piStruct_piDefGC.pi", lable.INFO)
+        printIt("  piGenCode reorderSeeds 44 9", lable.INFO)
+        printIt("  piGenCode reorderSeeds                                    # Remove gaps in numbering", lable.INFO)
+        return
     
     # Check if arguments are integers (shortcut mode) or file paths
     source_arg = theArgs[0]
@@ -290,3 +299,120 @@ def validateReorder(seeds_dir: Path):
     
     printIt(f"Validation successful: piSeed files numbered {min(numbers):03d} to {max(numbers):03d}", lable.INFO)
     return True
+
+def autoCompactSeeds(seeds_dir: Path, all_seed_files: dict) -> None:
+    """
+    Auto-compact piSeed files by removing gaps in numbering.
+    
+    Args:
+        seeds_dir: Path to piSeeds directory
+        all_seed_files: Dictionary of existing seed files {number: file_info}
+    
+    Logic:
+        - Find gaps in numbering sequence
+        - Renumber files to collapse gaps while preserving order
+        - Skip if highest number is >10 away from expected (indicates intentional offset)
+    """
+    if not all_seed_files:
+        printIt("No piSeed files found to compact", lable.INFO)
+        return
+    
+    # Get sorted list of existing numbers
+    existing_numbers = sorted(all_seed_files.keys())
+    min_num = existing_numbers[0]
+    max_num = existing_numbers[-1]
+    expected_max = min_num + len(existing_numbers) - 1
+    
+    printIt(f"Found {len(existing_numbers)} piSeed files: {min_num:03d} to {max_num:03d}", lable.INFO)
+    
+    # Check if there are gaps
+    expected_sequence = list(range(min_num, min_num + len(existing_numbers)))
+    if existing_numbers == expected_sequence:
+        printIt("No gaps found - piSeed files are already properly numbered", lable.INFO)
+        return
+    
+    # Check for intentional offset (>10 gap from expected)
+    if max_num - expected_max > 10:
+        printIt(f"Large gap detected ({max_num - expected_max} numbers). This appears to be intentional offset.", lable.INFO)
+        printIt("Skipping auto-compact. Use explicit reorderSeeds if you want to compact anyway.", lable.INFO)
+        return
+    
+    # Show what gaps will be removed
+    gaps = []
+    for i in range(min_num, max_num + 1):
+        if i not in existing_numbers:
+            gaps.append(i)
+    
+    if gaps:
+        printIt(f"Gaps found: {[f'{g:03d}' for g in gaps]}", lable.INFO)
+        printIt("Compacting piSeed files to remove gaps...", lable.INFO)
+    
+    # Create renaming plan
+    renaming_plan = []
+    new_number = min_num
+    
+    for old_number in existing_numbers:
+        if old_number != new_number:
+            file_info = all_seed_files[old_number]
+            old_path = file_info['path']
+            new_filename = f"piSeed{new_number:03d}_{file_info['name']}.pi"
+            new_path = seeds_dir / new_filename
+            
+            renaming_plan.append({
+                'old_number': old_number,
+                'new_number': new_number,
+                'old_path': old_path,
+                'new_path': new_path,
+                'name': file_info['name']
+            })
+        
+        new_number += 1
+    
+    if not renaming_plan:
+        printIt("No renaming needed", lable.INFO)
+        return
+    
+    # Show preview of changes
+    printIt("Preview of changes:", lable.INFO)
+    for item in renaming_plan:
+        printIt(f"  • piSeed{item['old_number']:03d}_{item['name']}.pi -> piSeed{item['new_number']:03d}_{item['name']}.pi", lable.INFO)
+    
+    # Confirm with user (in a real implementation, you might want user confirmation)
+    # For now, proceed automatically
+    
+    # Create temporary directory for safe renaming
+    temp_dir = seeds_dir / ".temp_reorder"
+    temp_dir.mkdir(exist_ok=True)
+    
+    try:
+        # Step 1: Move all files to temporary directory
+        temp_files = []
+        for item in renaming_plan:
+            temp_file = temp_dir / item['old_path'].name
+            shutil.move(str(item['old_path']), str(temp_file))
+            temp_files.append((temp_file, item['new_path']))
+            printIt(f"Moved {item['old_path'].name} to temporary location", lable.DEBUG)
+        
+        # Step 2: Move files back with new names
+        for temp_file, new_path in temp_files:
+            shutil.move(str(temp_file), str(new_path))
+            printIt(f"Renamed to {new_path.name}", lable.DEBUG)
+        
+        # Clean up temporary directory
+        temp_dir.rmdir()
+        
+        printIt(f"Successfully compacted {len(renaming_plan)} piSeed files", lable.INFO)
+        printIt(f"piSeed files now numbered: {min_num:03d} to {min_num + len(existing_numbers) - 1:03d}", lable.INFO)
+        
+    except Exception as e:
+        printIt(f"Error during compacting: {e}", lable.ERROR)
+        # Try to restore files from temp directory
+        try:
+            for temp_file in temp_dir.glob("*.pi"):
+                original_path = seeds_dir / temp_file.name
+                if not original_path.exists():
+                    shutil.move(str(temp_file), str(original_path))
+            temp_dir.rmdir()
+            printIt("Restored files from temporary directory", lable.INFO)
+        except:
+            printIt(f"Manual cleanup may be needed in {temp_dir}", lable.WARN)

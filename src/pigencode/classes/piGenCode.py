@@ -525,9 +525,16 @@ class PiGenCode():
                 rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = {self.initArguments[param]["value"]}'
             elif paramType[:2] == "Pi":
                 if paramType not in self.fromPiClasses: self.fromPiClasses.append(paramType)
-                if self.initArguments[param]["value"]:
-                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + f'{self.initArguments[param]["value"]}'
+                # Check if the value is None (either None object or string "None")
+                paramValue = self.initArguments[param]["value"]
+                if paramValue is None or str(paramValue).lower() == "none":
+                    # Parameter value is None - use union type syntax
+                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} | None = None'
+                elif paramValue:
+                    # Parameter has a non-None value
+                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + f'{paramValue}'
                 else:
+                    # Parameter has empty value - use default constructor
                     rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + f'{paramType}()'
             elif "Optional" in paramType:
                 if str(self.initArguments[param]["value"]).lower() == "none":

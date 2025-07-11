@@ -1,6 +1,6 @@
 import os, re, ast, traceback
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Set
 from ..classes.argParse import ArgParse
 from ..defs.logIt import printIt, lable
 from ..defs.piRCFile import getKeyItem
@@ -582,7 +582,7 @@ def syncCode(argParse: ArgParse):
     
     Enhanced CLI with options:
     - --dry-run: Show what would be changed without making changes
-    - --create-missing: Auto-create piSeed files for orphaned Python files
+    - --create-piSeeds: Auto-create piSeed files for specified Python files that don't have piSeeds
     - --validate: Validate sync results and show warnings
     - --stats: Show detailed statistics and change information
     - --filter <type>: Only sync specific file types (class|def|genclass)
@@ -596,7 +596,7 @@ def syncCode(argParse: ArgParse):
     # Parse enhanced command line options from cmd_options
     options = {
         'dry_run': 'dry-run' in cmd_options,
-        'create_missing': 'create-missing' in cmd_options,
+        'create_piSeeds': 'create-piSeeds' in cmd_options,
         'validate': 'validate' in cmd_options,
         'stats': 'stats' in cmd_options,
         'filter_type': cmd_options.get('filter'),
@@ -710,19 +710,31 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
             # Try to find or create piSeed file based on optimal type
             if file_type == "piDefGC":
                 piSeedFile = findPiDefGCSeedFile(className)
-                if not piSeedFile and options.get('create_missing', False):
-                    printIt(f"Creating new piDefGC piSeed file for: {className}", lable.INFO)
-                    piSeedFile = createNewPiDefGCSeedFileEnhanced(className, filePath)
+                if not piSeedFile and options.get('create_piSeeds', False):
+                    if options.get('dry_run', False):
+                        printIt(f"DRY RUN: Would create new piDefGC piSeed file for: {className}", lable.INFO)
+                        return  # Don't actually create in dry-run mode
+                    else:
+                        printIt(f"Creating new piDefGC piSeed file for: {className}", lable.INFO)
+                        piSeedFile = createNewPiDefGCSeedFileEnhanced(className, filePath)
             elif file_type == "piGenClass":
                 piSeedFile = findPiGenClassSeedFile(className)
-                if not piSeedFile and options.get('create_missing', False):
-                    printIt(f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
-                    piSeedFile = createNewPiGenClassSeedFile(className, filePath)
+                if not piSeedFile and options.get('create_piSeeds', False):
+                    if options.get('dry_run', False):
+                        printIt(f"DRY RUN: Would create new piGenClass piSeed file for: {className}", lable.INFO)
+                        return  # Don't actually create in dry-run mode
+                    else:
+                        printIt(f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
+                        piSeedFile = createNewPiGenClassSeedFile(className, filePath)
             else:  # piClassGC
                 piSeedFile = findPiClassGCSeedFile(className)
-                if not piSeedFile and options.get('create_missing', False):
-                    printIt(f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
-                    piSeedFile = createNewPiClassGCSeedFileEnhanced(className, filePath)
+                if not piSeedFile and options.get('create_piSeeds', False):
+                    if options.get('dry_run', False):
+                        printIt(f"DRY RUN: Would create new piClassGC piSeed file for: {className}", lable.INFO)
+                        return  # Don't actually create in dry-run mode
+                    else:
+                        printIt(f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
+                        piSeedFile = createNewPiClassGCSeedFileEnhanced(className, filePath)
         
         # Apply filter if specified
         if options.get('filter_type'):
@@ -743,8 +755,8 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
         # Check if we have a piSeed file to work with
         if not piSeedFile:
             printIt(f"{file_type} piSeed file not found for: {className}", lable.WARN)
-            if not options.get('create_missing', False):
-                printIt("Use --create-missing to auto-create piSeed file", lable.INFO)
+            if not options.get('create_piSeeds', False):
+                printIt("Use --create-piSeeds to auto-create piSeed file", lable.INFO)
             return
         
         # Dry run check
@@ -867,10 +879,53 @@ def syncAllFilesEnhanced(options: dict):
         
         if options.get('dry_run', False):
             printIt("DRY RUN MODE - No changes will be made", lable.WARN)
-            for filePath, file_type, dir_type in files_to_process[:10]:  # Show first 10
-                printIt(f"  Would process: {filePath.name} ({file_type})", lable.DEBUG)
-            if len(files_to_process) > 10:
-                printIt(f"  ... and {len(files_to_process) - 10} more files", lable.DEBUG)
+            
+            if options.get('create_piSeeds', False):
+                # Only show files that actually need piSeed creation
+                files_needing_piSeeds = []
+                for filePath, file_type, dir_type in files_to_process:
+                    className = filePath.stem
+                    piSeedFile = None
+                    
+                    # Use the same prioritized detection logic as actual sync
+                    # First check for existing piSeed files (prioritized)
+                    piSeedFile = findPiClassGCSeedFile(className)
+                    if piSeedFile:
+                        continue  # Has piClassGC piSeed
+                    
+                    piSeedFile = findPiGenClassSeedFile(className)
+                    if piSeedFile:
+                        continue  # Has piGenClass piSeed
+                    
+                    piSeedFile = findPiDefGCSeedFile(className)
+                    if piSeedFile:
+                        continue  # Has piDefGC piSeed
+                    
+                    # No existing piSeed found, determine optimal type
+                    optimal_type = determineOptimalPiSeedType(filePath)
+                    
+                    # Apply filter if specified
+                    if options.get('filter_type'):
+                        filter_map = {'class': 'piClassGC', 'def': 'piDefGC', 'genclass': 'piGenClass'}
+                        if optimal_type != filter_map.get(options['filter_type']):
+                            continue  # Skip files that don't match filter
+                    
+                    files_needing_piSeeds.append((filePath, optimal_type))
+                
+                if files_needing_piSeeds:
+                    printIt(f"Found {len(files_needing_piSeeds)} files that need piSeed creation:", lable.INFO)
+                    for filePath, file_type in files_needing_piSeeds[:10]:  # Show first 10
+                        printIt(f"  Would create {file_type} piSeed for: {filePath.name}", lable.DEBUG)
+                    if len(files_needing_piSeeds) > 10:
+                        printIt(f"  ... and {len(files_needing_piSeeds) - 10} more files", lable.DEBUG)
+                else:
+                    printIt("No files found that need piSeed creation", lable.INFO)
+            else:
+                # Show regular sync operations
+                for filePath, file_type, dir_type in files_to_process[:10]:  # Show first 10
+                    printIt(f"  Would process: {filePath.name} ({file_type})", lable.DEBUG)
+                if len(files_to_process) > 10:
+                    printIt(f"  ... and {len(files_to_process) - 10} more files", lable.DEBUG)
             return
         
         # Process files
@@ -883,7 +938,7 @@ def syncAllFilesEnhanced(options: dict):
                     defName = filePath.stem
                     piSeedFile = findPiDefGCSeedFile(defName)
                     
-                    if not piSeedFile and options.get('create_missing', False):
+                    if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, filePath)
                         if piSeedFile:
                             createdSeeds += 1
@@ -902,7 +957,7 @@ def syncAllFilesEnhanced(options: dict):
                     className = filePath.stem
                     piSeedFile = findPiGenClassSeedFile(className)
                     
-                    if not piSeedFile and options.get('create_missing', False):
+                    if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiGenClassSeedFile(className, filePath)
                         if piSeedFile:
                             createdSeeds += 1
@@ -921,7 +976,7 @@ def syncAllFilesEnhanced(options: dict):
                     className = filePath.stem
                     piSeedFile = findPiClassGCSeedFile(className)
                     
-                    if not piSeedFile and options.get('create_missing', False):
+                    if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiClassGCSeedFileEnhanced(className, filePath)
                         if piSeedFile:
                             createdSeeds += 1
@@ -948,8 +1003,8 @@ def syncAllFilesEnhanced(options: dict):
         if createdSeeds > 0:
             printIt(f"  • Created piSeed files: {createdSeeds}", lable.INFO)
         
-        if skippedFiles > 0 and not options.get('create_missing', False):
-            printIt("Tip: Use --create-missing to auto-create piSeed files for orphaned Python files", lable.INFO)
+        if skippedFiles > 0 and not options.get('create_piSeeds', False):
+            printIt("Tip: Use --create-piSeeds to auto-create piSeed files for orphaned Python files", lable.INFO)
         
     except Exception as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
@@ -982,11 +1037,54 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
         
         if options.get('dry_run', False):
             printIt("DRY RUN MODE - No changes will be made", lable.WARN)
-            for py_file in python_files[:10]:  # Show first 10
-                file_type = determineOptimalPiSeedType(py_file)
-                printIt(f"  Would process: {py_file.name} ({file_type})", lable.DEBUG)
-            if len(python_files) > 10:
-                printIt(f"  ... and {len(python_files) - 10} more files", lable.DEBUG)
+            
+            if options.get('create_piSeeds', False):
+                # Only show files that actually need piSeed creation
+                files_needing_piSeeds = []
+                for py_file in python_files:
+                    className = py_file.stem
+                    piSeedFile = None
+                    
+                    # Use the same prioritized detection logic as actual sync
+                    # First check for existing piSeed files (prioritized)
+                    piSeedFile = findPiClassGCSeedFile(className)
+                    if piSeedFile:
+                        continue  # Has piClassGC piSeed
+                    
+                    piSeedFile = findPiGenClassSeedFile(className)
+                    if piSeedFile:
+                        continue  # Has piGenClass piSeed
+                    
+                    piSeedFile = findPiDefGCSeedFile(className)
+                    if piSeedFile:
+                        continue  # Has piDefGC piSeed
+                    
+                    # No existing piSeed found, determine optimal type
+                    optimal_type = determineOptimalPiSeedType(py_file)
+                    
+                    # Apply filter if specified
+                    if options.get('filter_type'):
+                        filter_map = {'class': 'piClassGC', 'def': 'piDefGC', 'genclass': 'piGenClass'}
+                        if optimal_type != filter_map.get(options['filter_type']):
+                            continue  # Skip files that don't match filter
+                    
+                    files_needing_piSeeds.append((py_file, optimal_type))
+                
+                if files_needing_piSeeds:
+                    printIt(f"Found {len(files_needing_piSeeds)} files that need piSeed creation:", lable.INFO)
+                    for py_file, file_type in files_needing_piSeeds[:10]:  # Show first 10
+                        printIt(f"  Would create {file_type} piSeed for: {py_file.name}", lable.DEBUG)
+                    if len(files_needing_piSeeds) > 10:
+                        printIt(f"  ... and {len(files_needing_piSeeds) - 10} more files", lable.DEBUG)
+                else:
+                    printIt("No files found that need piSeed creation", lable.INFO)
+            else:
+                # Show regular sync operations
+                for py_file in python_files[:10]:  # Show first 10
+                    file_type = determineOptimalPiSeedType(py_file)
+                    printIt(f"  Would process: {py_file.name} ({file_type})", lable.DEBUG)
+                if len(python_files) > 10:
+                    printIt(f"  ... and {len(python_files) - 10} more files", lable.DEBUG)
             return
         
         # Process each file
@@ -1016,7 +1114,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                     defName = py_file.stem
                     piSeedFile = findPiDefGCSeedFile(defName)
                     
-                    if not piSeedFile and options.get('create_missing', False):
+                    if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, py_file)
                         if piSeedFile:
                             createdSeeds += 1
@@ -1028,7 +1126,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                     className = py_file.stem
                     piSeedFile = findPiGenClassSeedFile(className)
                     
-                    if not piSeedFile and options.get('create_missing', False):
+                    if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiGenClassSeedFile(className, py_file)
                         if piSeedFile:
                             createdSeeds += 1
@@ -1040,7 +1138,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                     className = py_file.stem
                     piSeedFile = findPiClassGCSeedFile(className)
                     
-                    if not piSeedFile and options.get('create_missing', False):
+                    if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiClassGCSeedFileEnhanced(className, py_file)
                         if piSeedFile:
                             createdSeeds += 1
@@ -1075,8 +1173,8 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
         if createdSeeds > 0:
             printIt(f"  • Created piSeed files: {createdSeeds}", lable.INFO)
         
-        if skippedFiles > 0 and not options.get('create_missing', False):
-            printIt("Tip: Use --create-missing to auto-create piSeed files for orphaned Python files", lable.INFO)
+        if skippedFiles > 0 and not options.get('create_piSeeds', False):
+            printIt("Tip: Use --create-piSeeds to auto-create piSeed files for orphaned Python files", lable.INFO)
         
     except Exception as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
@@ -2531,26 +2629,59 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict = No
                 fromImports, regularImports = extractImportStatements(importStatements)
                 
                 if fromImports:
-                    # IMPROVED LOGIC: Use intelligent pattern detection instead of force flag
-                    # Convert fromImports to a list format for shouldPreserveElegantPattern
-                    importLines = []
+                    # IMPROVED LOGIC: Filter out Pi class imports that are already handled by initArguments
+                    piClassTypes = extractPiClassTypesFromInitArgs(seedContent, className)
+                    
+                    # Filter out Pi class imports that genCode will automatically generate
+                    filteredFromImports = {}
                     for module_name, import_info in fromImports.items():
                         from_part = import_info.get('from', '')
                         import_part = import_info.get('import', '')
-                        if from_part and import_part:
-                            importLines.append(f"from {from_part} import {import_part}")
+                        
+                        # Check if this is a Pi class import that's already in initArguments
+                        shouldSkip = False
+                        if import_part in piClassTypes or module_name in piClassTypes:
+                            shouldSkip = True
+                            if options.get('stats', False):
+                                printIt(f"SKIP: fromImports for {className} - {import_part} from {from_part} already handled by initArguments", lable.DEBUG)
+                        
+                        # Also check for common Pi class patterns
+                        if (from_part.startswith('.') and import_part.startswith('Pi')) or \
+                           (from_part.startswith('pi') and import_part.startswith('Pi')):
+                            # Check if the imported class matches any initArgument types
+                            for piType in piClassTypes:
+                                if import_part == piType or module_name == piType:
+                                    shouldSkip = True
+                                    if options.get('stats', False):
+                                        printIt(f"SKIP: fromImports for {className} - {import_part} matches initArgument type {piType}", lable.DEBUG)
+                                    break
+                        
+                        if not shouldSkip:
+                            filteredFromImports[module_name] = import_info
                     
-                    if shouldPreserveElegantPattern(seedContent, className, 'fromImports', importLines, options):
-                        if options.get('stats', False):
-                            printIt(f"PRESERVE: fromImports for {className} - preserving auto-generated imports", lable.DEBUG)
-                    else:
-                        # Real changes detected - sync them
-                        newSeedContent, changed = updateSeedFromImports(
-                            seedContent, className, fromImports
-                        )
-                        if changed:
-                            seedContent = newSeedContent
-                            changes.append("fromImports")
+                    # Only process remaining imports
+                    if filteredFromImports:
+                        # Convert filtered imports to a list format for shouldPreserveElegantPattern
+                        importLines = []
+                        for module_name, import_info in filteredFromImports.items():
+                            from_part = import_info.get('from', '')
+                            import_part = import_info.get('import', '')
+                            if from_part and import_part:
+                                importLines.append(f"from {from_part} import {import_part}")
+                        
+                        if shouldPreserveElegantPattern(seedContent, className, 'fromImports', importLines, options):
+                            if options.get('stats', False):
+                                printIt(f"PRESERVE: fromImports for {className} - preserving auto-generated imports", lable.DEBUG)
+                        else:
+                            # Real changes detected - sync them
+                            newSeedContent, changed = updateSeedFromImports(
+                                seedContent, className, filteredFromImports
+                            )
+                            if changed:
+                                seedContent = newSeedContent
+                                changes.append("fromImports")
+                    elif options.get('stats', False):
+                        printIt(f"SKIP: All fromImports for {className} filtered out - handled by initArguments", lable.DEBUG)
                 
                 if regularImports:
                     newSeedContent, changed = updateSeedImports(
@@ -4175,6 +4306,41 @@ def updateSeedInitArguments(seedContent: str, className: str, initArgs: Dict[str
         printIt(f"Error updating seed init arguments: {e}", lable.ERROR)
         return seedContent, False
 
+def extractPiClassTypesFromInitArgs(seedContent: str, className: str) -> Set[str]:
+    """
+    Extract Pi class types from initArguments in the piSeed file.
+    These are classes that genCode will automatically import, so syncCode shouldn't add them to fromImports.
+    
+    Returns a set of Pi class names (e.g., {'PiUserProfile', 'PiBase', 'PiIndexer'})
+    """
+    try:
+        piClassTypes = set()
+        lines = seedContent.split('\n')
+        
+        # Pattern to match initArguments type definitions
+        typePattern = rf'^piValue\s+{re.escape(className)}\.piBody:piClassGC:initArguments:(\w+):type\s+(.+)$'
+        
+        for line in lines:
+            line = line.strip()
+            match = re.match(typePattern, line)
+            if match:
+                argName = match.group(1)
+                argType = match.group(2).strip('"')
+                
+                # Check if this is a Pi class type (starts with Pi and is capitalized)
+                if argType.startswith('Pi') and argType[2:3].isupper():
+                    piClassTypes.add(argType)
+                    if argType.startswith('Pi') and len(argType) > 2:
+                        # Also add the module name (e.g., PiUserProfile -> piUserProfile)
+                        moduleName = argType[2].lower() + argType[3:] if len(argType) > 3 else argType[2:].lower()
+                        piClassTypes.add(moduleName)
+        
+        return piClassTypes
+        
+    except Exception as e:
+        printIt(f"Error extracting Pi class types from initArgs: {e}", lable.ERROR)
+        return set()
+
 def extractImportStatements(importNodes: List) -> Tuple[Dict[str, Dict[str, str]], List[str]]:
     """
     Extract import statements from AST nodes.
@@ -5359,7 +5525,7 @@ USAGE:
 
 OPTIONS:
     --dry-run              Show what would be changed without making changes
-    --create-missing       Auto-create piSeed files for orphaned Python files
+    --create-piSeeds       Auto-create piSeed files for specified Python files that don't have piSeeds
     --validate             Validate sync results and show warnings
     --stats                Show detailed statistics and change information
     --filter <type>        Only sync specific file types (class|def|genclass)
@@ -5371,7 +5537,7 @@ EXAMPLES:
     piGenCode syncCode MyClass.py                   # Sync specific file
     piGenCode syncCode src/models/                  # Sync directory
     piGenCode syncCode --dry-run                    # Preview changes
-    piGenCode syncCode --create-missing             # Create missing piSeed files
+    piGenCode syncCode --create-piSeeds             # Create piSeed files for specified files
     piGenCode syncCode --filter genclass            # Only sync piGenClass files
     piGenCode syncCode --exclude-pattern "test_*"   # Skip test files
     piGenCode syncCode --stats --validate           # Detailed sync with validation

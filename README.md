@@ -11,7 +11,7 @@ There are 8 different piSeedTypes including piStruct (for JSON structure definit
 
 **piGenCode** provides commands like germSeed, genCode, syncCode, rmGC, and reorderSeeds for managing the workflow. The system supports distributed file placement, allowing generated files to be placed in any directory structure while maintaining precise tracking and cleanup capabilities.
 
-**Enhanced syncCode** includes powerful Auto-Creation capabilities that can automatically generate piSeed files for existing Python code, making it easy to integrate legacy codebases or manually created files into the piGenCode ecosystem.
+**Enhanced syncCode** includes powerful Auto-Creation capabilities with the `--create-piSeeds` option that can automatically generate piSeed files for specified Python files, making it easy to integrate legacy codebases or manually created files into the piGenCode ecosystem. The enhanced dry-run functionality shows only files that actually need piSeed creation.
 
 ## Table of Contents
 
@@ -58,16 +58,17 @@ Each piSeedType is an instruction for ***piGenCode*** to perform different opera
 
 ## Directory Structure
 
+
 ```
-piGenCode/
-├── piSeeds/               # Seed files (numbered piSeed000.pi to piSeedNNN.pi)
-├── piGerms/              # Generated JSON configurations (configurable via piScratchDir)
+./
+├── piSeeds/ # Seed files (numbered piSeed000.pi to piSeedNNN.pi)
+├── piGerms/ # Generated JSON configurations (configurable via piScratchDir)
 │   ├── piStruct/         # Structure definitions
 │   ├── piValuesSetD/     # Default values
 │   ├── piClassGC/        # Class generation configs
 │   └── piDefGC/          # Function definition configs
-├── piClasses/            # Generated Python classes (configurable via piClassGCDir)
-└── piDefs/               # Generated Python function files (configurable via piDefGCDir)
+├── piClasses/ # Generated Python classes (configurable via piClassGCDir)
+└── piDefs/ # Generated Python function files (configurable via piDefGCDir)
 ```
 
 **Configurable Directories:**
@@ -141,9 +142,9 @@ piGenCode rmGC
 ```
 INFO: Removed directory: piGerms (piGerms)
 INFO: Found 3 tracking files in piClasses (src/pigencode/piClasses)
-DEBUG: Processing tracking file: src/pigencode/piClasses/models/.piclass
-DEBUG: Removed generated file: src/pigencode/piClasses/models/GeneratedModel.py
-DEBUG: Preserved 2 user files in src/pigencode/piClasses/models
+INFO: Processing tracking file: src/pigencode/piClasses/models/.piclass
+INFO: Removed generated file: src/pigencode/piClasses/models/GeneratedModel.py
+INFO: Preserved 2 user files in src/pigencode/piClasses/models
 
 INFO: Removed directories:
   • piGerms (piGerms)
@@ -178,7 +179,7 @@ piGenCode syncCode utilities
 
 # Enhanced options (parsed internally)
 piGenCode syncCode --dry-run                    # Preview changes without making them
-piGenCode syncCode --create-missing             # Auto-create piSeed files for orphaned Python files
+piGenCode syncCode --create-piSeeds             # Auto-create piSeed files for orphaned Python files
 piGenCode syncCode --stats                      # Show detailed statistics
 piGenCode syncCode --validate                   # Validate sync results
 piGenCode syncCode --filter genclass            # Only sync piGenClass files
@@ -186,21 +187,25 @@ piGenCode syncCode --exclude-pattern "test_*"   # Skip test files
 ```
 
 **🚀 Auto-Creation Feature:**
-The `--create-missing` option automatically generates piSeed files for Python files that don't have corresponding piSeeds:
+The `--create-piSeeds` option automatically generates piSeed files for specified Python files that don't have corresponding piSeeds:
 
 ```bash
-# Auto-create piSeeds for all orphaned Python files
-piGenCode syncCode --create-missing
+# Auto-create piSeeds for specified files or directories
+piGenCode syncCode src/models/ --create-piSeeds
 
-# Example output:
-# "Creating new piGenClass piSeed file for: api_models"
-# "Creating new piDefGC piSeed file for: utilities" 
-# "Created piSeed files: 8"
+# Preview what piSeeds would be created (improved dry-run)
+piGenCode syncCode src/models/ --create-piSeeds --dry-run
+
+# Example dry-run output:
+# "Found 3 files that need piSeed creation:"
+# "  Would create piGenClass piSeed for: user_models.py"
+# "  Would create piDefGC piSeed for: utilities.py"
+# "  Would create piClassGC piSeed for: simple_class.py"
 ```
 
 **Intelligent Type Detection:**
 - **Multiple classes** → piGenClass
-- **Single class with inheritance/complexity** → piGenClass  
+- **Single class with inheritance/complexity** → piGenClass
 - **Only functions** → piDefGC
 - **Simple single class** → piClassGC
 
@@ -297,7 +302,7 @@ piGenCode genCode piGerms/piDefGC/piDefGC012_utilities.json
 # Files: src/models/user.py, src/utils/helpers.py, src/api/endpoints.py
 
 # 2. Auto-create piSeeds for all orphaned files
-piGenCode syncCode --create-missing --stats
+piGenCode syncCode --create-piSeeds --stats
 
 # Output example:
 # "Creating new piGenClass piSeed file for: user"
@@ -317,14 +322,14 @@ piGenCode genCode piGenClass 87-89
 **Legacy Code Integration:**
 ```bash
 # Integrate entire directories of existing Python code
-piGenCode syncCode legacy_code/ --create-missing --validate
+piGenCode syncCode legacy_code/ --create-piSeeds --validate
 
 # Filter by file type for selective integration
-piGenCode syncCode --create-missing --filter genclass  # Only multi-class files
-piGenCode syncCode --create-missing --filter def       # Only function files
+piGenCode syncCode --create-piSeeds --filter genclass  # Only multi-class files
+piGenCode syncCode --create-piSeeds --filter def       # Only function files
 
 # Preview what would be created before committing
-piGenCode syncCode --create-missing --dry-run
+piGenCode syncCode --create-piSeeds --dry-run
 ```
 
 **Features:**
@@ -358,7 +363,7 @@ INFO: Processed 31 files, made 273 total changes
 - **Function Development**: Develop utility functions in Python, then sync to piDefGC seeds
 
 ### reorderSeeds
-Move piSeed files to different positions and automatically renumber all affected files to maintain processing order. This command is essential for organizing the logical flow of seed processing.
+Move piSeed files to different positions and automatically renumber all affected files to maintain processing order. This command is essential for organizing the logical flow of seed processing. **Enhanced with auto-compact functionality to remove gaps in numbering.**
 
 **Usage:**
 ```bash
@@ -367,6 +372,9 @@ piGenCode reorderSeeds <source_number> <target_number>
 
 # File path mode (explicit)
 piGenCode reorderSeeds <source_file> <target_file>
+
+# Auto-compact mode (NEW) - Remove gaps in numbering
+piGenCode reorderSeeds
 ```
 
 **Examples:**
@@ -379,6 +387,34 @@ piGenCode reorderSeeds 15 25
 
 # File path mode (same result as first example)
 piGenCode reorderSeeds piSeeds/piSeed044_piStruct_piDefGC.pi piSeeds/piSeed009_piStruct_piDefGC.pi
+
+# Auto-compact gaps (NEW) - Remove missing numbers in sequence
+piGenCode reorderSeeds
+```
+
+**🚀 Auto-Compact Mode (NEW):**
+When no arguments are provided, `reorderSeeds` automatically detects and removes gaps in piSeed file numbering:
+
+- **Gap Detection**: Finds missing numbers in the sequence (e.g., 000,001,003,005 → missing 002,004)
+- **Smart Compacting**: Renumbers files to collapse gaps while preserving order (000,001,003,005 → 000,001,002,003)
+- **Intentional Offset Protection**: Skips compacting if highest number is >10 away from expected (indicates deliberate spacing)
+- **Safe Operations**: Uses temporary directories and validation to prevent data loss
+
+**Auto-Compact Examples:**
+```bash
+# Before: piSeed000, piSeed001, piSeed003, piSeed005 (gaps at 002, 004)
+piGenCode reorderSeeds
+
+# Result: piSeed000, piSeed001, piSeed002, piSeed003 (gaps removed)
+```
+
+**Intentional Offset Protection:**
+```bash
+# Large gap scenario: piSeed000-045, then piSeed060
+piGenCode reorderSeeds
+
+# Output: "Large gap detected (14 numbers). This appears to be intentional offset."
+# Output: "Skipping auto-compact. Use explicit reorderSeeds if you want to compact anyway."
 ```
 
 **How it works:**
@@ -394,6 +430,8 @@ piGenCode reorderSeeds piSeeds/piSeed044_piStruct_piDefGC.pi piSeeds/piSeed009_p
 - **Error Handling**: Comprehensive validation and user-friendly error messages
 - **Bidirectional**: Supports both forward and backward movements
 - **Filename Preservation**: Original filenames are preserved (only numbers change)
+- **Auto-Gap Detection**: Automatically finds and removes numbering gaps
+- **Intelligent Protection**: Prevents accidental compacting of intentionally spaced files
 
 **Example Output:**
 ```
@@ -406,6 +444,19 @@ INFO:   [... more files ...]
 INFO: Successfully reordered piSeed files
 ```
 
+**Auto-Compact Output:**
+```
+INFO: Found 46 piSeed files: 000 to 046
+INFO: Gaps found: ['011', '015']
+INFO: Compacting piSeed files to remove gaps...
+INFO: Preview of changes:
+INFO:   • piSeed012_piStruct_piUserProfile.pi -> piSeed011_piStruct_piUserProfile.pi
+INFO:   • piSeed013_piStruct_piUserBody.pi -> piSeed012_piStruct_piUserBody.pi
+INFO:   [... more files ...]
+INFO: Successfully compacted 34 piSeed files
+INFO: piSeed files now numbered: 000 to 044
+```
+
 ## piSeed Types
 
 ### piStruct
@@ -416,7 +467,7 @@ Generates Python class files with methods, properties, and inheritance. Supports
 
 **Key Features:**
 - Custom directory placement via `fileDirectory` field
-- Custom filename specification via `fileName` field  
+- Custom filename specification via `fileName` field
 - Automatic tracking for selective cleanup
 - Full inheritance and method support
 

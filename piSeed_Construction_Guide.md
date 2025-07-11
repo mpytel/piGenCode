@@ -141,6 +141,76 @@ This guide explains how to construct piSeed documents that generate the three ty
 
 piSeed files are processed sequentially by filename (piSeed000, piSeed001, etc.), so the order matters because later seeds can reference earlier ones.
 
+## Recent Improvements (Latest Session)
+
+### Enhanced syncCode Command
+
+The `syncCode` command has been significantly improved to provide better synchronization between Python files and piSeed definitions:
+
+#### 🚀 Key Improvements
+
+**1. Intelligent piSeed Type Detection**
+- `syncCode` now prioritizes existing piSeed files over optimal type detection
+- Prevents mismatched file type errors (e.g., looking for piGenClass when piClassGC exists)
+- Maintains backward compatibility with existing piSeed files
+
+**2. Removed --force Option**
+- Eliminated the problematic `--force` flag that was masking real change detection issues
+- Default behavior now intelligently detects real changes without requiring force flags
+- Improved pattern detection distinguishes between default/generated and customized code
+
+**3. Smart Import Filtering**
+- **Major Fix**: `syncCode` no longer creates redundant `fromImports` entries for Pi classes
+- Automatically excludes Pi class imports that are already handled by `initArguments`
+- Example: If `initArguments` specifies `piUserProfile:type PiUserProfile`, `syncCode` won't add:
+  ```
+  piStructA00 piUserBody.piBody:piClassGC:fromImports
+  piStructC01 fromImports piUserProfile.
+  piValue piUserBody.piBody:piClassGC:fromImports:piUserProfile:from "piUserProfile"
+  piValue piUserBody.piBody:piClassGC:fromImports:piUserProfile:import "PiUserProfile"
+  ```
+- `genCode` automatically analyzes `initArguments` and generates necessary Pi class imports
+
+**4. Enhanced Change Detection**
+- Better recognition of default vs. customized code patterns
+- More accurate detection of real user changes
+- Reduced false positives and unnecessary piSeed modifications
+
+#### 📈 Benefits
+
+**Cleaner piSeed Files:**
+- Eliminates duplicate import specifications
+- Clear separation between auto-generated and user-specified imports
+- Reduces piSeed file complexity and maintenance overhead
+
+**Better Workflow:**
+- Seamless synchronization between Python files and piSeed definitions
+- More reliable change detection without manual intervention
+- Improved error messages and file discovery
+
+**Reduced Confusion:**
+- `initArguments` handles Pi class dependencies automatically
+- `fromImports` only manages imports not covered by `initArguments`
+- Clear division of responsibilities between different import mechanisms
+
+#### 🔧 Technical Details
+
+**Import Filtering Logic:**
+```python
+# syncCode now checks initArguments for Pi class types
+piClassTypes = extractPiClassTypesFromInitArgs(seedContent, className)
+
+# Filters out redundant imports
+if import_part in piClassTypes or module_name in piClassTypes:
+    # Skip - already handled by initArguments
+    continue
+```
+
+**Pattern Detection:**
+- Only preserves patterns that are truly default/generated and haven't been customized
+- Allows real user modifications to be synced properly
+- Intelligent detection of Pi class vs. regular imports
+
 ## piSeed File Structure
 
 ### Basic Syntax
@@ -524,11 +594,33 @@ When you use `piStructA00`, it:
 
 ### Example: Building fromImports Structure
 
+**⚠️ IMPORTANT: Pi Class Import Filtering (Latest Update)**
+
+As of the latest improvements, `syncCode` automatically filters out redundant Pi class imports that are already handled by `initArguments`. This prevents duplicate import specifications and maintains cleaner piSeed files.
+
+**What This Means:**
+- If your `initArguments` specifies `piUserProfile:type PiUserProfile`, you should **NOT** manually add:
+  ```
+  piStructA00 piUserBody.piBody:piClassGC:fromImports
+  piStructC01 fromImports piUserProfile.
+  piValue piUserBody.piBody:piClassGC:fromImports:piUserProfile:from "piUserProfile"
+  piValue piUserBody.piBody:piClassGC:fromImports:piUserProfile:import "PiUserProfile"
+  ```
+- `genCode` automatically analyzes `initArguments` and generates the necessary Pi class imports
+- `syncCode` will skip adding these redundant entries and may remove existing ones
+
+**Use fromImports for:**
+- ✅ **Non-Pi class imports**: Standard library, third-party packages, utility modules
+- ✅ **External dependencies**: `pathlib`, `datetime`, `json`, `pydantic`, etc.
+- ❌ **Pi class imports**: These are handled automatically by `initArguments`
+
+**Example of Correct fromImports Usage:**
+
 ```
 # Step 1: Append fromImports container to piClassGC body
 piStructA00 piTrie.piBody:piClassGC:fromImports
 
-# Step 2: Clone child elements into the fromImports container
+# Step 2: Clone child elements into the fromImports container (NON-Pi classes only)
 piStructC01 fromImports ast.
 piStructC01 fromImports pathlib.
 piStructC01 fromImports json.
@@ -1526,11 +1618,47 @@ piValueA Calculator.piBody:piClassGC:classDefCode "    return a * b"
 5. **Cloning Syntax Error**:
    - Use `piStructC00 source target` for nested objects (composition)
    - Use `piStructC00 source target.` for merged fields (inheritance)
-   - Missing or extra period changes the entire structure layout
-6. **piStructA00 Misunderstanding**:
-   - piStructA00 creates a container, not an array
-   - Subsequent piStructC01/piValue operations add children to this container
-   - Context continues until another piStruct operation changes it
+
+### syncCode Issues (Latest Updates)
+
+**6. Redundant Pi Class Imports**
+- **Problem**: piSeed files contain unnecessary `fromImports` for Pi classes already in `initArguments`
+- **Solution**: Remove redundant `fromImports` entries - `genCode` handles Pi class imports automatically
+- **Example**: If you have `piUserProfile:type PiUserProfile` in `initArguments`, don't add `fromImports` for `PiUserProfile`
+
+**7. piSeed Type Mismatch**
+- **Problem**: `syncCode` reports "piGenClass piSeed file not found" when piClassGC exists
+- **Solution**: This is now fixed - `syncCode` prioritizes existing piSeed file types
+- **Behavior**: System now correctly uses existing piClassGC files instead of looking for piGenClass
+
+**8. Force Flag Issues**
+- **Problem**: Previously needed `--force` flag to sync changes
+- **Solution**: `--force` option has been removed - intelligent change detection is now the default
+- **Behavior**: System automatically detects real changes vs. generated patterns
+
+**9. Import Filtering Debug**
+- **Use**: `piGenCode syncCode --stats` to see detailed import filtering information
+- **Output**: Shows which imports are being filtered and why
+- **Example**: `SKIP: fromImports for piUserBody - PiUserProfile already handled by initArguments`
+
+### Best Practices (Latest Updates)
+
+**Import Management:**
+1. **Let initArguments Handle Pi Classes**: Don't manually add `fromImports` for Pi classes specified in `initArguments`
+2. **Use fromImports for External Dependencies**: Standard library, third-party packages, utility modules
+3. **Check with --stats**: Use `piGenCode syncCode --stats` to verify import filtering behavior
+4. **Clean Existing Files**: Remove redundant Pi class `fromImports` from existing piSeed files
+
+**syncCode Workflow:**
+1. **No More --force**: The `--force` option has been removed - intelligent detection is now default
+2. **Trust Existing Types**: `syncCode` now respects existing piSeed file types (piClassGC, piGenClass, piDefGC)
+3. **Monitor Changes**: Use `--stats` to understand what changes are being detected and why
+4. **Validate Results**: Use `--validate` to ensure synchronization accuracy
+
+**File Type Detection:**
+- **Existing Files**: `syncCode` prioritizes existing piSeed file types over optimal detection
+- **New Files**: Use `--create-missing` to auto-generate piSeed files for orphaned Python files
+- **Type Consistency**: System maintains backward compatibility with existing piSeed structures
 
 ### Validation
 Use `piGenCode germSeed <number>` to test individual files:
@@ -1932,6 +2060,28 @@ The piSeed system provides a powerful way to generate structured data and Python
 3. **piClassGC** - Generate single-class Python files
 4. **piDefGC** - Generate function-only Python files
 5. **piGenClass** - Generate multi-class Python files with complex inheritance
+
+## Recent Improvements Summary
+
+**🚀 Enhanced syncCode (Latest Session):**
+- **Intelligent piSeed Detection**: Prioritizes existing piSeed file types over optimal detection
+- **Removed --force Option**: Eliminated problematic force flag, intelligent change detection is now default
+- **Smart Import Filtering**: Automatically excludes Pi class imports already handled by `initArguments`
+- **Better Error Handling**: Improved file discovery and error messages
+
+**📈 Key Benefits:**
+- **Cleaner piSeed Files**: No more redundant Pi class import specifications
+- **Improved Workflow**: Seamless synchronization without manual intervention
+- **Reduced Confusion**: Clear separation between auto-generated and user-specified imports
+- **Enhanced Reliability**: More accurate change detection and fewer false positives
+
+**🔧 Migration Notes:**
+- Remove `--force` flags from scripts - no longer needed or supported
+- Clean up redundant Pi class `fromImports` from existing piSeed files
+- Use `--stats` option to monitor import filtering behavior
+- Trust the system's intelligent change detection
+
+The enhanced piGenCode system now provides a more robust, intelligent, and user-friendly code generation and synchronization experience, making it easier to maintain complex Python codebases through declarative piSeed definitions.
 
 **Key capabilities:**
 - **Flexible File Placement**: Use `fileDirectory` and `fileName` for distributed code organization
