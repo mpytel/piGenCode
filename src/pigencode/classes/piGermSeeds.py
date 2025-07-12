@@ -1,5 +1,5 @@
 import os, datetime, copy, json, re, traceback
-from ..defs.piRCFile import readRC, writeRC
+from ..defs.fileIO import readRC, writeRC
 from ..defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles, PiGenClassFiles
 from ..defs.piID import getPiMD5, getPiID
 from ..defs.logIt import logIt, printIt, germDbug, lable

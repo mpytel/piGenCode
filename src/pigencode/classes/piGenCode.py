@@ -2,8 +2,7 @@
 import os, json
 import inspect
 from pathlib import Path
-from ..defs.piRCFile import readRC
-from ..defs.piJsonFile import readJson, piLoadPiClassGCJson, PiSeedTypes
+from ..defs.fileIO import readRC, writeRC, piDirs, readJson, piLoadPiClassGCJson, PiSeedTypes
 from ..defs.logIt import logIt, printIt, lable, getCodeFile, getCodeLine
 
 class PiGenCode():
@@ -91,17 +90,6 @@ class PiGenCode():
             else:
                 rtnLines += '):\n\n'
         return rtnLines
-    def __genClassCommentLines(self, iniLevel=0) -> str:
-        indent = self.indent
-        rtnLines = ""
-        if self.classComment:
-            rtnLines = indent*iniLevel + "'"*3 + '\n'
-            iniLevel += 1
-            for classComment in self.classComment:
-                    rtnLines += indent*iniLevel + f'{classComment}\n'
-            iniLevel -= 1
-            rtnLines += indent*iniLevel + "'"*3 + '\n'
-        return rtnLines
     def __genInitSuperLine(self, iniLevel=0) -> str:
         indent = self.indent
         rtnLines = ""
@@ -174,19 +162,6 @@ class PiGenCode():
             rtnLines = indent*iniLevel + codeLine + '\n'
         else:
             rtnLines = codeLine + '\n'
-        return rtnLines
-    def __addPreSuperInitCodeLines(self, iniLevel=0):
-        rtnLines = ""
-        # printIt(f'{self.preSuperInitCode}',lable.DEBUG)
-        for InitCodeLine in self.preSuperInitCode:
-            rtnLines += self.__appednCodeLine(InitCodeLine, iniLevel)
-        rtnLines += '\n'
-        return rtnLines
-    def __addPostSuperInitCodeLines(self, iniLevel=0):
-        rtnLines = ""
-        for InitCodeLine in self.postSuperInitCode:
-            rtnLines += self.__appednCodeLine(InitCodeLine, iniLevel)
-        rtnLines += '\n'
         return rtnLines
     def __appendInitCodeLines(self, iniLevel=0):
         rtnLines = ""
@@ -667,6 +642,7 @@ class PiGenCode():
             for globalCode in self.globalCode:
                 rtnLines += f'{globalCode}\n'
         return rtnLines
+
     def __setPiClassDir(self):
         """Set up the piClasses directory for output files"""
         # Check if fileDirectory is specified in the piClassGC configuration
@@ -675,7 +651,7 @@ class PiGenCode():
             piClassDir = Path(self.fileDirectory)
             if not piClassDir.is_absolute():
                 # If relative, make it relative to current working directory
-                piClassDir = Path.cwd() / piClassDir
+                piClassDir = Path.cwd().joinpath(piClassDir)
         else:
             # Fall back to configured piClassGCDir from .pigencoderc
             piClassGCDir = readRC("piClassGCDir")
@@ -683,16 +659,19 @@ class PiGenCode():
                 # Use the RC configured directory
                 piClassDir = Path(piClassGCDir)
                 if not piClassDir.is_absolute():
-                    piClassDir = Path.cwd() / piClassDir
+                    piClassDir = Path.cwd().joinpath(piClassDir)
             else:
                 # Ultimate fallback to old behavior for backward compatibility
                 piClassDir = readRC(PiSeedTypes[0])
-                piClassDir = Path(piClassDir).parent.joinpath("piClasses")
+                if piClassDir:
+                    piClassDir = Path(piClassDir).parent.joinpath("piClasses")
+                else:
+                    piClassDir = Path.cwd().joinpath("piClasses")
 
         if not piClassDir.is_dir():
             logIt(f'Make direcory: {piClassDir}')
-            piClassDir.mkdir(mode=511,parents=True,exist_ok=True)
-        self.piClassDir =  piClassDir
+            piClassDir.mkdir(mode=511, parents=True, exist_ok=True)
+        self.piClassDir = piClassDir
 
     def __updatePiClassTrackingFile(self, fileName):
         """Update the .piclass tracking file with generated filenames"""
@@ -760,6 +739,9 @@ class PiGenCode():
             self.__genPiClass(genFileName, verbose)
         else:
             piJsonGCDir = readRC(PiSeedTypes[0])
+            if not piJsonGCDir:
+                piJsonGCDir = piDirs[PiSeedTypes[0]]
+                writeRC(PiSeedTypes[0], piJsonGCDir)
             piJsonGCDir = Path(piJsonGCDir).joinpath(PiSeedTypes[4])
             piJsonGCFilenames = os.listdir(piJsonGCDir)
             piJsonGCFilenames.sort()

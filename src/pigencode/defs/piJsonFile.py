@@ -6,7 +6,7 @@ from json import load, loads, dump, dumps, JSONDecodeError
 from re import compile as reCompile
 from .logIt import logIt, printIt, lable
 from ..classes.piSeeds import PiSeedTypes, PiSeed, PiSeedTypeREs
-from ..defs.piRCFile import readRC, getKeyItem
+from ..defs.fileIO import readRC, writeRC, getKeyItem, piDirs
 from ..defs.piID import getPiIDs
 
 def readJson(fileName: str, verbose=True) -> dict:
@@ -35,6 +35,9 @@ def writeJson(fileName: str, aDict: dict, verbose=True) -> bool:
 
 def getPiStrucFileName(baseTitle) -> str:
     piStrucFileName = readRC(PiSeedTypes[0])
+    if not piStrucFileName:
+        piStrucFileName = piDirs[PiSeedTypes[0]]
+        writeRC(PiSeedTypes[0], piStrucFileName)
     piStrucFileName = Path(piStrucFileName).joinpath(PiSeedTypes[1])
     makedirs(piStrucFileName, exist_ok=True)
     piStrucFileName = Path(piStrucFileName).joinpath(f'{PiSeedTypes[1]}_{baseTitle}.json')
@@ -53,6 +56,9 @@ def readPiStruc(baseTitle: str, verbose=True) -> dict:
 
 def getPiDefaultFileName(baseTitle) -> str:
     piStrucFileName = readRC(PiSeedTypes[0])
+    if not piStrucFileName:
+        piStrucFileName = piDirs[PiSeedTypes[0]]
+        writeRC(PiSeedTypes[0], piStrucFileName)
     piStrucFileName = Path(piStrucFileName).joinpath(PiSeedTypes[2])
     makedirs(piStrucFileName, exist_ok=True)
     piStrucFileName = Path(piStrucFileName).joinpath(f'{PiSeedTypes[2]}_{baseTitle}.json')
@@ -81,7 +87,11 @@ def readPiDefault(baseTitle: str, verbose=True) -> dict:
     return rtnDict
 
 def getPiFilePath(aDict: dict) -> Path:
-    piFilePath = Path(readRC('piScratchDir'))
+    piScratchDir = readRC('piScratchDir')
+    if not piScratchDir:
+        piScratchDir = piDirs[PiSeedTypes[0]]
+        writeRC(PiSeedTypes[0], piScratchDir)
+    piFilePath = Path(piScratchDir)
     piFilePath = piFilePath.joinpath("pis")
     piFilePath = piFilePath.joinpath(aDict["piIndexer"]["piUser"])
     piFilePath = piFilePath.joinpath(aDict["piIndexer"]["piRealm"])

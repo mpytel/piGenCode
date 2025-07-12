@@ -3,7 +3,7 @@ from re import compile as reCompile
 from pathlib import Path
 from ..classes.argParse import ArgParse
 from ..defs.logIt import printIt, lable
-from ..defs.piRCFile import getKeyItem, writeRC
+from ..defs.fileIO import getKeyItem, writeRC
 from ..classes.piGermSeeds import PiGermSeeds, germinateSeeds
 from ..classes.piSeeds import PiSeeds
 from .genCode import genCodeFile

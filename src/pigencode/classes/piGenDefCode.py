@@ -1,6 +1,6 @@
 import os, json
 from pathlib import Path
-from ..defs.piRCFile import readRC
+from ..defs.fileIO import readRC
 from ..defs.piJsonFile import readJson, PiSeedTypes
 from ..defs.logIt import logIt, printIt, lable
 
@@ -10,50 +10,50 @@ class PiGenDefCode():
         indent = 4
         self.indent = ' ' * indent
         self.savedCodeFiles = {}
-    
+
     def __str__(self) -> str:
         return self.testStr
-    
+
     def __setPiDefGCAttrs(self) -> None:
         """Extract attributes from piDefGC JSON structure"""
         self.piDefGC = self.pi_piDefGC["piBody"]["piDefGC"]
-        
+
         try: self.headers = self.piDefGC["headers"]
         except: self.headers = []
-        
+
         try: self.imports = self.piDefGC["imports"]
         except: self.imports = []
-        
+
         try: self.fromImports = self.piDefGC["fromImports"]
         except: self.fromImports = {}
-        
+
         try: self.fromPiClasses = self.piDefGC["fromPiClasses"]
         except: self.fromPiClasses = []
-        
+
         try: self.rawFromImports = self.piDefGC["rawFromImports"]
         except: self.rawFromImports = []
-        
+
         try: self.globals = self.piDefGC["globals"]
         except: self.globals = {}
-        
+
         try: self.fileDirectory = self.piDefGC["fileDirectory"]
         except: self.fileDirectory = ""
-        
+
         try: self.fileName = self.piDefGC["fileName"]
         except: self.fileName = "functions"
-        
+
         try: self.fileComment = self.piDefGC["fileComment"]
         except: self.fileComment = []
-        
+
         try: self.functionDefs = self.piDefGC["functionDefs"]
         except: self.functionDefs = {}
-        
+
         try: self.constants = self.piDefGC["constants"]
         except: self.constants = []
-        
+
         try: self.globalCode = self.piDefGC["globalCode"]
         except: self.globalCode = []
-    
+
     def __genHeaderLines(self) -> str:
         """Generate header comment lines"""
         rtnLines = ''
@@ -61,7 +61,7 @@ class PiGenDefCode():
             for headerStr in self.headers:
                 rtnLines += f'{headerStr}\n'
         return rtnLines
-    
+
     def __genFileCommentLines(self) -> str:
         """Generate file-level comment lines"""
         rtnLines = ''
@@ -71,24 +71,24 @@ class PiGenDefCode():
                 rtnLines += f'{commentLine}\n'
             rtnLines += '"""\n\n'
         return rtnLines
-    
+
     def __genImportLines(self) -> str:
         """Generate import statements"""
         rtnLines = ''
         haveImports = False
-        
+
         # Standard imports
         if len(self.imports) > 0:
             for importStr in self.imports:
                 rtnLines += f'import {importStr}\n'
             haveImports = True
-        
+
         # From imports
         if len(self.fromImports) > 0:
             for fromImport in self.fromImports:
                 rtnLines += f'from {self.fromImports[fromImport]["from"]} import {self.fromImports[fromImport]["import"]}\n'
             haveImports = True
-        
+
         # From piClasses imports
         if len(self.fromPiClasses) > 0:
             for fromPiClasse in self.fromPiClasses:
@@ -106,22 +106,22 @@ class PiGenDefCode():
                 else:
                     printIt('No piClass specified for fromPiClasses.', lable.ERROR)
             haveImports = True
-        
+
         # Raw from imports
         if len(self.rawFromImports) > 0:
             for rawFromImportStr in self.rawFromImports:
                 rtnLines += f'{rawFromImportStr}\n'
             haveImports = True
-        
+
         if haveImports:
             rtnLines += '\n'
-        
+
         return rtnLines
-    
+
     def __genConstantLines(self) -> str:
         """Generate module-level constants"""
         rtnLines = ''
-        
+
         # Global variables from globals dict
         if len(self.globals) > 0:
             for aGlobal in self.globals:
@@ -156,21 +156,21 @@ class PiGenDefCode():
                         rtnLines += f'{aGlobal} = []\n'
                 else:
                     printIt(f'Incorrect type {str(globalType)} for {self.globals[aGlobal]}.', lable.ERROR)
-        
+
         # Constants from constants list
         if len(self.constants) > 0:
             for constantLine in self.constants:
                 rtnLines += f'{constantLine}\n'
-        
+
         if rtnLines:
             rtnLines += '\n'
-        
+
         return rtnLines
-    
+
     def __genFunctionLines(self) -> str:
         """Generate function definitions"""
         rtnLines = ''
-        
+
         if len(self.functionDefs) > 0:
             for functionName, functionLines in self.functionDefs.items():
                 if isinstance(functionLines, list):
@@ -183,19 +183,19 @@ class PiGenDefCode():
                     rtnLines += '\n'  # Add blank line after each function
                 else:
                     printIt(f'Warning: Function {functionName} is not a list of lines', lable.WARN)
-        
+
         return rtnLines
-    
+
     def __genGlobalCodeLines(self) -> str:
         """Generate global code at end of file"""
         rtnLines = ''
-        
+
         if len(self.globalCode) > 0:
             for globalCodeLine in self.globalCode:
                 rtnLines += f'{globalCodeLine}\n'
-        
+
         return rtnLines
-    
+
     def __setPiDefDir(self):
         """Set up the piDefs directory for output files"""
         # Check if fileDirectory is specified in the piDefGC configuration
@@ -217,18 +217,18 @@ class PiGenDefCode():
                 # Ultimate fallback to original behavior
                 piDefDir = readRC(PiSeedTypes[0])  # Get piScratchDir
                 piDefDir = Path(piDefDir).parent.joinpath("piDefs")
-        
+
         if not piDefDir.is_dir():
             logIt(f'Make directory: {piDefDir}')
             piDefDir.mkdir(mode=0o755, parents=True, exist_ok=True)
         self.piDefDir = piDefDir
-    
+
     def __updatePiDefTrackingFile(self, fileName):
         """Update the .pidefs tracking file with generated filenames"""
         # Place tracking file in the same directory as the generated file
         trackingFile = os.path.join(self.piDefDir, ".pidefs")
         generatedFiles = set()
-        
+
         # Read existing tracking file if it exists
         if os.path.isfile(trackingFile):
             try:
@@ -236,10 +236,10 @@ class PiGenDefCode():
                     generatedFiles = set(line.strip() for line in f if line.strip())
             except Exception as e:
                 logIt(f'Warning: Could not read tracking file {trackingFile}: {e}')
-        
+
         # Add the new file (just the filename, not full path)
         generatedFiles.add(os.path.basename(fileName))
-        
+
         # Write updated tracking file with metadata
         try:
             with open(trackingFile, 'w') as f:
@@ -250,33 +250,33 @@ class PiGenDefCode():
                     f.write(f"{filename}\n")
         except Exception as e:
             logIt(f'Warning: Could not update tracking file {trackingFile}: {e}')
-    
+
     def __savePiDefFile(self, piDefLines, verbose=False):
         """Save the generated Python file"""
         fileName = os.path.join(self.piDefDir, f"{self.fileName}.py")
         if os.path.isfile(fileName):
-            if verbose: 
+            if verbose:
                 printIt(f'{fileName}', lable.REPLACED)
         else:
-            if verbose: 
+            if verbose:
                 printIt(f'{fileName}', lable.SAVED)
-        
+
         with open(fileName, 'w') as f:
             f.write(piDefLines)
-        
+
         # Update tracking file
         self.__updatePiDefTrackingFile(fileName)
-        
+
         self.savedCodeFiles[self.fileName] = fileName
-    
+
     def __genPiDefFile(self, piJsonFileName, verbose=False) -> None:
         """Generate a Python function definition file from piDefGC JSON"""
         self.pi_piDefGC = readJson(piJsonFileName)
         self.PiFileName = piJsonFileName
-        
+
         self.__setPiDefGCAttrs()
         self.__setPiDefDir()
-        
+
         # Build the complete Python file content
         piDefLines = ""
         piDefLines += self.__genHeaderLines()
@@ -285,10 +285,10 @@ class PiGenDefCode():
         piDefLines += self.__genConstantLines()
         piDefLines += self.__genFunctionLines()
         piDefLines += self.__genGlobalCodeLines()
-        
+
         self.__savePiDefFile(piDefLines, verbose)
         logIt("GenPiDefFile: " + piJsonFileName)
-    
+
     def genPiDefFiles(self, genFileName='', verbose=False):
         """Generate Python function definition files from piDefGC JSON files"""
         if genFileName:
@@ -297,11 +297,11 @@ class PiGenDefCode():
             # Process all piDefGC files in the directory
             piJsonDefGCDir = readRC(PiSeedTypes[0])  # Get piScratchDir
             piJsonDefGCDir = Path(piJsonDefGCDir).joinpath("piDefGC")
-            
+
             if piJsonDefGCDir.is_dir():
                 piJsonDefGCFilenames = os.listdir(piJsonDefGCDir)
                 piJsonDefGCFilenames.sort()
-                
+
                 # Loop through JSON files in correct order
                 for piJsonDefGCFilename in piJsonDefGCFilenames:
                     if piJsonDefGCFilename.endswith('.json'):

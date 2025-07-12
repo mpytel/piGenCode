@@ -185,7 +185,7 @@ def readSeedPis(piFileName) -> list[tuple]:
                     elif len(tokens) == 2:
                         piType, piTitle = tokens
                         piSD = ""
-                    else: 
+                    else:
                         # If we get more than 3 tokens, try to handle it by joining the extra parts as piSD
                         if len(tokens) > 3:
                             piType = tokens[0]
@@ -216,7 +216,7 @@ def readSeedPis(piFileName) -> list[tuple]:
                                 raise Exception("Could not parse line with quote issues")
                         except Exception as fallback_e:
                             tb_str = ''.join(format_exception(None, fallback_e, fallback_e.__traceback__))
-                            printIt(f'{fileName}, line:{inLineNumber}\n{tb_str}', lable.ERROR)
+                            printIt(f'{__file__}, line:{inLineNumber}\n{tb_str}', lable.ERROR)
                             printIt(f'current line: {currLine}', lable.ERROR)
                     else:
                         # Re-raise other ValueError types

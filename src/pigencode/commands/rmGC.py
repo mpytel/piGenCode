@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from ..classes.argParse import ArgParse
 from ..defs.logIt import printIt, lable
-from ..defs.piRCFile import getKeyItem
+from ..defs.fileIO import getKeyItem
 
 
 def rmGC(argParse: ArgParse):
