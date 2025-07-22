@@ -2,7 +2,7 @@
 import os, json
 import inspect
 from pathlib import Path
-from ..defs.fileIO import readRC, writeRC, piDirs, readJson, piLoadPiClassGCJson, PiSeedTypes
+from ..defs.fileIO import getKeyItem, piGCDirs, readJson, piLoadPiClassGCJson
 from ..defs.logIt import logIt, printIt, lable, getCodeFile, getCodeLine
 
 class PiGenCode():
@@ -649,24 +649,12 @@ class PiGenCode():
         if self.fileDirectory:
             # Use the specified fileDirectory (can be relative or absolute)
             piClassDir = Path(self.fileDirectory)
-            if not piClassDir.is_absolute():
-                # If relative, make it relative to current working directory
-                piClassDir = Path.cwd().joinpath(piClassDir)
         else:
             # Fall back to configured piClassGCDir from .pigencoderc
-            piClassGCDir = readRC("piClassGCDir")
-            if piClassGCDir:
-                # Use the RC configured directory
-                piClassDir = Path(piClassGCDir)
-                if not piClassDir.is_absolute():
-                    piClassDir = Path.cwd().joinpath(piClassDir)
-            else:
-                # Ultimate fallback to old behavior for backward compatibility
-                piClassDir = readRC(PiSeedTypes[0])
-                if piClassDir:
-                    piClassDir = Path(piClassDir).parent.joinpath("piClasses")
-                else:
-                    piClassDir = Path.cwd().joinpath("piClasses")
+            piClassDir = Path(getKeyItem(piGCDirs[2]))
+        if not piClassDir.is_absolute():
+            # If relative, make it relative to current working directory
+            piClassDir = Path.cwd().joinpath(piClassDir)
 
         if not piClassDir.is_dir():
             logIt(f'Make direcory: {piClassDir}')
@@ -738,11 +726,8 @@ class PiGenCode():
         if genFileName:
             self.__genPiClass(genFileName, verbose)
         else:
-            piJsonGCDir = readRC(PiSeedTypes[0])
-            if not piJsonGCDir:
-                piJsonGCDir = piDirs[PiSeedTypes[0]]
-                writeRC(PiSeedTypes[0], piJsonGCDir)
-            piJsonGCDir = Path(piJsonGCDir).joinpath(PiSeedTypes[4])
+            piGermDir = getKeyItem(piGCDirs[1])
+            piJsonGCDir = Path(piGermDir).joinpath(getKeyItem(piGCDirs[2]))
             piJsonGCFilenames = os.listdir(piJsonGCDir)
             piJsonGCFilenames.sort()
             #loop though json files in correct order

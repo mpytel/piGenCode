@@ -35,5 +35,10 @@
   },
   "rmGC": {
     "rmGC_description": "Remove generated files to clean up for a fresh start. Uses advanced selective removal: removes entire piGerms directory (volatile), recursively searches for .piclass and .pidefs tracking files throughout configured directories and subdirectories, removes only tracked generated files. Supports distributed file placement via fileDirectory field. Preserves all user files and directory structures."
+  },
+  "setDir": {
+    "setDir_description": "set piGenCode directories using dirKey dirName pair",
+    "dirKey": "Use list to show current set or dirKey = piClassGCDir, piDefGCDir, piSeedsDir, or piGermDir.",
+    "dirName": "The directory path to set as value for dirKey"
   }
 }

@@ -8,6 +8,7 @@ piDefs/
 devDocs/
 
 # for testing
+holdSeeds/
 src/cmdpackage
 
 # Byte-compiled / optimized / DLL files

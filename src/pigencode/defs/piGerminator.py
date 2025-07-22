@@ -1,5 +1,5 @@
-from classes.piSeeds import PiSeeds
-from classes.piGermSeeds import PiGermSeeds
+from pigencode.classes.piSeeds import PiSeeds
+from pigencode.classes.piGermSeeds import PiGermSeeds
 
 def germinateSeeds(fileName) -> PiGermSeeds:
     piSeeds = PiSeeds(fileName)

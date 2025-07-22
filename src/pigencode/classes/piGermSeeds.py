@@ -521,9 +521,7 @@ class PiGermSeeds():
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
             printIt(tb_str,lable.ERROR)
             exit()
-    def germinate_piScratchDir(self):
-        writeRC(self.seeds.currPi.piSeedType, self.seeds.currPi.piTitle)
-        self.seeds.next()
+
     def germinate_piStruct(self):
         dprint00 = False
         dprint01 = False
@@ -878,9 +876,9 @@ def germinateSeeds(fileName) -> PiGermSeeds:
 # Register all piSeed type handlers with the registry
 # This replaces the exec() pattern with a cleaner registry approach
 
-@register_pi_seed_handler("piScratchDir")
+@register_pi_seed_handler("piGermDir")
 def handle_piScratchDir(germ_seeds_instance):
-    """Handler for piScratchDir seed type"""
+    """Handler for piGermDir seed type"""
     germ_seeds_instance.germinate_piScratchDir()
 
 @register_pi_seed_handler("piStruct")

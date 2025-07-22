@@ -1,9 +1,10 @@
 import os, re, ast, traceback
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Set
-from ..classes.argParse import ArgParse
-from ..defs.logIt import printIt, lable
-from ..defs.fileIO import getKeyItem
+from pigencode.classes.argParse import ArgParse
+from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.fileIO import getKeyItem, piGCDirs
+from pigencode.defs.getSeedPath import getSeedPath
 
 # Intelligent pattern detection functions
 def isExactDefaultStrCode(methodCode: List[str], className: str) -> bool:
@@ -831,14 +832,14 @@ def syncAllFilesEnhanced(options: dict):
 
         # Process piClassGCDir if not filtered to def/genclass only
         if options.get('filter_type') not in ['def', 'genclass']:
-            piClassesDir = Path(getKeyItem("piClassGCDir", "piClasses"))
+            piClassesDir = Path(getKeyItem(piGCDirs[2]))
             if piClassesDir.exists():
                 class_files = findPythonFilesRecursively(piClassesDir, "class")
                 files_to_process.extend([(f, t, 'class') for f, t in class_files])
 
         # Process piDefGCDir if not filtered to class/genclass only
         if options.get('filter_type') not in ['class', 'genclass']:
-            piDefsDir = Path(getKeyItem("piDefGCDir", "piDefs"))
+            piDefsDir = Path(getKeyItem(piGCDirs[3]))
             if piDefsDir.exists():
                 def_files = findPythonFilesRecursively(piDefsDir, "def")
                 files_to_process.extend([(f, t, 'def') for f, t in def_files])
@@ -848,8 +849,8 @@ def syncAllFilesEnhanced(options: dict):
             # piGenClass files can be in either piClassGCDir or a separate directory
             # Check both locations
             piGenClassDirs = [
-                Path(getKeyItem("piClassGCDir", "piClasses")),
-                Path(getKeyItem("piDefGCDir", "piDefs"))
+                Path(getKeyItem(piGCDirs[4])),
+                Path(getKeyItem(piGCDirs[3]))
             ]
 
             for genClassDir in piGenClassDirs:
@@ -1346,19 +1347,7 @@ def createNewPiClassGCSeedFileEnhanced(className: str, pythonFile: Path) -> Opti
     and creates more complete piSeed files from existing Python code.
     """
     try:
-        seedDirName = "piSeeds"
-        seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-
-        if not seedPath.exists():
-            # Try current directory
-            cwd = Path.cwd()
-            if cwd.name == seedDirName:
-                seedPath = cwd
-            else:
-                seedPath = cwd / seedDirName
-
-        if not seedPath.exists():
-            seedPath.mkdir(parents=True, exist_ok=True)
+        seedPath = getSeedPath()
 
         # Get next available number
         nextNum = getNextPiSeedNumber()
@@ -1435,26 +1424,14 @@ def createNewPiDefGCSeedFileEnhanced(defName: str, pythonFile: Path) -> Optional
     and creates more complete piSeed files from existing Python code.
     """
     try:
-        seedDirName = "piSeeds"
-        seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-
-        if not seedPath.exists():
-            # Try current directory
-            cwd = Path.cwd()
-            if cwd.name == seedDirName:
-                seedPath = cwd
-            else:
-                seedPath = cwd / seedDirName
-
-        if not seedPath.exists():
-            seedPath.mkdir(parents=True, exist_ok=True)
+        seedPath = getSeedPath()
 
         # Get next available number
         nextNum = getNextPiSeedNumber()
 
         # Create new piSeed file name
         seedFileName = f"piSeed{nextNum}_piDefGC_{defName}.pi"
-        seedFilePath = seedPath / seedFileName
+        seedFilePath = seedPath.joinpath(seedFileName)
 
         # Determine relative file directory from pythonFile
         try:
@@ -1673,20 +1650,7 @@ def analyzePythonDefFile(pythonFile: Path) -> Dict:
 def findPiGenClassSeedFile(className: str) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given class name (piGenClass)"""
     try:
-        # Get piSeeds directory
-        seedDirName = "piSeeds"
-        seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-
-        if not seedPath.exists():
-            # Try current directory
-            cwd = Path.cwd()
-            if cwd.name == seedDirName:
-                seedPath = cwd
-            else:
-                seedPath = cwd / seedDirName
-
-        if not seedPath.exists():
-            return None
+        seedPath = getSeedPath()
 
         # Look for piSeed files that contain piGenClass for this class
         seedFiles = list(seedPath.glob("*.pi"))
@@ -1712,19 +1676,7 @@ def createNewPiGenClassSeedFile(className: str, pythonFile: Path) -> Optional[Pa
     Create a new piGenClass piSeed file for handling multiple classes in a single file.
     """
     try:
-        seedDirName = "piSeeds"
-        seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-
-        if not seedPath.exists():
-            # Try current directory
-            cwd = Path.cwd()
-            if cwd.name == seedDirName:
-                seedPath = cwd
-            else:
-                seedPath = cwd / seedDirName
-
-        if not seedPath.exists():
-            seedPath.mkdir(parents=True, exist_ok=True)
+        seedPath = getSeedPath()
 
         # Get next available number
         nextNum = getNextPiSeedNumber()
@@ -2264,19 +2216,7 @@ def updateGenClassSeedGlobalCode(seedContent: str, className: str, globalCode: L
 def getNextPiSeedNumber() -> str:
     """Get the next available piSeed number as a zero-padded string"""
     try:
-        seedDirName = "piSeeds"
-        seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-
-        if not seedPath.exists():
-            # Try current directory
-            cwd = Path.cwd()
-            if cwd.name == seedDirName:
-                seedPath = cwd
-            else:
-                seedPath = cwd / seedDirName
-
-        if not seedPath.exists():
-            return "001"
+        seedPath = getSeedPath()
 
         # Find all piSeed files and extract numbers
         seedFiles = list(seedPath.glob("piSeed*.pi"))
@@ -2301,19 +2241,7 @@ def getNextPiSeedNumber() -> str:
 def createNewPiClassGCSeedFile(className: str, pythonFile: Path) -> Optional[Path]:
     """Create a new piClassGC piSeed file for the given class"""
     try:
-        seedDirName = "piSeeds"
-        seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-
-        if not seedPath.exists():
-            # Try current directory
-            cwd = Path.cwd()
-            if cwd.name == seedDirName:
-                seedPath = cwd
-            else:
-                seedPath = cwd / seedDirName
-
-        if not seedPath.exists():
-            seedPath.mkdir(parents=True, exist_ok=True)
+        seedPath = getSeedPath()
 
         # Get next available number
         nextNum = getNextPiSeedNumber()
@@ -2357,19 +2285,7 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
 def createNewPiDefGCSeedFile(defName: str, pythonFile: Path) -> Optional[Path]:
     """Create a new piDefGC piSeed file for the given function definition file"""
     try:
-        seedDirName = "piSeeds"
-        seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-
-        if not seedPath.exists():
-            # Try current directory
-            cwd = Path.cwd()
-            if cwd.name == seedDirName:
-                seedPath = cwd
-            else:
-                seedPath = cwd / seedDirName
-
-        if not seedPath.exists():
-            seedPath.mkdir(parents=True, exist_ok=True)
+        seedPath = getSeedPath()
 
         # Get next available number
         nextNum = getNextPiSeedNumber()
@@ -2412,20 +2328,7 @@ piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from e
 def findPiClassGCSeedFile(className: str) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given class name (piClassGC)"""
     try:
-        # Get piSeeds directory
-        seedDirName = "piSeeds"
-        seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-
-        if not seedPath.exists():
-            # Try current directory
-            cwd = Path.cwd()
-            if cwd.name == seedDirName:
-                seedPath = cwd
-            else:
-                seedPath = cwd / seedDirName
-
-        if not seedPath.exists():
-            return None
+        seedPath = getSeedPath()
 
         # Look for piSeed files that contain piClassGC for this class
         seedFiles = list(seedPath.glob("*.pi"))
@@ -2449,20 +2352,7 @@ def findPiClassGCSeedFile(className: str) -> Optional[Path]:
 def findPiDefGCSeedFile(defName: str) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given function definition name (piDefGC)"""
     try:
-        # Get piSeeds directory
-        seedDirName = "piSeeds"
-        seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-
-        if not seedPath.exists():
-            # Try current directory
-            cwd = Path.cwd()
-            if cwd.name == seedDirName:
-                seedPath = cwd
-            else:
-                seedPath = cwd / seedDirName
-
-        if not seedPath.exists():
-            return None
+        seedPath = getSeedPath()
 
         # Look for piSeed files that contain piDefGC for this def name
         seedFiles = list(seedPath.glob("*.pi"))
@@ -5383,7 +5273,7 @@ def enhancedFileDiscovery(fileName: str) -> Optional[Path]:
                 return filePath
 
         # Search in configurable piClassGCDir
-        piClassesDir = Path(getKeyItem("piClassGCDir", "piClasses"))
+        piClassesDir = Path(getKeyItem(piGCDirs[2]))
         if piClassesDir.exists():
             # Direct file in piClasses
             candidate = piClassesDir / fileName
@@ -5406,10 +5296,10 @@ def enhancedFileDiscovery(fileName: str) -> Optional[Path]:
                         return candidate
 
         # Search in configurable piDefGCDir
-        piDefsDir = Path(getKeyItem("piDefGCDir", "piDefs"))
+        piDefsDir = Path(getKeyItem(piGCDirs[3]))
         if piDefsDir.exists():
             # Direct file in piDefs
-            candidate = piDefsDir / fileName
+            candidate = piDefsDir.joinpath(fileName)
             if candidate.exists():
                 return candidate
 

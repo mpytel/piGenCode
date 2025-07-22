@@ -6,7 +6,7 @@ from json import load, loads, dump, dumps, JSONDecodeError
 from re import compile as reCompile
 from .logIt import logIt, printIt, lable
 from ..classes.piSeeds import PiSeedTypes, PiSeed, PiSeedTypeREs
-from ..defs.fileIO import readRC, writeRC, getKeyItem, piDirs
+from ..defs.fileIO import readRC, writeRC, getKeyItem, piGenCodeDirs, piGCDirs
 from ..defs.piID import getPiIDs
 
 def readJson(fileName: str, verbose=True) -> dict:
@@ -34,9 +34,9 @@ def writeJson(fileName: str, aDict: dict, verbose=True) -> bool:
     return rtnBool
 
 def getPiStrucFileName(baseTitle) -> str:
-    piStrucFileName = readRC(PiSeedTypes[0])
+    piStrucFileName = getKeyItem(piGCDirs[1])
     if not piStrucFileName:
-        piStrucFileName = piDirs[PiSeedTypes[0]]
+        piStrucFileName = piGenCodeDirs[piGCDirs[1]]
         writeRC(PiSeedTypes[0], piStrucFileName)
     piStrucFileName = Path(piStrucFileName).joinpath(PiSeedTypes[1])
     makedirs(piStrucFileName, exist_ok=True)
@@ -57,7 +57,7 @@ def readPiStruc(baseTitle: str, verbose=True) -> dict:
 def getPiDefaultFileName(baseTitle) -> str:
     piStrucFileName = readRC(PiSeedTypes[0])
     if not piStrucFileName:
-        piStrucFileName = piDirs[PiSeedTypes[0]]
+        piStrucFileName = piGenCodeDirs[piGCDirs[1]]
         writeRC(PiSeedTypes[0], piStrucFileName)
     piStrucFileName = Path(piStrucFileName).joinpath(PiSeedTypes[2])
     makedirs(piStrucFileName, exist_ok=True)
@@ -87,11 +87,11 @@ def readPiDefault(baseTitle: str, verbose=True) -> dict:
     return rtnDict
 
 def getPiFilePath(aDict: dict) -> Path:
-    piScratchDir = readRC('piScratchDir')
-    if not piScratchDir:
-        piScratchDir = piDirs[PiSeedTypes[0]]
-        writeRC(PiSeedTypes[0], piScratchDir)
-    piFilePath = Path(piScratchDir)
+    piGermDir = readRC('piGermDir')
+    if not piGermDir:
+        piGermDir = piGenCodeDirs[piGCDirs[1]]
+        writeRC(PiSeedTypes[0], piGermDir)
+    piFilePath = Path(piGermDir)
     piFilePath = piFilePath.joinpath("pis")
     piFilePath = piFilePath.joinpath(aDict["piIndexer"]["piUser"])
     piFilePath = piFilePath.joinpath(aDict["piIndexer"]["piRealm"])
@@ -152,9 +152,9 @@ def piLoadPiClassGCJson(PiClassName, piClassGCDir) -> dict:
 
 class PiDefGCFiles():
     def __init__(self) -> None:
-        piScratchPath = Path(getKeyItem("piScratchDir"))
-        self.fileDirName = piScratchPath.joinpath("piDefGC")
-        self.fileDirName.mkdir(mode=0o755, parents=True, exist_ok=True)
+        piScratchPath = Path(getKeyItem("piGermDir"))
+        self.fileDirName = piScratchPath.joinpath(getKeyItem("piDefGCDir"))
+        self.fileDirName.mkdir(mode=511, parents=True, exist_ok=True)
         self.baseMaxFileInt = self._getBaseMaxFileInt()
         self.maxFileInt = self.baseMaxFileInt
         self.lastLineNumber = 0
@@ -249,7 +249,7 @@ class PiDefGCFiles():
 
 class PiGenClassFiles():
     def __init__(self) -> None:
-        piScratchPath = Path(getKeyItem("piScratchDir"))
+        piScratchPath = Path(getKeyItem("piGermDir"))
         self.fileDirName = piScratchPath.joinpath("piGenClass")
         self.fileDirName.mkdir(mode=0o755, parents=True, exist_ok=True)
         self.baseMaxFileInt = self._getBaseMaxFileInt()
@@ -346,7 +346,7 @@ class PiGenClassFiles():
 
 class PiClassGCFiles():
     def __init__(self) -> None:
-        piScratchPath = Path(getKeyItem("piScratchDir"))
+        piScratchPath = Path(getKeyItem("piGermDir"))
         self.fileDirName = piScratchPath.joinpath("piClassGC")
         self.fileDirName.mkdir(mode=511, parents=True, exist_ok=True)
         self.baseMaxFileInt = self._getBaseMaxFileInt()

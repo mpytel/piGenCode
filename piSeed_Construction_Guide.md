@@ -5,12 +5,16 @@
 - [piSeed Construction Guide](#piseed-construction-guide)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
+  - [Recent Improvements (Latest Session)](#recent-improvements-latest-session)
+    - [Enhanced syncCode Command](#enhanced-synccode-command)
+      - [🚀 Key Improvements](#-key-improvements)
+      - [📈 Benefits](#-benefits)
+      - [🔧 Technical Details](#-technical-details)
   - [piSeed File Structure](#piseed-file-structure)
     - [Basic Syntax](#basic-syntax)
     - [Comments](#comments)
   - [1. piStruct Generation](#1-pistruct-generation)
     - [Required piSeedTypes for piStruct:](#required-piseedtypes-for-pistruct)
-      - [piScratchDir](#piscratchdir)
       - [piStruct](#pistruct)
       - [piSeed Types](#piseed-types)
       - [Important: piStructC00 Cloning Syntax](#important-pistructc00-cloning-syntax)
@@ -104,17 +108,6 @@
       - [5. File Naming Strategy](#5-file-naming-strategy)
     - [piGenClass Command Support:](#pigenclass-command-support)
     - [When to Use piGenClass:](#when-to-use-pigenclass)
-  - [Enhanced syncCode: Bidirectional Synchronization](#enhanced-synccode-bidirectional-synchronization)
-    - [Core syncCode Functionality](#core-synccode-functionality)
-    - [Auto-Creation Feature: Integrating Existing Python Code](#auto-creation-feature-integrating-existing-python-code)
-      - [What Auto-Creation Solves](#what-auto-creation-solves)
-      - [Intelligent Type Detection](#intelligent-type-detection)
-      - [Auto-Generated piSeed Examples](#auto-generated-piseed-examples)
-      - [Advanced Auto-Creation Features](#advanced-auto-creation-features)
-      - [Auto-Creation Workflows](#auto-creation-workflows)
-      - [Auto-Creation Statistics and Reporting](#auto-creation-statistics-and-reporting)
-      - [Auto-Creation Best Practices](#auto-creation-best-practices)
-    - [syncCode Integration Benefits](#synccode-integration-benefits)
   - [Processing Order](#processing-order)
   - [File Naming Convention](#file-naming-convention)
   - [Best Practices](#best-practices)
@@ -128,16 +121,32 @@
     - [Class with Methods](#class-with-methods)
   - [Troubleshooting](#troubleshooting)
     - [Common Errors](#common-errors)
+    - [syncCode Issues (Latest Updates)](#synccode-issues-latest-updates)
+    - [Best Practices (Latest Updates)](#best-practices-latest-updates)
     - [Validation](#validation)
+  - [Enhanced syncCode: Bidirectional Synchronization](#enhanced-synccode-bidirectional-synchronization)
+    - [Core syncCode Functionality](#core-synccode-functionality)
+    - [Auto-Creation Feature: Integrating Existing Python Code](#auto-creation-feature-integrating-existing-python-code)
+      - [What Auto-Creation Solves](#what-auto-creation-solves)
+      - [Intelligent Type Detection](#intelligent-type-detection)
+      - [Auto-Generated piSeed Examples](#auto-generated-piseed-examples)
+      - [Advanced Auto-Creation Features](#advanced-auto-creation-features)
+      - [Auto-Creation Workflows](#auto-creation-workflows)
+      - [Auto-Creation Statistics and Reporting](#auto-creation-statistics-and-reporting)
+      - [Auto-Creation Best Practices](#auto-creation-best-practices)
+    - [syncCode Integration Benefits](#synccode-integration-benefits)
   - [Summary](#summary)
+  - [Recent Improvements Summary](#recent-improvements-summary)
 
 ## Overview
 
-This guide explains how to construct piSeed documents that generate the three types of germ files in the correct order:
+This guide explains how to construct piSeed documents that generate the four types of germ files in the correct order:
 
 1. **piStruct** - Data structure definitions
 2. **piValuesSetD** - Default values for structures
-3. **piClassGC** - Python class generation configurations
+3. **piClassGC** - Python piClass generation configurations
+4. **piDefsGC** - Python function generation configurations
+5. **piGenClass** - Python general class generation configurations
 
 piSeed files are processed sequentially by filename (piSeed000, piSeed001, etc.), so the order matters because later seeds can reference earlier ones.
 
@@ -220,7 +229,7 @@ Each line in a piSeed file follows this pattern:
 <piSeedType> <piSeedKey> <piSeedValue>
 ```
 
-- **piSeedType**: One of 8 types (piScratchDir, piStruct, piValuesSetD, piValue, piClassGC, piValueA, piType, piIndexer)
+- **piSeedType**: One of 7 types (piStruct, piValuesSetD, piValue, piClassGC, piValueA, piType, piIndexer)
 - **piSeedKey**: The identifier or path for the data
 - **piSeedValue**: The value or description (usually in single quotes)
 
@@ -234,12 +243,6 @@ Each line in a piSeed file follows this pattern:
 piStruct files define the data structure schema for your objects.
 
 ### Required piSeedTypes for piStruct:
-
-#### piScratchDir
-Sets the output directory for generated files:
-```
-piScratchDir ./piGerms 'location for storing pis before piIndexing'
-```
 
 #### piStruct
 Defines the main structure:
@@ -296,7 +299,6 @@ The period syntax is crucial for structures like `piClassGC` that need to inheri
 
 ### Example piStruct piSeed:
 ```
-piScratchDir ./piGerms 'location for storing pis'
 # piStruct.piProlog
 piStruct piProlog 'Defines a data structure for piProlog'
 piStructS00 title 'A string value for storing the system name'
@@ -420,7 +422,7 @@ piValue <className>.piBody:piClassGC:fileName <outputFileName>
 
 3. **Legacy Fallback** (lowest priority)
    - If no RC configuration, fall back to original behavior
-   - Uses `piScratchDir/../piClasses`
+   - Uses `piGermDir/../piClasses`
 
 **Examples:**
 
@@ -946,7 +948,7 @@ piValue <fileName>.piBody:piDefGC:fileDirectory <directoryPath>
 
 3. **Legacy Fallback** (lowest priority)
    - If no RC configuration, fall back to original behavior
-   - Uses `piScratchDir` parent directory + "piDefs"
+   - Uses `piGermDir` parent directory + "piDefs"
 
 **Examples:**
 
@@ -1273,17 +1275,17 @@ from typing import Optional, List
 
 class UserBase(BaseModel):
     '''Base user model with common validation'''
-    
+
     name: str = Field(..., min_length=1, max_length=100)
     email: str = Field(..., regex=r'^[^@]+@[^@]+\.[^@]+$')
     active: bool = True
 
 class UserCreate(UserBase):
     '''User creation model with password'''
-    
+
     password: str = Field(..., min_length=8)
     confirm_password: str
-    
+
     def validate_passwords(self):
         if self.password != self.confirm_password:
             raise ValueError('Passwords do not match')
@@ -1291,14 +1293,14 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     '''User response model for API responses'''
-    
+
     id: int
     created_at: datetime.datetime
     updated_at: Optional[datetime.datetime] = None
 
 class UserUpdate(BaseModel):
     '''User update model for partial updates'''
-    
+
     name: Optional[str] = None
     email: Optional[str] = None
     active: Optional[bool] = None
@@ -1471,7 +1473,7 @@ piGenClass provides the perfect balance between piClassGC's structure and piDefG
 **Recommended numbering scheme:**
 - `piSeed000-014`: piStruct and piValuesSetD definitions
 - `piSeed015-043`: piClassGC single-class generators
-- `piSeed044-048`: piDefGC function definition generators  
+- `piSeed044-048`: piDefGC function definition generators
 - `piSeed049-099`: piGenClass multi-class generators
 
 ## File Naming Convention
@@ -1732,7 +1734,7 @@ Auto-Creation analyzes each Python file to determine the optimal piSeed type:
 ```python
 # Analysis Logic:
 # Multiple classes → piGenClass
-# Single class with inheritance → piGenClass  
+# Single class with inheritance → piGenClass
 # Single class with >3 methods → piGenClass
 # Only functions, no classes → piDefGC
 # Simple single class → piClassGC (backward compatibility)
@@ -1742,14 +1744,14 @@ Auto-Creation analyzes each Python file to determine the optimal piSeed type:
 
 ```python
 # File: api_models.py (Multiple classes)
-class UserBase(BaseModel): 
+class UserBase(BaseModel):
     name: str
     email: str
 
-class UserCreate(UserBase): 
+class UserCreate(UserBase):
     password: str
 
-class UserResponse(UserBase): 
+class UserResponse(UserBase):
     id: int
     created_at: datetime
 # → Auto-creates: piSeed049_piGenClass_api_models.pi
@@ -1766,7 +1768,7 @@ def validate_email(email: str) -> bool:
 class DataHolder:
     def __init__(self, data):
         self.data = data
-    
+
     def __str__(self):
         return f"DataHolder({self.data})"
 # → Auto-creates: piSeed015_piClassGC_data_holder.pi
@@ -2056,7 +2058,7 @@ The piSeed system provides a powerful way to generate structured data and Python
 **The five main generation types:**
 
 1. **piStruct** - Define data structures and schemas
-2. **piValuesSetD** - Set default values for structures  
+2. **piValuesSetD** - Set default values for structures
 3. **piClassGC** - Generate single-class Python files
 4. **piDefGC** - Generate function-only Python files
 5. **piGenClass** - Generate multi-class Python files with complex inheritance

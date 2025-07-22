@@ -45,8 +45,7 @@ There are 8 different piSeedTypes including piStruct (for JSON structure definit
 ## A vision for piGenCode, an instance of pi
 We are developing an idea that uses three string (tokens) called a pi to represent a particle of Pertinent Information, composed of a type, title and short description (SD). This is the dictionary piBase, containing three keys: piType, piTitle, and piSD. When representing a piSeed these elements represent a piSeedType, piSeedKey, and the piSeedValue.
 
-Each piSeedType is an instruction for ***piGenCode*** to perform different operations. Currently there are 8 piSeedTypes:
-- piScratchDir
+Each piSeedType is an instruction for ***piGenCode*** to perform different operations. Currently there are 7 piSeedTypes:
 - piStruct
 - piValuesSetD
 - piValue
@@ -62,20 +61,22 @@ Each piSeedType is an instruction for ***piGenCode*** to perform different opera
 ```
 ./
 ├── piSeeds/ # Seed files (numbered piSeed000.pi to piSeedNNN.pi)
-├── piGerms/ # Generated JSON configurations (configurable via piScratchDir)
+├── piGerms/ # Generated JSON configurations (configurable via piGermDir)
 │   ├── piStruct/         # Structure definitions
 │   ├── piValuesSetD/     # Default values
-│   ├── piClassGC/        # Class generation configs
+│   ├── piClassGC/        # Class piClass generation configs
 │   └── piDefGC/          # Function definition configs
+│   └── piGenClass/       # General class definition configs
 ├── piClasses/ # Generated Python classes (configurable via piClassGCDir)
 └── piDefs/ # Generated Python function files (configurable via piDefGCDir)
 ```
 
 **Configurable Directories:**
 The system supports flexible directory configuration through `.pigencoderc`:
-- **piScratchDir**: Location for temporary JSON germ files
-- **piClassGCDir**: Base directory for generated Python classes
+- **piGermDir**: Location for temporary JSON germ files
+- **piClassGCDir**: Base directory for generated Python piClasses
 - **piDefGCDir**: Base directory for generated Python function files
+- **piGenClassDir**: Base directory for generated Python classes files
 - **Distributed Placement**: Individual files can be placed in custom subdirectories using `fileDirectory` field
 
 ## Commands
@@ -546,18 +547,20 @@ The system uses a `.pigencoderc` file to store configuration settings for direct
 **Example .pigencoderc:**
 ```json
 {
-  "piSeedsDir": "piSeeds",
-  "piScratchDir": "./piGerms",
-  "piDefGCDir": "./src/pigencode/piDefs",
-  "piClassGCDir": "./src/pigencode/piClasses"
+    "piSeedsDir": "piSeeds",
+    "piGermDir": "piGerms",
+    "piClassGCDir": "piClassGC",
+    "piDefGCDir": "piDefsGC",
+    "piGenClassDir": "piGenClasses"
 }
 ```
 
 **Configuration Options:**
 - **piSeedsDir**: Directory containing piSeed files
-- **piScratchDir**: Location for temporary JSON germ files
-- **piDefGCDir**: Base directory for generated Python function files
+- **piGermDir**: Location for temporary JSON germ files
 - **piClassGCDir**: Base directory for generated Python class files
+- **piDefGCDir**: Base directory for generated Python function files
+- **piGenClassDir**: Base directory for generated Python class files
 
 **Distributed File Placement:**
 Individual files can override the base directories using the `fileDirectory` field in piSeed configurations, allowing for complex project structures while maintaining organized code generation.

@@ -1,40 +1,43 @@
 from json import load, loads, dump, JSONDecodeError
 from traceback import format_exception
 from pathlib import Path
-from .logIt import printIt, lable, logIt, cStr, color
 import difflib
+from pigencode.defs.logIt import printIt, lable, logIt, cStr, color
 
-PiSeedTypes = ["piScratchDir", "piStruct", "piValuesSetD", "piValue", "piClassGC", "piValueA", "piType", "piIndexer"]
+cswPath = Path.cwd()
+rcFileName = Path.cwd()
+rcFileName = cswPath.joinpath(f'.{cswPath.name.lower()}rc')
+
+piGenCodeDirs = {
+    "piSeedsDir": "piSeeds",
+    "piGermDir": "piGerms",
+    "piClassGCDir": "piClassGC",
+    "piDefGCDir": "piDefsGC",
+    "piGenClassDir": "piGenClasses"
+}
+piGCDirs = list(piGenCodeDirs.keys())
+
 piIndexerTypes_S = ["users", "realms", "domains", "subjects"]
 piIndexerTypes = ["user", "realm", "domain", "subject"]
-from decouple import config
-piAPIURL = f'http://{config("piHost")}:{str(config("piPort"))}'
 
-rcFileName = Path.cwd()
-rcFileName = rcFileName.joinpath(f'.{rcFileName.name}rc')
-
-baseDir = Path(__file__).resolve().parents[2]
-piDirs = {
-    "piSeedsDir": "piSeeds",
-    "piScratchDir": "piGerm",
-    "piClassGCDir": "piGerm/piClassGC",
-    "piDefGCDir": "piGerm/piDefGC",
-    "piClassGCDir": "piGerm/piGenClass",
-    "piClassDir": "piClasses",
-}
 def resetPiRC():
-    piRC = baseDir.joinpath('.pirc')
-    if piRC.is_file(): piRC.unlink()
-    for piDir, piDirPathStr in piDirs.items():
+    if rcFileName.is_file():
+        rcFileName.unlink()
+    for piDir, piDirPathStr in piGenCodeDirs.items():
         writeRC(piDir, piDirPathStr)
-def getKeyItem(key, defultValue="") -> str:
+
+def getKeyItem(key) -> str:
     rtnValue = readRC(key)
     if not rtnValue:
-        rtnValue = defultValue
-        writeRC(key, rtnValue)
-    return rtnValue
+        if key in piGCDirs:
+            rtnValue = piGenCodeDirs[key]
+            writeRC(key, rtnValue)
+            return rtnValue
+    return str(rtnValue)
+
 def setKeyItem(key, Value):
     writeRC(key, Value)
+
 def delKey(key):
     global rcFileName
     if rcFileName.is_file():
@@ -46,7 +49,8 @@ def delKey(key):
     #print(rawRC)
     with open(rcFileName, 'w') as wf:
         dump(rawRC, wf, indent=2)
-def readRC(rcName: str):
+
+def readRC(rcName: str) -> (int | float | str | list | dict):
     global rcFileName
     if rcFileName.is_file():
         # print(rcFileName)
@@ -59,9 +63,10 @@ def readRC(rcName: str):
     try:
         rcValue = rawRcJson[rcName]
     except:
-        rcValue = None
+        rcValue = ''
     return rcValue
-def writeRC(rcName: str, rcValue: (int|float|str|list|dict)):
+
+def writeRC(rcName: str, rcValue: (int | float | str | list | dict)):
     global rcFileName
     if rcFileName.is_file():
         with open(rcFileName, 'r') as rf:
@@ -72,6 +77,7 @@ def writeRC(rcName: str, rcValue: (int|float|str|list|dict)):
     # print(rawRC)
     with open(rcFileName, 'w') as wf:
         dump(rawRC, wf, indent=2)
+
 def readJson(fileName: str, verbose=True) -> dict:
     rtnDict = {}
     try:
@@ -180,15 +186,15 @@ def savePiLn(softLinkMD5: Path, fileNameMD5: Path, suppress=True):
         thePiFilePath = softLinkMD5.readlink()
         softLinkMD5.unlink()
         softLinkMD5.symlink_to(thePiFilePath)
-def getPisPath() -> Path:
-    pisPath = None
-    pisPathStr = getKeyItem('pisDir', '')
-    if not pisPathStr:
-        pisPath = Path.home().joinpath('pis')
-        pisPathStr = getKeyItem('pisDir', str(pisPath))
-    else:
-        pisPath = Path(pisPathStr)
-    return pisPath
+# def getPisPath() -> Path:
+#     pisPath = None
+#     pisPathStr = getKeyItem('pisDir')
+#     if not pisPathStr:
+#         pisPath = Path.home().joinpath('pis')
+#         pisPathStr = getKeyItem('pisDir')
+#     else:
+#         pisPath = Path(pisPathStr)
+#     return pisPath
 
 
 def highlight_differences(str1, str2):

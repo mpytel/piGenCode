@@ -4,7 +4,7 @@ from pathlib import Path
 from re import compile as reCompile
 from ..classes.argParse import ArgParse
 from ..defs.logIt import printIt, lable
-from ..defs.fileIO import getKeyItem, writeRC
+from pigencode.defs.getSeedPath import getSeedPath
 
 # Pattern to match piSeed files: piSeed000_name.pi
 seedFilePattern = reCompile(r'piSeed(\d{3})_(.+)\.pi')
@@ -133,27 +133,27 @@ def reorderSeeds(argParse: ArgParse):
     else:
         printIt(f"Reordering completed but validation found issues", lable.WARN)
 
-def getSeedPath() -> Path:
-    """Get the piSeeds directory path"""
-    seedDirName = "piSeeds"
-    seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-    if seedPath.is_dir():
-        return seedPath
+# def getSeedPath() -> Path | None:
+#     """Get the piSeeds directory path"""
+#     seedDirName = "piSeeds"
+#     seedPath = Path(getKeyItem("piSeedsDir"))
+#     if seedPath.is_dir():
+#         return seedPath
 
-    # Check current directory
-    cwd = Path.cwd()
-    if cwd.name == seedDirName:
-        seedPath = cwd
-    else:
-        cwdDirs = [str(p.name) for p in cwd.iterdir() if p.is_dir()]
-        if seedDirName in cwdDirs:
-            seedPath = cwd.joinpath(seedDirName)
+#     # Check current directory
+#     cwd = Path.cwd()
+#     if cwd.name == seedDirName:
+#         seedPath = cwd
+#     else:
+#         cwdDirs = [str(p.name) for p in cwd.iterdir() if p.is_dir()]
+#         if seedDirName in cwdDirs:
+#             seedPath = cwd.joinpath(seedDirName)
 
-    if seedPath and seedPath.is_dir():
-        writeRC("piSeedsDir", str(seedPath))
-        return seedPath
+#     if seedPath and seedPath.is_dir():
+#         writeRC("piSeedsDir", str(seedPath))
+#         return seedPath
 
-    return None
+#     return None
 
 def getAllSeedFiles(seeds_dir: Path) -> dict:
     """Get all piSeed files and their numbers"""

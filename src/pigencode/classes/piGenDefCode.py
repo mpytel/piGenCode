@@ -1,7 +1,7 @@
 import os, json
 from pathlib import Path
-from ..defs.fileIO import readRC
-from ..defs.piJsonFile import readJson, PiSeedTypes
+from ..defs.fileIO import getKeyItem, piGCDirs
+from ..defs.piJsonFile import readJson
 from ..defs.logIt import logIt, printIt, lable
 
 class PiGenDefCode():
@@ -202,25 +202,15 @@ class PiGenDefCode():
         if self.fileDirectory:
             # Use the specified fileDirectory (can be relative or absolute)
             piDefDir = Path(self.fileDirectory)
-            if not piDefDir.is_absolute():
-                # If relative, make it relative to current working directory
-                piDefDir = Path.cwd() / piDefDir
         else:
             # Fall back to default behavior using RC configuration
-            piDefGCDir = readRC("piDefGCDir")
-            if piDefGCDir:
-                # Use the RC configured directory
-                piDefDir = Path(piDefGCDir)
-                if not piDefDir.is_absolute():
-                    piDefDir = Path.cwd() / piDefDir
-            else:
-                # Ultimate fallback to original behavior
-                piDefDir = readRC(PiSeedTypes[0])  # Get piScratchDir
-                piDefDir = Path(piDefDir).parent.joinpath("piDefs")
+            piDefDir = Path(getKeyItem(piGCDirs[3]))
+        if not piDefDir.is_absolute():
+            piDefDir = Path.cwd().joinpath(piDefDir)
 
         if not piDefDir.is_dir():
             logIt(f'Make directory: {piDefDir}')
-            piDefDir.mkdir(mode=0o755, parents=True, exist_ok=True)
+            piDefDir.mkdir(mode=511, parents=True, exist_ok=True)
         self.piDefDir = piDefDir
 
     def __updatePiDefTrackingFile(self, fileName):
@@ -295,8 +285,8 @@ class PiGenDefCode():
             self.__genPiDefFile(genFileName, verbose)
         else:
             # Process all piDefGC files in the directory
-            piJsonDefGCDir = readRC(PiSeedTypes[0])  # Get piScratchDir
-            piJsonDefGCDir = Path(piJsonDefGCDir).joinpath("piDefGC")
+            piGermDir = getKeyItem(piGCDirs[1])  # Get piGermDir
+            piJsonDefGCDir = Path(piGermDir).joinpath(getKeyItem(piGCDirs[3]))
 
             if piJsonDefGCDir.is_dir():
                 piJsonDefGCFilenames = os.listdir(piJsonDefGCDir)

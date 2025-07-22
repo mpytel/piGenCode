@@ -3,7 +3,7 @@ from re import compile as reCompile
 from pathlib import Path
 from ..classes.argParse import ArgParse
 from ..defs.logIt import printIt, lable
-from ..defs.fileIO import getKeyItem, writeRC
+from ..defs.fileIO import getKeyItem, writeRC, piGCDirs
 from ..classes.piGermSeeds import PiGermSeeds, germinateSeeds
 from ..classes.piSeeds import PiSeeds
 from .genCode import genCodeFile
@@ -60,7 +60,7 @@ def germSeed(argParse: ArgParse):
 
 def getSeedFileName(fileIntStr) -> str:
     fileName = ''
-    seedDir = Path(getKeyItem("piSeedsDir"))
+    seedDir = Path(getKeyItem(piGCDirs[0]))
     seedFiles = [str(p.name) for p in seedDir.iterdir() if p.is_file()]
     for fileName in seedFiles:
         theMatch = seedFilePattern.match(fileName)
@@ -74,7 +74,7 @@ def getSeedFileName(fileIntStr) -> str:
     return str(fileName)
 
 def germAllSeedFiles(verbose=True) -> PiGermSeeds:
-    seedPath = getSeedPath()
+    seedPath = Path(getKeyItem(piGCDirs[0]))
     piSeeds = PiSeeds()
     piGermSeeds = PiGermSeeds(piSeeds)
     if seedPath:
@@ -89,28 +89,6 @@ def germAllSeedFiles(verbose=True) -> PiGermSeeds:
     else:
         printIt(f'No piSeed Directory founc: {seedPath}',lable.FileNotFound)
     return piGermSeeds
-
-def getSeedPath() -> Path | None:
-    # get possible path from resource file and set it to the default
-    # directory name if no resorce file or key is preset
-    seedDirName = "piSeeds"
-    seedPath = Path(getKeyItem("piSeedsDir", seedDirName))
-    if seedPath.is_dir():
-        return seedPath
-    else:
-        seedPath = None
-    # check if current directory or subdirectry is a piSeeds directory
-    cwd = Path.cwd()
-    if cwd.name == seedDirName:
-         seedPath = cwd
-    else:
-        cwdDirs = [str(p.name) for p in cwd.iterdir() if p.is_dir()]
-        if seedDirName in cwdDirs:
-            seedPath = cwd.joinpath(seedDirName)
-    if not seedPath:
-        return seedPath
-    writeRC("piSeedsDir", str(seedPath))
-    return seedPath
 
 def germSeedFile(fileName: str, verbose=True) -> PiGermSeeds:
     piGermSeeds: PiGermSeeds

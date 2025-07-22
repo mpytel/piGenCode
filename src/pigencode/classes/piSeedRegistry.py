@@ -74,7 +74,7 @@ class CommandRegistry:
         self._handlers: Dict[str, CommandHandler] = {}
         self._command_modules: Dict[str, str] = {}
 
-    def register(self, command_name: str, handler: CommandHandler, module_path: str = None) -> None:
+    def register(self, command_name: str, handler: CommandHandler, module_path: str = '') -> None:
         """Register a handler for a specific command"""
         self._handlers[command_name] = handler
         if module_path:
@@ -145,7 +145,7 @@ def register_pi_seed_handler(seed_type: str):
     return decorator
 
 
-def register_command_handler(command_name: str, module_path: str = None):
+def register_command_handler(command_name: str, module_path: str = ''):
     """Decorator to register a command handler"""
     def decorator(handler_func: CommandHandler) -> CommandHandler:
         command_registry.register(command_name, handler_func, module_path)

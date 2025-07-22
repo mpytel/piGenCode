@@ -1,7 +1,7 @@
 import os, json
 from pathlib import Path
-from ..defs.fileIO import readRC
-from ..defs.piJsonFile import readJson, PiSeedTypes
+from ..defs.fileIO import getKeyItem, piGCDirs
+from ..defs.piJsonFile import readJson
 from ..defs.logIt import logIt, printIt, lable
 
 class PiGenClassCode():
@@ -105,15 +105,7 @@ class PiGenClassCode():
             target_dir = Path(self.fileDirectory)
         else:
             # Use RC configuration or default
-            rc = readRC()
-            if rc and "piGenClassDir" in rc:
-                target_dir = Path(rc["piGenClassDir"])
-            else:
-                # Fallback to piClassGCDir or default
-                if rc and "piClassGCDir" in rc:
-                    target_dir = Path(rc["piClassGCDir"])
-                else:
-                    target_dir = Path("piClasses")
+            target_dir = Path(getKeyItem(piGCDirs[4]))
 
         # Create directory if it doesn't exist
         target_dir.mkdir(parents=True, exist_ok=True)

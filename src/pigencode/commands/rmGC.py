@@ -3,13 +3,12 @@ import os
 from pathlib import Path
 from ..classes.argParse import ArgParse
 from ..defs.logIt import printIt, lable
-from ..defs.fileIO import getKeyItem
-
+from ..defs.fileIO import getKeyItem, piGCDirs
 
 def rmGC(argParse: ArgParse):
     """
     Remove generated files to clean up for a fresh start.
-    - piGerms (piScratchDir): Removes entire directory (volatile temp files)
+    - piGerms (piGermDir): Removes entire directory (volatile temp files)
     - piClasses (piClassGCDir): Recursively searches for .piclass tracking files and removes tracked files
     - piDefs (piDefGCDir): Recursively searches for .pidefs tracking files and removes tracked files
 
@@ -17,13 +16,14 @@ def rmGC(argParse: ArgParse):
     Empty directories are removed after cleanup.
     """
     try:
+        print()
         removed_files = []
         removed_dirs = []
         not_found_items = []
         preserved_files = []
 
-        # 1. Handle piGerms (piScratchDir) - Remove entire directory (volatile)
-        piGermsDir = Path(getKeyItem("piScratchDir", "piGerms"))
+        # 1. Handle piGerms (piGermDir) - Remove entire directory (volatile)
+        piGermsDir = Path(getKeyItem(piGCDirs[1]))
         if piGermsDir.exists() and piGermsDir.is_dir():
             try:
                 shutil.rmtree(piGermsDir)
@@ -35,7 +35,7 @@ def rmGC(argParse: ArgParse):
             not_found_items.append(f"piGerms ({piGermsDir})")
 
         # 2. Handle piClasses (piClassGCDir) - Recursive search for .piclass files
-        piClassesDir = Path(getKeyItem("piClassGCDir", "piClasses"))
+        piClassesDir = Path(getKeyItem(piGCDirs[1]))
         removed_count, preserved_count, tracking_files_found = removeTrackedFilesRecursive(
             piClassesDir, ".piclass", "piClasses"
         )
@@ -45,7 +45,7 @@ def rmGC(argParse: ArgParse):
             preserved_files.append(f"{preserved_count} user files preserved under {piClassesDir}")
 
         # 3. Handle piDefs (piDefGCDir) - Recursive search for .pidefs files
-        piDefsDir = Path(getKeyItem("piDefGCDir", "piDefs"))
+        piDefsDir = Path(getKeyItem(piGCDirs[1]))
         removed_count, preserved_count, tracking_files_found = removeTrackedFilesRecursive(
             piDefsDir, ".pidefs", "piDefs"
         )
@@ -53,6 +53,22 @@ def rmGC(argParse: ArgParse):
             removed_files.append(f"{removed_count} piDef files from {tracking_files_found} locations under {piDefsDir}")
         if preserved_count > 0:
             preserved_files.append(f"{preserved_count} user files preserved under {piDefsDir}")
+
+        # 4. remoge
+
+        # 5. Handle piSeeds (piSeedsDir) - Remove entire directory (volatile)
+        piSeedsDir = Path(getKeyItem(piGCDirs[0]))
+        if piSeedsDir.exists() and piSeedsDir.is_dir():
+            try:
+                shutil.rmtree(piSeedsDir)
+                removed_dirs.append(f"piGerms ({piSeedsDir})")
+                printIt(
+                    f"Removed directory: piSeeds ({piSeedsDir})", lable.INFO)
+            except Exception as e:
+                printIt(
+                    f"Error removing directory piSeeds ({piSeedsDir}): {e}", lable.ERROR)
+        else:
+            not_found_items.append(f"piSeeds ({piSeedsDir})")
 
         # Summary reporting
         if removed_dirs:
@@ -79,6 +95,7 @@ def rmGC(argParse: ArgParse):
             printIt("No generated files to remove", lable.INFO)
 
         printIt("Clean-up complete. Generated files removed, user files preserved.", lable.INFO)
+        print()
 
     except Exception as e:
         printIt(f"Error in rmGC command: {e}", lable.ERROR)
@@ -156,7 +173,8 @@ def removeTrackedFilesRecursive(rootDirectory: Path, trackingFileName: str, disp
         )
         total_removed_count += removed_count
         total_preserved_count += preserved_count
-
+    # if preserved_count == 0 and not directory == Path.cwd():
+    #     directory.unlink()
     return total_removed_count, total_preserved_count, tracking_files_found
 
 
@@ -176,7 +194,7 @@ def removeTrackedFilesInDirectory(directory: Path, trackingFile: Path, displayNa
     removed_count = 0
     preserved_count = 0
 
-    printIt(f"Processing tracking file: {trackingFile}", lable.INFO)
+    # printIt(f"Processing tracking file: {trackingFile}", lable.INFO)
 
     # Read tracking file to get list of generated files
     try:

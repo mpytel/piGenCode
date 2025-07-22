@@ -107,7 +107,7 @@ class PiSeeds():
             #raise StopIteration
         return rtnPi
 
-PiSeedTypes = ["piScratchDir", "piStruct", "piValuesSetD", "piValue", "piClassGC", "piValueA", "piType", "piIndexer", "piDefGC", "piGenClass"]
+PiSeedTypes = ["piGermDir", "piStruct", "piValuesSetD", "piValue", "piClassGC", "piValueA", "piType", "piIndexer", "piDefGC", "piGenClass"]
 PiSeedTypeVarTypes = ["B", "I", "S", "F", "D", "L", "C", "A"]
 PiSeedTypeVarTypesStr = ''.join(PiSeedTypeVarTypes)
 PiSeedTypeVarValues = {
@@ -121,7 +121,7 @@ PiSeedTypeVarValues = {
     PiSeedTypeVarTypes[7]: {}
 }
 PiSeedTypeREs = {
-    PiSeedTypes[0]: reCompile('(piScratchDir)'),
+    PiSeedTypes[0]: reCompile('(piGermDir)'),
     PiSeedTypes[1]: reCompile(f'(piStruct)([{PiSeedTypeVarTypesStr}]'+'{1})([0-9]{2})'),
     PiSeedTypes[2]: reCompile(r'(.+)\.(.*)[\:]*'),
     PiSeedTypes[3]: reCompile('piClassGC(\\d{3})_(.+).json'),
