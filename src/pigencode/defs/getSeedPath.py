@@ -9,7 +9,7 @@ from pigencode.defs.fileIO import getKeyItem, setKeyItem, piGCDirs
 #     return seedPath
 
 
-def getSeedPath() -> Path | None:
+def getSeedPath() -> Path:
     """Get the piSeeds directory path"""
     # seedDirName = "piSeeds"
     seedPath = Path(getKeyItem(piGCDirs[0]))
