@@ -9,7 +9,7 @@ devDocs/
 .pigencoderc
 
 # for testing
-holdSeeds/
+holdCode/
 testCode/
 
 # Byte-compiled / optimized / DLL files

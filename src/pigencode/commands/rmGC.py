@@ -5,6 +5,9 @@ from pigencode.classes.argParse import ArgParse
 from pigencode.defs.logIt import printIt, lable
 from pigencode.defs.fileIO import getKeyItem, piGCDirs
 
+# Global variable to track empty directories removed
+empty_dirs_removed = []
+
 def rmGC(argParse: ArgParse):
     """
     Remove generated files to clean up for a fresh start.
@@ -13,7 +16,7 @@ def rmGC(argParse: ArgParse):
     - piDefs (piDefGCDir): Recursively searches for .pidefs tracking files and removes tracked files
 
     This approach supports distributed file placement via fileDirectory and preserves user files.
-    Empty directories are removed after cleanup.
+    Empty directories are removed after cleanup, including parent directories that become empty.
     """
     try:
         print()
@@ -21,6 +24,10 @@ def rmGC(argParse: ArgParse):
         removed_dirs = []
         not_found_items = []
         preserved_files = []
+
+        # Reset global tracking of empty directories
+        global empty_dirs_removed
+        empty_dirs_removed = []
 
         # 1. Handle piGerms (piGermDir) - Remove entire directory (volatile)
         piGermsDir = Path(getKeyItem(piGCDirs[1]))
@@ -54,9 +61,7 @@ def rmGC(argParse: ArgParse):
         if preserved_count > 0:
             preserved_files.append(f"{preserved_count} user files preserved under {piDefsDir}")
 
-        # 4. remoge
-
-        # 5. Handle piSeeds (piSeedsDir) - Remove entire directory (volatile)
+        # 4. Handle piSeeds (piSeedsDir) - Remove entire directory (volatile)
         piSeedsDir = Path(getKeyItem(piGCDirs[0]))
         if piSeedsDir.exists() and piSeedsDir.is_dir():
             try:
@@ -80,6 +85,11 @@ def rmGC(argParse: ArgParse):
             printIt(f"Removed generated files:", lable.INFO)
             for file_info in removed_files:
                 printIt(f"  • {file_info}", lable.INFO)
+                
+        if empty_dirs_removed:
+            printIt(f"Removed empty directories:", lable.INFO)
+            for dir_info in empty_dirs_removed:
+                printIt(f"  • {dir_info}", lable.INFO)
 
         if preserved_files:
             printIt(f"Preserved user files:", lable.INFO)
@@ -87,11 +97,10 @@ def rmGC(argParse: ArgParse):
                 printIt(f"  • {file_info}", lable.INFO)
 
         if not_found_items:
-            # printIt(f"Items not found (already clean):", lable.DirNotFound)
             for item_info in not_found_items:
                 printIt(f"  • {item_info}", lable.DirNotFound)
 
-        if not removed_dirs and not removed_files:
+        if not removed_dirs and not removed_files and not empty_dirs_removed:
             printIt("No generated files to remove", lable.INFO)
 
         printIt("Clean-up complete. Generated files removed, user files preserved.", lable.INFO)
@@ -126,13 +135,11 @@ def removeTrackedFilesRecursive(rootDirectory: Path, trackingFileName: str, disp
         tracking_files = list(rootDirectory.rglob(trackingFileName))
     else:
         pass
-        # printIt(f"Configured directory not found: {displayName} ({rootDirectory})", lable.DEBUG)
 
     # If no tracking files found in configured directory, expand search scope
     if not tracking_files:
         # Search from current working directory to catch custom fileDirectory placements
         expanded_search_root = Path.cwd()
-        # printIt(f"No tracking files found in configured {displayName} directory, expanding search scope", lable.DEBUG)
 
         # Find all tracking files of this type in the entire project
         all_tracking_files = list(expanded_search_root.rglob(trackingFileName))
@@ -173,8 +180,7 @@ def removeTrackedFilesRecursive(rootDirectory: Path, trackingFileName: str, disp
         )
         total_removed_count += removed_count
         total_preserved_count += preserved_count
-    # if preserved_count == 0 and not directory == Path.cwd():
-    #     directory.unlink()
+
     return total_removed_count, total_preserved_count, tracking_files_found
 
 
@@ -182,6 +188,7 @@ def removeTrackedFilesInDirectory(directory: Path, trackingFile: Path, displayNa
     """
     Remove tracked files in a specific directory based on its tracking file.
     If directory becomes empty after cleanup, remove the directory as well.
+    Then recursively check parent directories and remove them if they become empty.
 
     Args:
         directory: Directory containing files and tracking file
@@ -193,8 +200,6 @@ def removeTrackedFilesInDirectory(directory: Path, trackingFile: Path, displayNa
     """
     removed_count = 0
     preserved_count = 0
-
-    # printIt(f"Processing tracking file: {trackingFile}", lable.INFO)
 
     # Read tracking file to get list of generated files
     try:
@@ -219,58 +224,98 @@ def removeTrackedFilesInDirectory(directory: Path, trackingFile: Path, displayNa
                 printIt(f"Error removing file {file_path}: {e}", lable.ERROR)
         else:
             printIt(f"Tracked file not found: {file_path}", lable.WARN)
-    printIt(f"Removed {removed_count} generated from: {directory}", lable.INFO)
+    
+    if removed_count > 0:
+        printIt(f"Removed {removed_count} generated files from: {directory}", lable.INFO)
 
     # Count preserved files (Python files not in tracking list)
     preserved_files = all_python_files - tracked_files
     preserved_count = len(preserved_files)
 
     if preserved_count > 0:
-        printIt(
-            f"Preserved {preserved_count} user files in {directory}", lable.INFO)
+        printIt(f"Preserved {preserved_count} user files in {directory}", lable.INFO)
 
     # Remove tracking file itself
     try:
         trackingFile.unlink()
-        printIt(f"Removed tracking file: {trackingFile}", lable.INFO)
     except Exception as e:
         printIt(f"Error removing tracking file {trackingFile}: {e}", lable.ERROR)
 
-    # Check if directory is empty after cleanup and remove if so
-    try:
-        # Get all remaining files and directories in the directory
-        remaining_items = list(directory.iterdir())
+    # Now check if directory is empty and remove if so
+    check_and_remove_directory(directory)
 
+    return removed_count, preserved_count
+
+
+def check_and_remove_directory(directory: Path):
+    """
+    Check if a directory is empty (or contains only __pycache__) and remove it if so.
+    Then recursively check parent directories.
+    
+    Args:
+        directory: Directory to check and potentially remove
+    """
+    global empty_dirs_removed
+    
+    # Skip if directory doesn't exist or is not a directory
+    if not directory.exists() or not directory.is_dir():
+        return
+    
+    # Skip certain directories that should never be removed
+    if directory.name in ['.git', '.github', '.vscode', 'env', 'venv']:
+        return
+    
+    # Skip the current working directory and its parents
+    cwd = Path.cwd()
+    if directory == cwd or directory in cwd.parents:
+        return
+    
+    try:
+        # First, check if directory is empty
+        remaining_items = list(directory.iterdir())
+        
         if not remaining_items:
             # Directory is completely empty, remove it
-            directory.rmdir()
-            printIt(f"Removed empty directory: {directory}", lable.INFO)
+            parent_dir = directory.parent
+            try:
+                directory.rmdir()
+                printIt(f"Removed empty directory: {directory}", lable.INFO)
+                empty_dirs_removed.append(str(directory))
+                
+                # Recursively check parent
+                check_and_remove_directory(parent_dir)
+            except Exception as e:
+                printIt(f"Could not remove empty directory {directory}: {e}", lable.DEBUG)
         else:
             # Check if only hidden files or __pycache__ remain
             significant_items = [
                 item for item in remaining_items
                 if not item.name.startswith('.') and item.name != '__pycache__'
             ]
-
+            
             if not significant_items:
-                # Only hidden files or __pycache__ remain, consider removing
-                # But be conservative - only remove __pycache__ directories
+                # Only hidden files or __pycache__ remain
+                # Remove __pycache__ directories
                 for item in remaining_items:
                     if item.name == '__pycache__' and item.is_dir():
                         try:
-                            import shutil
                             shutil.rmtree(item)
                             printIt(f"Removed __pycache__ directory: {item}", lable.DEBUG)
                         except Exception as e:
                             printIt(f"Could not remove __pycache__ directory {item}: {e}", lable.DEBUG)
-
+                
                 # Check again if directory is now empty
                 remaining_items = list(directory.iterdir())
                 if not remaining_items:
-                    directory.rmdir()
-                    printIt(f"Removed empty directory: {directory}", lable.DEBUG)
-
+                    parent_dir = directory.parent
+                    try:
+                        directory.rmdir()
+                        printIt(f"Removed empty directory: {directory}", lable.INFO)
+                        empty_dirs_removed.append(str(directory))
+                        
+                        # Recursively check parent
+                        check_and_remove_directory(parent_dir)
+                    except Exception as e:
+                        printIt(f"Could not remove empty directory {directory}: {e}", lable.DEBUG)
     except Exception as e:
-        printIt(f"Could not check/remove directory {directory}: {e}", lable.DEBUG)
-
-    return removed_count, preserved_count
+        printIt(f"Could not check directory {directory}: {e}", lable.DEBUG)

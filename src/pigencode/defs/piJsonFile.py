@@ -193,7 +193,7 @@ class PiDefGCFiles():
                         oldName = self.fileDirName.joinpath(PiDefGCFile)
                         self.fileDirName.joinpath(PiDefGCFile).rename(newName)
 
-    def _chkForExistingFile(self, piTitle):
+    def _chkForExistingFile(self, piTitle, fileDirectory=None):
         fileInt = 0
         PiDefGCFiles = self._getPiDefGCFiles()
         if PiDefGCFiles:
@@ -205,13 +205,31 @@ class PiDefGCFiles():
                     fileParts = fileMatch.groups()
                     if fileParts[0].isnumeric():
                         chkFileName = fileParts[1]
+                        # Only consider it a match if both title and file path match
+                        # If fileDirectory is None, fall back to just checking the title
                         if chkFileName == piTitle:
-                            fileInt = int(fileParts[0])
-                            break
+                            # If we have a file directory, we need to check if it matches
+                            # by reading the JSON file and checking the fileDirectory field
+                            if fileDirectory:
+                                jsonFile = self.fileDirName.joinpath(PiDefGCFile)
+                                if jsonFile.exists():
+                                    try:
+                                        with open(jsonFile, 'r') as f:
+                                            data = load(f)
+                                            if data.get("piBody", {}).get("piDefGC", {}).get("fileDirectory") == fileDirectory:
+                                                fileInt = int(fileParts[0])
+                                                break
+                                    except Exception:
+                                        # If we can't read the file, just continue
+                                        pass
+                            else:
+                                # If no fileDirectory specified, just match on title
+                                fileInt = int(fileParts[0])
+                                break
         return fileInt
 
-    def _getFileIntZFill(self, piTitle: str, lineNumber, pad=3) -> str:
-        fileInt = self._chkForExistingFile(piTitle)
+    def _getFileIntZFill(self, piTitle: str, lineNumber, fileDirectory=None, pad=3) -> str:
+        fileInt = self._chkForExistingFile(piTitle, fileDirectory)
         if not fileInt:
             if not self.lastLineNumber:
                 self.lastLineNumber = lineNumber
@@ -227,14 +245,17 @@ class PiDefGCFiles():
             #print(">>>", piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exists')
         return str(fileInt).zfill(3)
 
-    def _getPiDefGCFileName(self, piType, piTitle, lineNumber=0) -> str:
+    def _getPiDefGCFileName(self, piType, piTitle, lineNumber=0, aDict=None) -> str:
         makedirs(self.fileDirName, exist_ok=True)
-        fileIntStr = self._getFileIntZFill(piTitle, lineNumber)
+        fileDirectory = None
+        if aDict and "piBody" in aDict and "piDefGC" in aDict["piBody"] and "fileDirectory" in aDict["piBody"]["piDefGC"]:
+            fileDirectory = aDict["piBody"]["piDefGC"]["fileDirectory"]
+        fileIntStr = self._getFileIntZFill(piTitle, lineNumber, fileDirectory)
         fileName = self.fileDirName.joinpath(f'{piType}{fileIntStr}_{piTitle}.json')
         return str(fileName)
 
     def writePiDefGC(self, piType, piTitle, lineNumber, aDict: dict, verbose=True) -> bool:
-        piStrucFileName = self._getPiDefGCFileName(piType, piTitle, lineNumber)
+        piStrucFileName = self._getPiDefGCFileName(piType, piTitle, lineNumber, aDict)
         rtnBool = writeJson(piStrucFileName, aDict, verbose)
         if rtnBool:
             self.defGCFilePaths.append(piStrucFileName)
@@ -243,7 +264,7 @@ class PiDefGCFiles():
         return rtnBool
 
     def readPiDefGC(self, piType, piTitle, verbose=True) -> dict:
-        piStrucFileName = self._getPiDefGCFileName(piType, piTitle)
+        piStrucFileName = self._getPiDefGCFileName(piType, piTitle, 0, None)
         rtnDict = readJson(piStrucFileName, verbose)
         return rtnDict
 
