@@ -10,7 +10,7 @@ devDocs/
 
 # for testing
 holdSeeds/
-src/cmdpackage
+testCode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
