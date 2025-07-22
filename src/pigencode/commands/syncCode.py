@@ -1674,8 +1674,6 @@ def findPiClassGCSeedFile(py_file: Path) -> Optional[Path]:
                         fileDirectory = match.group(2)
                         if (fileDirectory) == str(py_file_dir):
                             return seedFile
-                        else:
-                            print(f'{fileDirectory} != {py_file_dir}')
             except Exception:
                 continue
         return None
@@ -1705,8 +1703,6 @@ def findPiDefGCSeedFile(py_file: Path) -> Optional[Path]:
                         fileDirectory = match.group(2)
                         if (fileDirectory) == str(py_file_dir):
                             return seedFile
-                        else:
-                            print(f'{fileDirectory} != {py_file_dir}')
             except Exception:
                 continue
         return None
@@ -1738,8 +1734,6 @@ def findPiGenClassSeedFile(py_file: Path) -> Optional[Path]:
                         fileDirectory = match.group(2)
                         if (fileDirectory) == str(py_file_dir):
                             return seedFile
-                        else:
-                            print(f'{fileDirectory} != {py_file_dir}')
             except Exception:
                 continue
         return None
