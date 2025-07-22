@@ -1,4 +1,4 @@
-from ..defs.logIt import printIt, lable, cStr, color
+from pigencode.defs.logIt import printIt, lable, cStr, color
 from pigencode.defs.fileIO import rcFileName, setKeyItem, readJson
 from json import dumps
 

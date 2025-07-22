@@ -1889,7 +1889,7 @@ piValue user.piBody:piGenClass:fileName user
 
 **2. Comprehensive Code Analysis:**
 The system extracts and preserves:
-- ✅ **Import statements** (both `import` and `from ... import`)
+- ✅ **Import statements** (both `import` and `from pigencode.. import`)
 - ✅ **Module-level constants** and variables
 - ✅ **Class definitions** with inheritance information
 - ✅ **Function definitions** with signatures and docstrings

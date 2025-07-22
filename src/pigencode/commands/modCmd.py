@@ -1,6 +1,6 @@
 import os, copy
-from ..defs.logIt import printIt, lable
-from ..classes.argParse import ArgParse
+from pigencode.defs.logIt import printIt, lable
+from pigencode.classes.argParse import ArgParse
 from .commands import Commands, cmdDescriptionTagStr
 from .templates.newCmd import cmdDefTemplate, argDefTemplate
 import readline

@@ -1,8 +1,8 @@
 import os, datetime, copy, json, re, traceback
-from ..defs.fileIO import readRC, writeRC
-from ..defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles, PiGenClassFiles
-from ..defs.piID import getPiMD5, getPiID
-from ..defs.logIt import logIt, printIt, germDbug, lable
+from pigencode.defs.fileIO import readRC, writeRC
+from pigencode.defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles, PiGenClassFiles
+from pigencode.defs.piID import getPiMD5, getPiID
+from pigencode.defs.logIt import logIt, printIt, germDbug, lable
 from .piSeeds import PiSeeds, PiSeedTypes, piSeedTitelSplit
 from .piSeedRegistry import pi_seed_registry, register_pi_seed_handler
 
@@ -125,7 +125,7 @@ class PiGermSeeds():
         # print('in germinate_piClassGC"',self.seeds.currPi)
         try:
             while self.seeds.currIndex < self.seeds.seedCount:
-                if self.seeds.currPi.piSeedType == PiSeedTypes[4]:
+                if self.seeds.currPi.piSeedType == PiSeedTypes[3]:
                     lastSeed = False
                     baseType = self.seeds.currPi.piType
                     baseTitle = self.seeds.currPi.piTitle
@@ -149,6 +149,7 @@ class PiGermSeeds():
 
         except piIncorectPiValuePath:
             printIt(f'{self.seeds.currPi.piTitle}',lable.IncorectPiValuePath)
+            print('here00')
             exit()
         except piPiStrucNotFound:
             printIt("germinate_piClassGC", lable.DEBUG)
@@ -165,7 +166,7 @@ class PiGermSeeds():
         # print('in germinate_piDefGC"',self.seeds.currPi)
         try:
             while self.seeds.currIndex < self.seeds.seedCount:
-                if self.seeds.currPi.piSeedType == PiSeedTypes[8]:  # piDefGC is now index 8
+                if self.seeds.currPi.piSeedType == PiSeedTypes[7]:  # piDefGC is now index 8
                     lastSeed = False
                     baseType = "piDefGC"  # Use piDefGC as the structure type
                     baseTitle = self.seeds.currPi.piTitle
@@ -189,6 +190,7 @@ class PiGermSeeds():
 
         except piIncorectPiValuePath:
             printIt(f'{self.seeds.currPi.piTitle}',lable.IncorectPiValuePath)
+            print('here01')
             exit()
         except piPiStrucNotFound:
             printIt("germinate_piDefGC", lable.DEBUG)
@@ -206,7 +208,7 @@ class PiGermSeeds():
         # print('in germinate_piGenClass"',self.seeds.currPi)
         try:
             while self.seeds.currIndex < self.seeds.seedCount:
-                if self.seeds.currPi.piSeedType == PiSeedTypes[9]:  # piGenClass is now index 9
+                if self.seeds.currPi.piSeedType == PiSeedTypes[8]:  # piGenClass is now index 9
                     lastSeed = False
                     baseType = "piGenClass"  # Use piGenClass as the structure type
                     baseTitle = self.seeds.currPi.piTitle
@@ -230,6 +232,7 @@ class PiGermSeeds():
 
         except piIncorectPiValuePath:
             printIt(f'{self.seeds.currPi.piTitle}', lable.IncorectPiValuePath)
+            print('here02')
             exit()
         except piPiStrucNotFound:
             printIt("germinate_piGenClass", lable.DEBUG)
@@ -248,7 +251,7 @@ class PiGermSeeds():
             #piValueA piDates.piBody:piClassGC:imports datetime
             while self.seeds.currIndex < self.seeds.seedCount:
                 lastSeed = False
-                if self.seeds.currPi.piSeedType == PiSeedTypes[5]:
+                if self.seeds.currPi.piSeedType == PiSeedTypes[4]:
                     baseTitle = self.seeds.currPi.piTitle
                     baseValue = self.seeds.currPi.piSD
                     piPiTitleKey, piElemKeys = piSeedTitelSplit(baseTitle)
@@ -332,12 +335,13 @@ class PiGermSeeds():
                     else: raise Exception
                     self.seeds.next()
                     if self.seeds.currPi == None: break
-                    if self.seeds.currPi.piSeedType != PiSeedTypes[5]: break
+                    if self.seeds.currPi.piSeedType != PiSeedTypes[4]: break
                 if lastSeed: break # last seed run.
                 if self.seeds.nextPi == None:
                     lastSeed = True # Run the last piSeed
         except piIncorectPiValuePath:
             printIt(f'{self.seeds.currPi.piTitle}',lable.IncorectPiValuePath)
+            print('here03')
             exit()
         except piPiStrucNotFound:
             printIt("germinate_piValueA", lable.DEBUG)
@@ -356,12 +360,12 @@ class PiGermSeeds():
         dprint00 = False
         try:
             while True: # self.seeds.currIndex < self.seeds.seedCount:
-                if self.seeds.currPi.piSeedType == PiSeedTypes[2]:
+                if self.seeds.currPi.piSeedType == PiSeedTypes[1]:
                     # load structure if not in self.piStructs, populate with defaults,
                     # and save to scratchPis/piDefult folder
                     piTitle = self.seeds.currPi.piTitle
                     if self.seeds.nextPi != None:
-                        if self.seeds.nextPi.piType == PiSeedTypes[3]:
+                        if self.seeds.nextPi.piType == PiSeedTypes[2]:
                             self.seeds.next()
                             if dprint00: print("debug01", piTitle)
                             self.germinatePiValues(piTitle)
@@ -378,7 +382,7 @@ class PiGermSeeds():
                         self.seeds.next()
                     writePiDefault(piTitle, self.piStructs[piTitle], False)
                 else:
-                    assert self.seeds.currPi.piType == PiSeedTypes[3]
+                    assert self.seeds.currPi.piType == PiSeedTypes[2]
                     # populate with provided defaults
                     if dprint00: printIt("debug05\n", str(self.seeds.currPi), lable.DEBUG)
                     self.germinatePiValues()
@@ -387,13 +391,13 @@ class PiGermSeeds():
                         break # because last line was processed.
                 if self.seeds.nextPi != None:
                     if dprint00: print("debug06:\n",self.seeds.currPi.piType)
-                    # print(f'{self.seeds.nextPi.piSeedType} in {PiSeedTypes[2:4]}')
-                    if self.seeds.currPi.piSeedType == PiSeedTypes[3]: self.seeds.next()
-                    if not self.seeds.currPi.piSeedType in PiSeedTypes[2:4]: break
+                    # print(f'{self.seeds.nextPi.piSeedType} in {PiSeedTypes[1:3]}')
+                    if self.seeds.currPi.piSeedType == PiSeedTypes[2]: self.seeds.next()
+                    if not self.seeds.currPi.piSeedType in PiSeedTypes[1:3]: break
                 else:
                     if dprint00: print("debug07", piTitle)
                     if self.seeds.nextPi == None: break
-                    if not self.seeds.currPi.piSeedType in PiSeedTypes[2:4]:
+                    if not self.seeds.currPi.piSeedType in PiSeedTypes[1:3]:
                         break
 
         except piPiStrucNotFound:
@@ -468,12 +472,14 @@ class PiGermSeeds():
                 if piTitle != piPiTitleKey: raise piIncorectPiValuePath
                 targetPi = self.getTargetPi(piTitle)
                 #print(f'piTitle: {piTitle}')
-            if piElemKeys == None: raise piIncorectPiValuePath
+            if piElemKeys == None:
+                raise piIncorectPiValuePath
             if targetPi:
                 while True: # self.seeds.currIndex < self.seeds.seedCount:
-                    if self.seeds.currPi.piType != PiSeedTypes[3]: break
+                    if self.seeds.currPi.piType != PiSeedTypes[2]: break
                     piPiTitleKey, piElemKeys = piSeedTitelSplit(self.seeds.currPi.piTitle)
-                    if piTitle != piPiTitleKey: raise piIncorectPiValuePath
+                    if piTitle != piPiTitleKey:
+                        raise piIncorectPiValuePath
                     structDictKeys = piElemKeys.split(":")
                     #print( piPiTitleKey, piElemKeys)
                     #print(structDictKeys, piTitle)
@@ -503,12 +509,13 @@ class PiGermSeeds():
                     ##### ****** Best end, same next loop control. !!!!!
                     if self.seeds.nextPi != None:
                         self.seeds.next()
-                        if self.seeds.currPi.piSeedType != PiSeedTypes[3]: break
+                        if self.seeds.currPi.piSeedType != PiSeedTypes[2]: break
                     else: break # because last line was processed.
                 self.piStructs[piTitle] = targetPi
 
         except piIncorectPiValuePath:
             printIt(f'germinatePiValues: {self.seeds.currPi.piTitle}, line {self.seeds.currPi.lineNumber}',lable.IncorectPiValuePath)
+            print('here04')
             exit()
         except piPiStrucNotFound:
             printIt("germinate_piValues:", self.seeds.currPi.piTitle, lable.DEBUG)
@@ -530,16 +537,16 @@ class PiGermSeeds():
             while self.seeds.currIndex < self.seeds.seedCount:
                 processStruct = True
                 if dprint01: print(self.seeds.currPi)
-                if self.seeds.currPi.piType != PiSeedTypes[1]:
+                if self.seeds.currPi.piType != PiSeedTypes[0]:
                     if dprint00: printIt("test01",lable.DEBUG)
                     processStruct = False
                 elif self.seeds.nextPi == None:
                     if dprint00: printIt("test02",lable.DEBUG)
                     processStruct = False
-                elif self.seeds.nextPi.piType == PiSeedTypes[1]:
+                elif self.seeds.nextPi.piType == PiSeedTypes[0]:
                     if dprint00: printIt("test03",lable.DEBUG)
                     processStruct = False
-                elif self.seeds.nextPi.piSeedType != PiSeedTypes[1]: processStruct = False
+                elif self.seeds.nextPi.piSeedType != PiSeedTypes[0]: processStruct = False
                 if processStruct: # Start of structure found
                     baseName = self.seeds.currPi.piTitle
                     baseType = self.seeds.currPi.piType
@@ -558,7 +565,7 @@ class PiGermSeeds():
                     _ = writePiStruc(baseName, self.piStructs[baseName], False)
                 else:
                     # print(self.seeds.currPi.piSeedType, self.seeds.currPi.piSeedKeyType)
-                    if self.seeds.currPi.piSeedType == PiSeedTypes[1] and \
+                    if self.seeds.currPi.piSeedType == PiSeedTypes[0] and \
                         self.seeds.currPi.piSeedKeyType == "A":
                         piPiTitleKey, _ = piSeedTitelSplit(self.seeds.currPi.piTitle)
                         baseName = piPiTitleKey
@@ -568,8 +575,8 @@ class PiGermSeeds():
                         break
             if self.seeds.nextPi != None:
                 #print("here in germinate_piStruct")
-                #print(f'{self.seeds.currPi.piType} == {PiSeedTypes[1]}')
-                if self.seeds.currPi.piSeedType == PiSeedTypes[1]: self.seeds.next()
+                #print(f'{self.seeds.currPi.piType} == {PiSeedTypes[0]}')
+                if self.seeds.currPi.piSeedType == PiSeedTypes[0]: self.seeds.next()
 
         except piDictLevelError:
             printIt(f'piDictLevelError: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
@@ -591,8 +598,8 @@ class PiGermSeeds():
             currDepth = self.seeds.currPi.piSeedKeyDepth
             if currDepth != baseDepth: raise piDictLevelError
             while self.seeds.currIndex < self.seeds.seedCount:
-                if self.seeds.currPi.piType == PiSeedTypes[1]: break
-                if self.seeds.currPi.piSeedType != PiSeedTypes[1]: break
+                if self.seeds.currPi.piType == PiSeedTypes[0]: break
+                if self.seeds.currPi.piSeedType != PiSeedTypes[0]: break
                 # PiSeedTypeVarTypes = ["I", "S", "F", "D", "L", "C", "A"]
                 if self.seeds.currPi.piSeedKeyType == "B":
                     if dprint00: print('addB', self.seeds.currPi.piTitle)
@@ -644,7 +651,7 @@ class PiGermSeeds():
                 else:
                     raise piPiStrucNotFound
                 if self.seeds.nextPi != None:
-                    if self.seeds.nextPi.piSeedType == PiSeedTypes[1]: self.seeds.next()
+                    if self.seeds.nextPi.piSeedType == PiSeedTypes[0]: self.seeds.next()
                     else: break
                 else: break
         except piDictLevelError:
@@ -666,7 +673,7 @@ class PiGermSeeds():
             currDepth = baseDepth + 1
             if self.seeds.currPi.piSeedKeyDepth == currDepth:
                 while self.seeds.currIndex < self.seeds.seedCount:
-                    if self.seeds.currPi.piType == PiSeedTypes[1]: break
+                    if self.seeds.currPi.piType == PiSeedTypes[0]: break
                     # PiSeedTypeVarTypes = ["I", "S", "F", "D", "L", "C", "A"]
                     if self.seeds.currPi.piSeedKeyType == "B":
                         theDict[self.seeds.currPi.piTitle] = False
@@ -703,7 +710,7 @@ class PiGermSeeds():
                     if self.seeds.nextPi != None:
                         if self.seeds.nextPi.piSeedKeyDepth < currDepth: break
                         #print(self.seeds.currPi.piTitle)
-                        if self.seeds.nextPi.piSeedType == PiSeedTypes[1]: self.seeds.next()
+                        if self.seeds.nextPi.piSeedType == PiSeedTypes[0]: self.seeds.next()
                         else: break
                     else: break
             else: raise piDictLevelError
@@ -728,7 +735,7 @@ class PiGermSeeds():
             currDepth = baseDepth + 1
             if self.seeds.currPi.piSeedKeyDepth == currDepth:
                 while self.seeds.currIndex < self.seeds.seedCount:
-                    if self.seeds.currPi.piType == PiSeedTypes[1]: break
+                    if self.seeds.currPi.piType == PiSeedTypes[0]: break
                     # PiSeedTypeVarTypes = ["I", "S", "F", "D", "L", "C", "A"]
                     if self.seeds.currPi.piSeedKeyType == "B":
                         theList.append(False)
@@ -766,7 +773,7 @@ class PiGermSeeds():
                     if self.seeds.nextPi != None:
                         if self.seeds.nextPi.piSeedKeyDepth < currDepth: break
                         # print(self.seeds.currPi.piTitle)
-                        if self.seeds.nextPi.piSeedType == PiSeedTypes[1]: self.seeds.next()
+                        if self.seeds.nextPi.piSeedType == PiSeedTypes[0]: self.seeds.next()
                         else: break
                     else: break
             else: raise piDictLevelError
@@ -790,7 +797,7 @@ class PiGermSeeds():
             currDepth = baseDepth + 1
             if self.seeds.currPi.piSeedKeyDepth == currDepth:
                 while self.seeds.currIndex < self.seeds.seedCount:
-                    if self.seeds.currPi.piType == PiSeedTypes[1]: break
+                    if self.seeds.currPi.piType == PiSeedTypes[0]: break
                     # PiSeedTypeVarTypes = ["I", "S", "F", "D", "L", "C", "A"]
                     if self.seeds.currPi.piSeedKeyType == "B":
                         theDict[self.seeds.currPi.piTitle] = False
@@ -876,10 +883,10 @@ def germinateSeeds(fileName) -> PiGermSeeds:
 # Register all piSeed type handlers with the registry
 # This replaces the exec() pattern with a cleaner registry approach
 
-@register_pi_seed_handler("piGermDir")
-def handle_piScratchDir(germ_seeds_instance):
-    """Handler for piGermDir seed type"""
-    germ_seeds_instance.germinate_piScratchDir()
+# @register_pi_seed_handler("piGermDir")
+# def handle_piScratchDir(germ_seeds_instance):
+#     """Handler for piGermDir seed type"""
+#     germ_seeds_instance.germinate_piScratchDir()
 
 @register_pi_seed_handler("piStruct")
 def handle_piStruct(germ_seeds_instance):

@@ -2,8 +2,8 @@
 import os, json
 import inspect
 from pathlib import Path
-from ..defs.fileIO import getKeyItem, piGCDirs, readJson, piLoadPiClassGCJson
-from ..defs.logIt import logIt, printIt, lable, getCodeFile, getCodeLine
+from pigencode.defs.fileIO import getKeyItem, piGCDirs, readJson, piLoadPiClassGCJson
+from pigencode.defs.logIt import logIt, printIt, lable, getCodeFile, getCodeLine
 
 class PiGenCode():
     def __init__(self):

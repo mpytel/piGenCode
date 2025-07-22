@@ -2,8 +2,8 @@ import os
 import sys
 import argparse
 import shlex
-from ..defs.logIt import color, cStr
-from ..commands.commands import Commands, cmdDescriptionTagStr
+from pigencode.defs.logIt import color, cStr
+from pigencode.commands.commands import Commands, cmdDescriptionTagStr
 
 
 class PiHelpFormatter(argparse.RawTextHelpFormatter):
@@ -124,7 +124,7 @@ class ArgParse():
 
     def _extract_cmd_options(self, args):
         '''Extract command-specific options(--option) from arguments'''
-        
+
         # Define which options are flags (no value) vs options that take values
         flag_options = {
             'dry-run', 'create-missing', 'validate', 'stats', 'force', 'help'
@@ -132,7 +132,7 @@ class ArgParse():
         value_options = {
             'filter', 'exclude-pattern'
         }
-        
+
         filtered_args = []
         i = 0
         while i < len(args):
@@ -140,7 +140,7 @@ class ArgParse():
             if arg.startswith('--'):
                 # Handle command-specific options
                 option_name = arg[2:]  # Remove --
-                
+
                 if option_name in flag_options:
                     # This is a flag option (no value)
                     self.cmd_options[option_name] = True

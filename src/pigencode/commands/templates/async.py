@@ -2,7 +2,7 @@ from string import Template
 from textwrap import dedent
 
 cmdDefTemplate = Template(dedent("""import asyncio
-from ..defs.logIt import printIt, lable, cStr, color
+from pigencode.defs.logIt import printIt, lable, cStr, color
 from .commands import Commands
 
 async def ${defName}_async(argParse):

@@ -1,11 +1,11 @@
 import os, traceback, re
 from pathlib import Path
-from ..classes.argParse import ArgParse
-from ..defs.logIt import printIt, lable
-from ..defs.fileIO import getKeyItem, piGCDirs
-from ..classes.piGenCode import genPiPiClass
-from ..classes.piGenDefCode import genPiDefCode
-from ..classes.piGenClassCode import genPiGenClass
+from pigencode.classes.argParse import ArgParse
+from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.fileIO import getKeyItem, piGCDirs
+from pigencode.classes.piGenCode import genPiPiClass
+from pigencode.classes.piGenDefCode import genPiDefCode
+from pigencode.classes.piGenClassCode import genPiGenClass
 
 def genCode(argParse: ArgParse):
 

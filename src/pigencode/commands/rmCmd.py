@@ -1,5 +1,5 @@
 import os, json
-from ..defs.logIt import printIt, lable, cStr, color
+from pigencode.defs.logIt import printIt, lable, cStr, color
 from .commands import Commands
 
 cmdObj = Commands()

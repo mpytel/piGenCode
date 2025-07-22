@@ -1,4 +1,4 @@
-from ..classes.optSwitches import OptSwitches
+from pigencode.classes.optSwitches import OptSwitches
 
 def cmdOptSwitchbord(switchFlag: str, switchFlags: str):
     optSwitches = OptSwitches(switchFlags)

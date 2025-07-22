@@ -1,9 +1,9 @@
 import os, re, ast, traceback
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
-from ..classes.argParse import ArgParse
-from ..defs.logIt import printIt, lable
-from ..defs.fileIO import getKeyItem
+from pigencode.classes.argParse import ArgParse
+from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.fileIO import getKeyItem
 
 def syncCode(argParse: ArgParse):
     """

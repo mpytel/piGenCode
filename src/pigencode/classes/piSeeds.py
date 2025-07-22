@@ -1,6 +1,6 @@
 import shlex
 from traceback import format_exception
-from ..defs.logIt import logIt, printIt, lable
+from pigencode.defs.logIt import logIt, printIt, lable
 from re import Pattern, compile as reCompile
 from typing import Any
 
@@ -107,30 +107,28 @@ class PiSeeds():
             #raise StopIteration
         return rtnPi
 
-PiSeedTypes = ["piGermDir", "piStruct", "piValuesSetD", "piValue", "piClassGC", "piValueA", "piType", "piIndexer", "piDefGC", "piGenClass"]
+PiSeedTypes = ["piStruct", "piValuesSetD", "piValue", "piClassGC", "piValueA", "piType", "piIndexer", "piDefGC", "piGenClass"]
 PiSeedTypeVarTypes = ["B", "I", "S", "F", "D", "L", "C", "A"]
 PiSeedTypeVarTypesStr = ''.join(PiSeedTypeVarTypes)
 PiSeedTypeVarValues = {
-    PiSeedTypeVarTypes[0]: False,
-    PiSeedTypeVarTypes[1]: 0,
-    PiSeedTypeVarTypes[2]: "",
-    PiSeedTypeVarTypes[3]: 0.0,
-    PiSeedTypeVarTypes[4]: {},
-    PiSeedTypeVarTypes[5]: [],
-    PiSeedTypeVarTypes[6]: {},
-    PiSeedTypeVarTypes[7]: {}
+    PiSeedTypeVarTypes[0]: 0,
+    PiSeedTypeVarTypes[1]: "",
+    PiSeedTypeVarTypes[2]: 0.0,
+    PiSeedTypeVarTypes[3]: {},
+    PiSeedTypeVarTypes[4]: [],
+    PiSeedTypeVarTypes[5]: {},
+    PiSeedTypeVarTypes[6]: {}
 }
 PiSeedTypeREs = {
-    PiSeedTypes[0]: reCompile('(piGermDir)'),
-    PiSeedTypes[1]: reCompile(f'(piStruct)([{PiSeedTypeVarTypesStr}]'+'{1})([0-9]{2})'),
-    PiSeedTypes[2]: reCompile(r'(.+)\.(.*)[\:]*'),
-    PiSeedTypes[3]: reCompile('piClassGC(\\d{3})_(.+).json'),
-    PiSeedTypes[4]: reCompile('(piClassGC)'),
-    PiSeedTypes[5]: reCompile('(piValueA)'),
-    PiSeedTypes[6]: reCompile('(piType)'),
-    PiSeedTypes[7]: reCompile('(piIndexer)'),
-    PiSeedTypes[8]: reCompile('(piDefGC)'),
-    PiSeedTypes[9]: reCompile('(piGenClass)'),
+    PiSeedTypes[0]: reCompile(f'(piStruct)([{PiSeedTypeVarTypesStr}]'+'{1})([0-9]{2})'),
+    PiSeedTypes[1]: reCompile(r'(.+)\.(.*)[\:]*'),
+    PiSeedTypes[2]: reCompile('piClassGC(\\d{3})_(.+).json'),
+    PiSeedTypes[3]: reCompile('(piClassGC)'),
+    PiSeedTypes[4]: reCompile('(piValueA)'),
+    PiSeedTypes[5]: reCompile('(piType)'),
+    PiSeedTypes[6]: reCompile('(piIndexer)'),
+    PiSeedTypes[7]: reCompile('(piDefGC)'),
+    PiSeedTypes[8]: reCompile('(piGenClass)'),
     'default': reCompile('(.+)') # this last one returns the input string
 } # example piStrucD00
 PiFunctionsTokens = ["getPiIDMD5", "getPiMD5", "getMD5"]
@@ -145,7 +143,7 @@ def piSeedTitelSplit(piValueTitle: str) -> tuple:
     try:
         #print(f'piSeedTitelSplit: {piTitle}')
         piPiTitleKey, piElemKeys = None, None
-        rtnMatch = PiSeedTypeREs[PiSeedTypes[2]].match(piValueTitle)
+        rtnMatch = PiSeedTypeREs[PiSeedTypes[1]].match(piValueTitle)
         if rtnMatch != None:
             theMatchGroups = rtnMatch.groups()
             if len(theMatchGroups) == 2:

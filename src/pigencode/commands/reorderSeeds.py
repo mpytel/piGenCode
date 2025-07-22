@@ -2,8 +2,8 @@ import os
 import shutil
 from pathlib import Path
 from re import compile as reCompile
-from ..classes.argParse import ArgParse
-from ..defs.logIt import printIt, lable
+from pigencode.classes.argParse import ArgParse
+from pigencode.defs.logIt import printIt, lable
 from pigencode.defs.getSeedPath import getSeedPath
 
 # Pattern to match piSeed files: piSeed000_name.pi

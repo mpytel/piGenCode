@@ -1,10 +1,10 @@
 import sys, traceback
 from argparse import Namespace
-from ..defs.logIt import printIt, lable
+from pigencode.defs.logIt import printIt, lable
 from .commands import Commands
 from .cmdOptSwitchbord import cmdOptSwitchbord
-from ..classes.argParse import ArgParse
-from ..classes.piSeedRegistry import command_registry
+from pigencode.classes.argParse import ArgParse
+from pigencode.classes.piSeedRegistry import command_registry
 
 cmdObj = Commands()
 commands = cmdObj.commands
@@ -35,7 +35,7 @@ def cmdSwitchbord(argParse: ArgParse):
                     command_registry.execute_command(theCmd, argParse)
                 except ValueError:
                     # Fallback to old exec() method if command not in registry
-                    exec(f'from ..commands.{theCmd} import {theCmd}')
+                    exec(f'from pigencode.commands.{theCmd} import {theCmd}')
                     exec(f'{theCmd}(argParse)')
             else:
                 print(args)

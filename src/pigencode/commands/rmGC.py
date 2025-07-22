@@ -1,9 +1,9 @@
 import shutil
 import os
 from pathlib import Path
-from ..classes.argParse import ArgParse
-from ..defs.logIt import printIt, lable
-from ..defs.fileIO import getKeyItem, piGCDirs
+from pigencode.classes.argParse import ArgParse
+from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.fileIO import getKeyItem, piGCDirs
 
 def rmGC(argParse: ArgParse):
     """

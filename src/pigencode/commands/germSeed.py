@@ -1,11 +1,12 @@
 import os, traceback
 from re import compile as reCompile
 from pathlib import Path
-from ..classes.argParse import ArgParse
-from ..defs.logIt import printIt, lable
-from ..defs.fileIO import getKeyItem, writeRC, piGCDirs
-from ..classes.piGermSeeds import PiGermSeeds, germinateSeeds
-from ..classes.piSeeds import PiSeeds
+from pigencode.classes.argParse import ArgParse
+from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.fileIO import getKeyItem, writeRC, piGCDirs
+from pigencode.defs.getSeedPath import getSeedPath
+from pigencode.classes.piGermSeeds import PiGermSeeds, germinateSeeds
+from pigencode.classes.piSeeds import PiSeeds
 from .genCode import genCodeFile
 
 seedFilePattern = reCompile(
@@ -74,7 +75,7 @@ def getSeedFileName(fileIntStr) -> str:
     return str(fileName)
 
 def germAllSeedFiles(verbose=True) -> PiGermSeeds:
-    seedPath = Path(getKeyItem(piGCDirs[0]))
+    seedPath = getSeedPath()
     piSeeds = PiSeeds()
     piGermSeeds = PiGermSeeds(piSeeds)
     if seedPath:

@@ -6,6 +6,7 @@ piGerms/
 piClasses/
 piDefs/
 devDocs/
+.pigencoderc
 
 # for testing
 holdSeeds/

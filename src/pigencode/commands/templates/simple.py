@@ -1,7 +1,7 @@
 from string import Template
 from textwrap import dedent
 
-cmdDefTemplate = Template(dedent("""from ..defs.logIt import printIt, lable
+cmdDefTemplate = Template(dedent("""from pigencode.defs.logIt import printIt, lable
 
 def ${defName}(argParse):
     '''Simple ${defName} command implementation'''

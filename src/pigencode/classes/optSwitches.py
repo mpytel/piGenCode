@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from ..defs.logIt import printIt, lable
+from pigencode.defs.logIt import printIt, lable
 
 
 rcFileDir = Path(__file__).resolve().parents[2]

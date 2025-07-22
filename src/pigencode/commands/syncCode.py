@@ -119,8 +119,8 @@ def isCustomCodeUsingArchitecture(elementType: str, actualCode: List[str], class
     """
     try:
         # Import here to avoid circular imports
-        from ..classes.piGenCode import PiGenCode
-        from ..defs.piJsonFile import readJson
+        from pigencode.classes.piGenCode import PiGenCode
+        from pigencode.defs.piJsonFile import readJson
         import json
         import tempfile
         import os
@@ -3144,7 +3144,7 @@ def generateExpectedInitMethod(seedContent: str, className: str) -> str:
             return ""
 
         # Create a minimal piGenCode instance to generate the expected method
-        from ..classes.piGenCode import PiGenCode
+        from pigencode.classes.piGenCode import PiGenCode
         genCode = PiGenCode()
         genCode.initArguments = initArgs
         genCode.inheritance = []  # Assume no inheritance for now - can be enhanced
