@@ -13,7 +13,6 @@ def getSeedPath() -> Path:
     """Get the piSeeds directory path"""
     # seedDirName = "piSeeds"
     seedPath = Path(getKeyItem(piGCDirs[0]))
-    print(f'debug {str(seedPath)}')
     if seedPath.is_dir():
         writeBasePiSeeds(seedPath)
     else:

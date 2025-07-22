@@ -650,24 +650,24 @@ def syncCode(argParse: ArgParse):
         # Sync all files with enhanced options
         syncAllFilesEnhanced(options)
 
-def findExistingPiSeedFile(className: str) -> tuple:
+def findExistingPiSeedFile(filePath: Path) -> tuple:
     """
     Find existing piSeed file for a class, checking all types.
     Returns (piSeedFile_path, piSeed_type) or (None, None) if not found.
     Priority: piClassGC -> piGenClass -> piDefGC
     """
     # Check piClassGC first (most common for single classes)
-    piSeedFile = findPiClassGCSeedFile(className)
+    piSeedFile = findPiClassGCSeedFile(filePath)
     if piSeedFile:
         return piSeedFile, "piClassGC"
 
     # Check piGenClass second
-    piSeedFile = findPiGenClassSeedFile(className)
+    piSeedFile = findPiGenClassSeedFile(filePath)
     if piSeedFile:
         return piSeedFile, "piGenClass"
 
     # Check piDefGC last (for function files)
-    piSeedFile = findPiDefGCSeedFile(className)
+    piSeedFile = findPiDefGCSeedFile(filePath)
     if piSeedFile:
         return piSeedFile, "piDefGC"
 
@@ -694,8 +694,8 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
         className = filePath.stem
 
         # First, check for existing piSeed files of any type
-        existingPiSeedFile, existingType = findExistingPiSeedFile(className)
-
+        existingPiSeedFile, existingType = findExistingPiSeedFile(filePath)
+        print(existingPiSeedFile, existingType)
         if existingPiSeedFile:
             # Use existing piSeed file type
             file_type = existingType
@@ -710,7 +710,7 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
 
             # Try to find or create piSeed file based on optimal type
             if file_type == "piDefGC":
-                piSeedFile = findPiDefGCSeedFile(className)
+                piSeedFile = findPiDefGCSeedFile(filePath)
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(f"DRY RUN: Would create new piDefGC piSeed file for: {className}", lable.INFO)
@@ -719,7 +719,7 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                         printIt(f"Creating new piDefGC piSeed file for: {className}", lable.INFO)
                         piSeedFile = createNewPiDefGCSeedFileEnhanced(className, filePath)
             elif file_type == "piGenClass":
-                piSeedFile = findPiGenClassSeedFile(className)
+                piSeedFile = findPiGenClassSeedFile(filePath)
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(f"DRY RUN: Would create new piGenClass piSeed file for: {className}", lable.INFO)
@@ -728,7 +728,7 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                         printIt(f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
                         piSeedFile = createNewPiGenClassSeedFile(className, filePath)
             else:  # piClassGC
-                piSeedFile = findPiClassGCSeedFile(className)
+                piSeedFile = findPiClassGCSeedFile(filePath)
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(f"DRY RUN: Would create new piClassGC piSeed file for: {className}", lable.INFO)
@@ -993,7 +993,8 @@ def syncAllFilesEnhanced(options: dict):
                         skippedFiles += 1
 
             except Exception as e:
-                printIt(f"Error processing {filePath}: {e}", lable.ERROR)
+                printIt(
+                    f"Error processing {filePath}: {e} {e.__traceback__.tb_lineno}", lable.ERROR)
                 skippedFiles += 1
 
         # Final summary
@@ -1095,6 +1096,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
         createdSeeds = 0
 
         for py_file in python_files:
+            defName = py_file.stem
             try:
                 # Determine file type
                 file_type = determineOptimalPiSeedType(py_file)
@@ -1112,8 +1114,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                 piSeedFile = None
 
                 if file_type == "piDefGC":
-                    defName = py_file.stem
-                    piSeedFile = findPiDefGCSeedFile(defName)
+                    piSeedFile = findPiDefGCSeedFile(py_file)
 
                     if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, py_file)
@@ -1163,7 +1164,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                     skippedFiles += 1
 
             except Exception as e:
-                printIt(f"Error processing {py_file}: {e}", lable.ERROR)
+                printIt(f"Error processing {py_file}: {e} {e.__traceback__.tb_lineno}", lable.ERROR)
                 skippedFiles += 1
 
         # Final summary
@@ -1185,7 +1186,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
         printIt(f"Processing directory: {directory}", lable.INFO)
 
         # Find all Python files recursively
-        python_files = []
+        python_files: List[Path] = []
         for py_file in directory.rglob("*.py"):
             # Skip __pycache__ and other system directories
             if "__pycache__" in str(py_file) or ".git" in str(py_file):
@@ -1204,15 +1205,14 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
 
         for py_file in python_files:
             try:
-                printIt(f"Processing: {py_file.relative_to(directory)}", lable.DEBUG)
-
+                printIt(f"Processing: {py_file}", lable.DEBUG)
+                defName = py_file.stem
                 # Determine the best piSeed type for this file
                 file_type = determineOptimalPiSeedType(py_file)
 
                 if file_type == "piDefGC":
                     # Handle as piDefGC (function definitions)
-                    defName = py_file.stem
-                    piSeedFile = findPiDefGCSeedFile(defName)
+                    piSeedFile = findPiDefGCSeedFile(py_file)
 
                     if not piSeedFile:
                         printIt(f"Creating new piDefGC piSeed file for: {defName}", lable.INFO)
@@ -1232,7 +1232,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                 elif file_type == "piGenClass":
                     # Handle as piGenClass (multiple classes)
                     className = py_file.stem
-                    piSeedFile = findPiGenClassSeedFile(className)
+                    piSeedFile = findPiGenClassSeedFile(py_file)
 
                     if not piSeedFile:
                         printIt(f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
@@ -1252,7 +1252,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                 else:  # piClassGC
                     # Handle as piClassGC (single class)
                     className = py_file.stem
-                    piSeedFile = findPiClassGCSeedFile(className)
+                    piSeedFile = findPiClassGCSeedFile(py_file)
 
                     if not piSeedFile:
                         printIt(f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
@@ -1270,7 +1270,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                         errors += 1
 
             except Exception as e:
-                printIt(f"Error processing {py_file}: {e}", lable.ERROR)
+                printIt(f"Error processing {py_file}: {e} {e.__traceback__.tb_lineno}", lable.ERROR)
                 errors += 1
 
         # Summary
@@ -1341,20 +1341,22 @@ def determineOptimalPiSeedType(pythonFile: Path) -> str:
         printIt(f"WARN: Error analyzing file type for {pythonFile.name}: {e}. Using default piClassGC.", lable.WARN)
         return "piClassGC"  # Safe fallback
 
-def createNewPiClassGCSeedFileEnhanced(className: str, pythonFile: Path) -> Optional[Path]:
+def createNewPiClassGCSeedFileEnhanced(className: str, pythonFile: Path, seed_file: Path | None = None) -> Optional[Path]:
     """
     Enhanced version of createNewPiClassGCSeedFile that better handles directory structures
     and creates more complete piSeed files from existing Python code.
     """
     try:
         seedPath = getSeedPath()
+        if seed_file:
+            seedFilePath = seed_file
+        else:
+            # Get next available number
+            nextNum = getNextPiSeedNumber()
 
-        # Get next available number
-        nextNum = getNextPiSeedNumber()
-
-        # Create new piSeed file name
-        seedFileName = f"piSeed{nextNum}_piClassGC_{className}.pi"
-        seedFilePath = seedPath / seedFileName
+            # Create new piSeed file name
+            seedFileName = f"piSeed{nextNum}_piClassGC_{className}.pi"
+            seedFilePath = seedPath.joinpath(seedFileName)
 
         # Determine relative file directory from pythonFile
         try:
@@ -1418,7 +1420,7 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
         printIt(f"Error creating new piClassGC piSeed file for {className}: {e}", lable.ERROR)
         return None
 
-def createNewPiDefGCSeedFileEnhanced(defName: str, pythonFile: Path) -> Optional[Path]:
+def createNewPiDefGCSeedFileEnhanced(defName: str, pythonFile: Path, seed_file: Path | None = None) -> Optional[Path]:
     """
     Enhanced version of createNewPiDefGCSeedFile that better handles directory structures
     and creates more complete piSeed files from existing Python code.
@@ -1426,12 +1428,15 @@ def createNewPiDefGCSeedFileEnhanced(defName: str, pythonFile: Path) -> Optional
     try:
         seedPath = getSeedPath()
 
-        # Get next available number
-        nextNum = getNextPiSeedNumber()
+        if seed_file:
+            seedFilePath = seed_file
+        else:
+            # Get next available number
+            nextNum = getNextPiSeedNumber()
 
-        # Create new piSeed file name
-        seedFileName = f"piSeed{nextNum}_piDefGC_{defName}.pi"
-        seedFilePath = seedPath.joinpath(seedFileName)
+            # Create new piSeed file name
+            seedFileName = f"piSeed{nextNum}_piDefGC_{defName}.pi"
+            seedFilePath = seedPath.joinpath(seedFileName)
 
         # Determine relative file directory from pythonFile
         try:
@@ -1647,43 +1652,116 @@ def analyzePythonDefFile(pythonFile: Path) -> Dict:
         printIt(f"Error analyzing Python def file {pythonFile}: {e}", lable.ERROR)
         return {}
 
-def findPiGenClassSeedFile(className: str) -> Optional[Path]:
-    """Find the piSeed file that corresponds to a given class name (piGenClass)"""
+def findPiClassGCSeedFile(py_file: Path) -> Optional[Path]:
+    """Find the piSeed file that corresponds to a given class name (piClassGC)"""
     try:
+        className = py_file.stem
         seedPath = getSeedPath()
+        py_file_dir = py_file.parent
 
-        # Look for piSeed files that contain piGenClass for this class
-        seedFiles = list(seedPath.glob("*.pi"))
+        # Look for piSeed files that contain piClassGC for this class
+        seedFiles = list(seedPath.glob(f"*_piClassGC_{className}.pi"))
 
         for seedFile in seedFiles:
             try:
                 with open(seedFile, 'r', encoding='utf-8') as f:
                     content = f.read()
-                    # Look for piGenClass line with this class name
-                    if re.search(rf'^piGenClass\s+{re.escape(className)}\s+', content, re.MULTILINE):
-                        return seedFile
+                    # Look for piClassGC line with this def name
+                    regex_pattern = rf"(piValue {className}\.piBody:piClassGC:fileDirectory\s+'([^']+)')"
+                    # Search for the pattern in the line
+                    match = re.search(regex_pattern, content, re.MULTILINE)
+                    if match:
+                        fileDirectory = match.group(2)
+                        if (fileDirectory) == str(py_file_dir):
+                            return seedFile
+                        else:
+                            print(f'{fileDirectory} != {py_file_dir}')
             except Exception:
                 continue
-
+        return None
+    except Exception as e:
+        printIt(
+            f"Error finding piClassGC piSeed file for {className}: {e}", lable.ERROR)
         return None
 
+def findPiDefGCSeedFile(py_file: Path) -> Optional[Path]:
+    """Find the piSeed file that corresponds to a given function definition name (piDefGC)"""
+    try:
+        defName = py_file.stem
+        seedPath = getSeedPath()
+        py_file_dir = py_file.parent
+
+        # Look for piSeed files that contain piDefGC for this def name
+        seedFiles = list(seedPath.glob(f"*_piDefGC_{defName}.pi"))
+        for seedFile in seedFiles:
+            try:
+                with open(seedFile, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    # Look for piDefGC line with this def name
+                    regex_pattern = rf"(piValue {defName}\.piBody:piDefGC:fileDirectory\s+'([^']+)')"
+                    # Search for the pattern in the line
+                    match = re.search(regex_pattern, content, re.MULTILINE)
+                    if match:
+                        fileDirectory = match.group(2)
+                        if (fileDirectory) == str(py_file_dir):
+                            return seedFile
+                        else:
+                            print(f'{fileDirectory} != {py_file_dir}')
+            except Exception:
+                continue
+        return None
+    except Exception as e:
+        printIt(
+            f"Error finding piDefGC piSeed file for {defName}: {e} {e.__traceback__.tb_lineno}", lable.ERROR)
+        return None
+
+
+def findPiGenClassSeedFile(py_file: Path) -> Optional[Path]:
+    """Find the piSeed file that corresponds to a given class name (piGenClass)"""
+    try:
+        className = py_file.stem
+        seedPath = getSeedPath()
+        py_file_dir = py_file.parent
+
+        # Look for piSeed files that contain piGenClass for this class
+        seedFiles = list(seedPath.glob(f"*_piGenClass_{className}.pi"))
+
+        for seedFile in seedFiles:
+            try:
+                with open(seedFile, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    # Look for piClassGC line with this def name
+                    regex_pattern = rf"(piValue {className}\.piBody:piGenClass:fileDirectory\s+'([^']+)')"
+                    # Search for the pattern in the line
+                    match = re.search(regex_pattern, content, re.MULTILINE)
+                    if match:
+                        fileDirectory = match.group(2)
+                        if (fileDirectory) == str(py_file_dir):
+                            return seedFile
+                        else:
+                            print(f'{fileDirectory} != {py_file_dir}')
+            except Exception:
+                continue
+        return None
     except Exception as e:
         printIt(f"Error finding piGenClass piSeed file for {className}: {e}", lable.ERROR)
         return None
 
-def createNewPiGenClassSeedFile(className: str, pythonFile: Path) -> Optional[Path]:
+def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Path | None = None) -> Optional[Path]:
     """
     Create a new piGenClass piSeed file for handling multiple classes in a single file.
     """
     try:
         seedPath = getSeedPath()
+        if seed_file:
+            seedFilePath = seed_file
+        else:
+            # Get next available number
+            nextNum = getNextPiSeedNumber()
 
-        # Get next available number
-        nextNum = getNextPiSeedNumber()
-
-        # Create new piSeed file name
-        seedFileName = f"piSeed{nextNum}_piGenClass_{className}.pi"
-        seedFilePath = seedPath / seedFileName
+            # Create new piSeed file name
+            seedFileName = f"piSeed{nextNum}_piGenClass_{className}.pi"
+            seedFilePath = seedPath.joinpath(seedFileName)
 
         # Determine relative file directory from pythonFile
         try:
@@ -2238,17 +2316,19 @@ def getNextPiSeedNumber() -> str:
         printIt(f"Error getting next piSeed number: {e}", lable.ERROR)
         return "001"
 
-def createNewPiClassGCSeedFile(className: str, pythonFile: Path) -> Optional[Path]:
+def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path | None = None) -> Optional[Path]:
     """Create a new piClassGC piSeed file for the given class"""
     try:
         seedPath = getSeedPath()
-
+        if seed_file:
+            seedFilePath = seed_file
+        else:
         # Get next available number
-        nextNum = getNextPiSeedNumber()
+            nextNum = getNextPiSeedNumber()
 
-        # Create new piSeed file name
-        seedFileName = f"piSeed{nextNum}_piClassGC_{className}.pi"
-        seedFilePath = seedPath / seedFileName
+            # Create new piSeed file name
+            seedFileName = f"piSeed{nextNum}_piClassGC_{className}.pi"
+            seedFilePath = seedPath.joinpath(seedFileName)
 
         # Determine relative file directory from pythonFile
         try:
@@ -2282,17 +2362,19 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
         printIt(f"Error creating new piClassGC piSeed file for {className}: {e}", lable.ERROR)
         return None
 
-def createNewPiDefGCSeedFile(defName: str, pythonFile: Path) -> Optional[Path]:
+def createNewPiDefGCSeedFile(defName: str, pythonFile: Path, seed_file: Path | None = None) -> Optional[Path]:
     """Create a new piDefGC piSeed file for the given function definition file"""
     try:
         seedPath = getSeedPath()
+        if seed_file:
+            seedFilePath = seed_file
+        else:
+            # Get next available number
+            nextNum = getNextPiSeedNumber()
 
-        # Get next available number
-        nextNum = getNextPiSeedNumber()
-
-        # Create new piSeed file name
-        seedFileName = f"piSeed{nextNum}_piDefGC_{defName}.pi"
-        seedFilePath = seedPath / seedFileName
+            # Create new piSeed file name
+            seedFileName = f"piSeed{nextNum}_piDefGC_{defName}.pi"
+            seedFilePath = seedPath.joinpath(seedFileName)
 
         # Determine relative file directory from pythonFile
         try:
@@ -2323,54 +2405,6 @@ piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from e
 
     except Exception as e:
         printIt(f"Error creating new piDefGC piSeed file for {defName}: {e}", lable.ERROR)
-        return None
-
-def findPiClassGCSeedFile(className: str) -> Optional[Path]:
-    """Find the piSeed file that corresponds to a given class name (piClassGC)"""
-    try:
-        seedPath = getSeedPath()
-
-        # Look for piSeed files that contain piClassGC for this class
-        seedFiles = list(seedPath.glob("*.pi"))
-
-        for seedFile in seedFiles:
-            try:
-                with open(seedFile, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    # Look for piClassGC line with this class name
-                    if re.search(rf'^piClassGC\s+{re.escape(className)}\s+', content, re.MULTILINE):
-                        return seedFile
-            except Exception:
-                continue
-
-        return None
-
-    except Exception as e:
-        printIt(f"Error finding piClassGC piSeed file for {className}: {e}", lable.ERROR)
-        return None
-
-def findPiDefGCSeedFile(defName: str) -> Optional[Path]:
-    """Find the piSeed file that corresponds to a given function definition name (piDefGC)"""
-    try:
-        seedPath = getSeedPath()
-
-        # Look for piSeed files that contain piDefGC for this def name
-        seedFiles = list(seedPath.glob("*.pi"))
-
-        for seedFile in seedFiles:
-            try:
-                with open(seedFile, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    # Look for piDefGC line with this def name
-                    if re.search(rf'^piDefGC\s+{re.escape(defName)}\s+', content, re.MULTILINE):
-                        return seedFile
-            except Exception:
-                continue
-
-        return None
-
-    except Exception as e:
-        printIt(f"Error finding piDefGC piSeed file for {defName}: {e}", lable.ERROR)
         return None
 
 def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict = None) -> List[str]:
