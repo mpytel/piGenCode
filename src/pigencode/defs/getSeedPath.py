@@ -11,26 +11,33 @@ from pigencode.defs.fileIO import getKeyItem, setKeyItem, piGCDirs
 
 def getSeedPath() -> Path | None:
     """Get the piSeeds directory path"""
-    seedDirName = "piSeeds"
-    seedPath = Path(getKeyItem("piSeedsDir"))
+    # seedDirName = "piSeeds"
+    seedPath = Path(getKeyItem(piGCDirs[0]))
+    print(f'debug {str(seedPath)}')
     if seedPath.is_dir():
-        return seedPath
-
-    # Check current directory
-    cwd = Path.cwd()
-    if cwd.name == seedDirName:
-        seedPath = cwd
-    else:
-        cwdDirs = [str(p.name) for p in cwd.iterdir() if p.is_dir()]
-        if seedDirName in cwdDirs:
-            seedPath = cwd.joinpath(seedDirName)
-
-    if seedPath and seedPath.is_dir():
-        setKeyItem("piSeedsDir", str(seedPath))
-        return seedPath
+        writeBasePiSeeds(seedPath)
     else:
         seedPath.mkdir(parents=True, exist_ok=True)
         writeBasePiSeeds(seedPath)
+    return seedPath
+
+    # # Check current directory
+    # cwd = Path.cwd()
+    # if cwd.name == seedDirName:
+    #     seedPath = cwd
+    # else:
+    #     cwdDirs = [str(p.name) for p in cwd.iterdir() if p.is_dir()]
+    #     if seedDirName in cwdDirs:
+    #         seedPath = cwd.joinpath(seedDirName)
+
+    # if seedPath and seedPath.is_dir():
+    #     print(f'debug {str(seedPath)}')
+    #     print(f'debug {seedPath.relative_to(Path.cwd())}')
+    #     setKeyItem("piSeedsDir", str(seedPath.relative_to(Path.cwd())))
+    #     return seedPath
+    # else:
+    #     seedPath.mkdir(parents=True, exist_ok=True)
+    #     writeBasePiSeeds(seedPath)
 
     return seedPath
 
@@ -192,6 +199,7 @@ piStructL02 globalCode 'List of global code lines at the end of the file.'
     for key, value in piSeeds.items():
         fileName = f'piSeed{str(fileID).zfill(3)}_{key}.pi'
         filePath = piSeedPath.joinpath(fileName)
-        with open(filePath, 'w') as fw:
-            fw.write(value)
+        if not filePath.exists():
+            with open(filePath, 'w') as fw:
+                fw.write(value)
         fileID += 1

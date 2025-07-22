@@ -5,9 +5,9 @@ from pathlib import Path
 from json import load, loads, dump, dumps, JSONDecodeError
 from re import compile as reCompile
 from .logIt import logIt, printIt, lable
-from ..classes.piSeeds import PiSeedTypes, PiSeed, PiSeedTypeREs
-from ..defs.fileIO import readRC, writeRC, getKeyItem, piGenCodeDirs, piGCDirs
-from ..defs.piID import getPiIDs
+from pigencode.classes.piSeeds import PiSeedTypes, PiSeed, PiSeedTypeREs
+from pigencode.defs.fileIO import readRC, writeRC, getKeyItem, setKeyItem, piGenCodeDirs, piGCDirs
+from pigencode.defs.piID import getPiIDs
 
 def readJson(fileName: str, verbose=True) -> dict:
     rtnDict = {}
@@ -34,13 +34,13 @@ def writeJson(fileName: str, aDict: dict, verbose=True) -> bool:
     return rtnBool
 
 def getPiStrucFileName(baseTitle) -> str:
-    piStrucFileName = getKeyItem(piGCDirs[1])
-    if not piStrucFileName:
-        piStrucFileName = piGenCodeDirs[piGCDirs[1]]
-        writeRC(PiSeedTypes[0], piStrucFileName)
-    piStrucFileName = Path(piStrucFileName).joinpath(PiSeedTypes[1])
+    piGermDir = getKeyItem(piGCDirs[1])
+    if not piGermDir:
+        piGermDir = piGenCodeDirs[piGCDirs[1]]
+        setKeyItem(piGCDirs[1], piGermDir)
+    piStrucFileName = Path(piGermDir).joinpath(PiSeedTypes[0])
     makedirs(piStrucFileName, exist_ok=True)
-    piStrucFileName = Path(piStrucFileName).joinpath(f'{PiSeedTypes[1]}_{baseTitle}.json')
+    piStrucFileName = Path(piStrucFileName).joinpath(f'{PiSeedTypes[0]}_{baseTitle}.json')
     return str(piStrucFileName)
 
 def writePiStruc(baseTitle: str, aDict: dict, verbose=True) -> bool:
@@ -55,14 +55,14 @@ def readPiStruc(baseTitle: str, verbose=True) -> dict:
     return rtnDict
 
 def getPiDefaultFileName(baseTitle) -> str:
-    piStrucFileName = readRC(PiSeedTypes[0])
-    if not piStrucFileName:
-        piStrucFileName = piGenCodeDirs[piGCDirs[1]]
-        writeRC(PiSeedTypes[0], piStrucFileName)
-    piStrucFileName = Path(piStrucFileName).joinpath(PiSeedTypes[2])
-    makedirs(piStrucFileName, exist_ok=True)
-    piStrucFileName = Path(piStrucFileName).joinpath(f'{PiSeedTypes[2]}_{baseTitle}.json')
-    return str(piStrucFileName)
+    piGermDir = getKeyItem(piGCDirs[1])
+    if not piGermDir:
+        piGermDir = piGenCodeDirs[piGCDirs[1]]
+        setKeyItem(piGCDirs[1], piGermDir)
+    piDefaultFileName = Path(piGermDir).joinpath(PiSeedTypes[1])
+    makedirs(piDefaultFileName, exist_ok=True)
+    piDefaultFileName = Path(piDefaultFileName).joinpath(f'{PiSeedTypes[1]}_{baseTitle}.json')
+    return str(piDefaultFileName)
 
 def writePiDefault(baseTitle: str, aDict: dict, verbose=True) -> bool:
     piStrucFileName = getPiDefaultFileName(baseTitle)
@@ -86,11 +86,12 @@ def readPiDefault(baseTitle: str, verbose=True) -> dict:
     rtnDict = readJson(piStrucFileName, verbose)
     return rtnDict
 
+
 def getPiFilePath(aDict: dict) -> Path:
-    piGermDir = readRC('piGermDir')
+    piGermDir = getKeyItem(piGCDirs[1])
     if not piGermDir:
         piGermDir = piGenCodeDirs[piGCDirs[1]]
-        writeRC(PiSeedTypes[0], piGermDir)
+        setKeyItem(piGCDirs[1], piGermDir)
     piFilePath = Path(piGermDir)
     piFilePath = piFilePath.joinpath("pis")
     piFilePath = piFilePath.joinpath(aDict["piIndexer"]["piUser"])
@@ -354,13 +355,13 @@ class PiClassGCFiles():
         self.lastLineNumber = 0
         self.classGCFilePaths = []
     def _getPiClassGCFiles(self):
-        return [p.name for p in self.fileDirName.iterdir() if p.is_file() and PiSeedTypeREs[PiSeedTypes[3]].match(p.name)]
+        return [p.name for p in self.fileDirName.iterdir() if p.is_file() and PiSeedTypeREs[PiSeedTypes[2]].match(p.name)]
     def _getBaseMaxFileInt(self):
         rtnInt = 1
         PiClassGCFiles = self._getPiClassGCFiles()
         if PiClassGCFiles:
             PiClassGCFiles.sort()
-            fileMatch = PiSeedTypeREs[PiSeedTypes[3]].match(str(PiClassGCFiles[-1]))
+            fileMatch = PiSeedTypeREs[PiSeedTypes[2]].match(str(PiClassGCFiles[-1]))
             if fileMatch:
                 fileParts = fileMatch.groups()
                 rtnInt = int(fileParts[0]) + 1
@@ -372,7 +373,7 @@ class PiClassGCFiles():
             PiClassGCFiles.sort(reverse=True)
             for PiClassGCFile in PiClassGCFiles:
                 # PiSeedTypes[3]: reCompile('piClassGC(\d{3})_(.+).json'),
-                fileMatch = PiSeedTypeREs[PiSeedTypes[3]].match(PiClassGCFile)
+                fileMatch = PiSeedTypeREs[PiSeedTypes[2]].match(PiClassGCFile)
                 if fileMatch:
                     fileParts = fileMatch.groups()
                     fileInt = int(fileParts[0])
@@ -392,7 +393,7 @@ class PiClassGCFiles():
             for PiClassGCFile in PiClassGCFiles:
                 # print('PiClassGCFile',PiClassGCFile)
                 # PiSeedTypes[3]: reCompile('piClassGC(\d{3})_(.+).json'),
-                fileMatch = PiSeedTypeREs[PiSeedTypes[3]].match(PiClassGCFile)
+                fileMatch = PiSeedTypeREs[PiSeedTypes[2]].match(PiClassGCFile)
                 if fileMatch:
                     fileParts = fileMatch.groups()
                     # print(fileParts)

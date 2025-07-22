@@ -57,13 +57,13 @@ def readRC(rcName: str) -> (int | float | str | list | dict):
         try:
             with open(rcFileName, 'r') as rf:
                 rawRcJson = load(rf)
+                rcValue = rawRcJson[rcName]
         except:
             resetPiRC()
-            rcValue = readRC(rcName)
-    try:
-        rcValue = rawRcJson[rcName]
-    except:
-        rcValue = ''
+            rcValue = piGenCodeDirs[rcName]
+    else:
+        resetPiRC()
+        rcValue = piGenCodeDirs[rcName]
     return rcValue
 
 def writeRC(rcName: str, rcValue: (int | float | str | list | dict)):
