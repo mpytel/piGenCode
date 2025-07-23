@@ -130,7 +130,7 @@ class ArgParse():
             'dry-run', 'create-missing', 'validate', 'stats', 'force', 'help'
         }
         value_options = {
-            'filter', 'exclude-pattern'
+            'filter', 'exclude-pattern', 'dest-dir'
         }
 
         filtered_args = []

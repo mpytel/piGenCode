@@ -7,6 +7,7 @@ from pigencode.defs.fileIO import getKeyItem, piGCDirs
 from pigencode.defs.getSeedPath import getSeedPath
 
 piSeedValuePattern = r'["\'](.*)["\'].*$'
+global options
 
 # Intelligent pattern detection functions
 def isExactDefaultStrCode(methodCode: List[str], className: str) -> bool:
@@ -604,6 +605,7 @@ def syncCode(argParse: ArgParse):
         'stats': 'stats' in cmd_options,
         'filter_type': cmd_options.get('filter'),
         'exclude_pattern': cmd_options.get('exclude-pattern'),
+        'dest_dir': cmd_options.get('dest-dir'),
         'target_file': None
     }
 
@@ -712,14 +714,15 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
 
             # Try to find or create piSeed file based on optimal type
             if file_type == "piDefGC":
-                piSeedFile = findPiDefGCSeedFile(filePath)
+                piSeedFile = findPiDefGCSeedFile(filePath, options.get('dest_dir'))
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(f"DRY RUN: Would create new piDefGC piSeed file for: {className}", lable.INFO)
                         return  # Don't actually create in dry-run mode
                     else:
                         printIt(f"Creating new piDefGC piSeed file for: {className}", lable.INFO)
-                        piSeedFile = createNewPiDefGCSeedFileEnhanced(className, filePath)
+                        piSeedFile = createNewPiDefGCSeedFileEnhanced(
+                            className, filePath, None, options.get('dest_dir'))
             elif file_type == "piGenClass":
                 piSeedFile = findPiGenClassSeedFile(filePath)
                 if not piSeedFile and options.get('create_piSeeds', False):
@@ -728,7 +731,8 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                         return  # Don't actually create in dry-run mode
                     else:
                         printIt(f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
-                        piSeedFile = createNewPiGenClassSeedFile(className, filePath)
+                        piSeedFile = createNewPiGenClassSeedFile(
+                            className, filePath, None, options.get('dest_dir'))
             else:  # piClassGC
                 piSeedFile = findPiClassGCSeedFile(filePath)
                 if not piSeedFile and options.get('create_piSeeds', False):
@@ -737,7 +741,8 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                         return  # Don't actually create in dry-run mode
                     else:
                         printIt(f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
-                        piSeedFile = createNewPiClassGCSeedFileEnhanced(className, filePath)
+                        piSeedFile = createNewPiClassGCSeedFileEnhanced(
+                            className, filePath, None, options.get('dest_dir'))
 
         # Apply filter if specified
         if options.get('filter_type'):
@@ -770,7 +775,8 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
         # Sync based on the determined file type
         changes = []
         if file_type == "piDefGC":
-            changes = syncPythonDefToSeed(filePath, piSeedFile)
+            changes = syncPythonDefToSeed(
+                filePath, piSeedFile, options.get('dest_dir'))
         elif file_type == "piGenClass":
             changes = syncPythonGenClassToSeed(filePath, piSeedFile)
         else:  # piClassGC
@@ -900,7 +906,7 @@ def syncAllFilesEnhanced(options: dict):
                     if piSeedFile:
                         continue  # Has piGenClass piSeed
 
-                    piSeedFile = findPiDefGCSeedFile(filePath)
+                    piSeedFile = findPiDefGCSeedFile(filePath, options.get('dest_dir'))
                     if piSeedFile:
                         continue  # Has piDefGC piSeed
 
@@ -939,10 +945,10 @@ def syncAllFilesEnhanced(options: dict):
 
                 if optimal_type == "piDefGC":
                     defName = filePath.stem
-                    piSeedFile = findPiDefGCSeedFile(filePath)
+                    piSeedFile = findPiDefGCSeedFile(filePath, options.get('dest_dir'))
 
                     if piSeedFile and options.get('create_piSeeds', True):
-                        changes = syncPythonDefToSeed(filePath, piSeedFile)
+                        changes = syncPythonDefToSeed(filePath, piSeedFile, options.get('dest_dir'))
                         if changes:
                             totalChanges += len(changes)
                             if options.get('stats', False):
@@ -950,7 +956,8 @@ def syncAllFilesEnhanced(options: dict):
                                     f"02 Synced {len(changes)} changes from {filePath.name}", lable.INFO)
                         processedFiles += 1
                     else:
-                        piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, filePath)
+                        piSeedFile = createNewPiDefGCSeedFileEnhanced(
+                            defName, filePath, None, options.get('dest_dir'))
                         if piSeedFile:
                             createdSeeds += 1
                         else:
@@ -970,7 +977,8 @@ def syncAllFilesEnhanced(options: dict):
                                     f"03 Synced {len(changes)} changes from {filePath.name}", lable.INFO)
                         processedFiles += 1
                     else:
-                        piSeedFile = createNewPiGenClassSeedFile(className, filePath)
+                        piSeedFile = createNewPiGenClassSeedFile(
+                            className, filePath, None, options.get('dest_dir'))
                         if piSeedFile:
                             createdSeeds += 1
                         else:
@@ -990,7 +998,8 @@ def syncAllFilesEnhanced(options: dict):
                                     f"04 Synced {len(changes)} changes from {filePath.name}", lable.INFO)
                         processedFiles += 1
                     else:
-                        piSeedFile = createNewPiClassGCSeedFileEnhanced(className, filePath)
+                        piSeedFile = createNewPiClassGCSeedFileEnhanced(
+                            className, filePath, None, options.get('dest_dir'))
                         if piSeedFile:
                             createdSeeds += 1
                         else:
@@ -1062,7 +1071,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                     if piSeedFile:
                         continue  # Has piGenClass piSeed
 
-                    piSeedFile = findPiDefGCSeedFile(py_file)
+                    piSeedFile = findPiDefGCSeedFile(py_file, options.get('dest_dir'))
                     if piSeedFile:
                         continue  # Has piDefGC piSeed
 
@@ -1099,6 +1108,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
         processedFiles = 0
         skippedFiles = 0
         createdSeeds = 0
+        errors = 0
 
         for py_file in python_files:
             defName = py_file.stem
@@ -1119,22 +1129,21 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                 piSeedFile = None
 
                 if file_type == "piDefGC":
-                    piSeedFile = findPiDefGCSeedFile(py_file)
-
-                    if not piSeedFile and options.get('create_piSeeds', False):
-                        piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, py_file)
+                    piSeedFile = findPiDefGCSeedFile(py_file, options.get('dest_dir'))
+                    if not piSeedFile:
+                        piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, py_file, None, options.get('dest_dir'))
                         if piSeedFile:
                             createdSeeds += 1
 
                     if piSeedFile:
-                        changes = syncPythonDefToSeed(py_file, piSeedFile)
+                        changes = syncPythonDefToSeed(py_file, piSeedFile, options.get('dest_dir'))
 
                 elif file_type == "piGenClass":
                     className = py_file.stem
                     piSeedFile = findPiGenClassSeedFile(py_file)
 
                     if not piSeedFile and options.get('create_piSeeds', False):
-                        piSeedFile = createNewPiGenClassSeedFile(className, py_file)
+                        piSeedFile = createNewPiGenClassSeedFile(className, py_file, None, options.get('dest_dir'))
                         if piSeedFile:
                             createdSeeds += 1
 
@@ -1146,7 +1155,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                     piSeedFile = findPiClassGCSeedFile(py_file)
 
                     if not piSeedFile and options.get('create_piSeeds', False):
-                        piSeedFile = createNewPiClassGCSeedFileEnhanced(className, py_file)
+                        piSeedFile = createNewPiClassGCSeedFileEnhanced(className, py_file, None, options.get('dest_dir'))
                         if piSeedFile:
                             createdSeeds += 1
 
@@ -1159,6 +1168,8 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
 
                 # Track results
                 if changes:
+                    for change in changes:
+                        print(change)
                     totalChanges += len(changes)
                     if options.get('stats', False):
                         printIt(f"04 Synced {len(changes)} changes from {py_file.name}", lable.INFO)
@@ -1172,7 +1183,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                 lineNum = f"{e.__traceback__.tb_lineno})" if e.__traceback__ is not None else ""
                 printIt(
                     f"Error processing {py_file}: {e} {lineNum}", lable.ERROR)
-                skippedFiles += 1
+                errors += 1
 
         # Final summary
         printIt(f"Directory Sync Complete:", lable.INFO)
@@ -1182,12 +1193,19 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
         if createdSeeds > 0:
             printIt(f"  • Created piSeed files: {createdSeeds}", lable.BLANK)
 
-        if skippedFiles > 0 and not options.get('create_piSeeds', False):
-            printIt("Tip: Use --create-piSeeds to auto-create piSeed files for orphaned Python files", lable.INFO)
+        # if skippedFiles > 0 and not options.get('create_piSeeds', False):
+        #     printIt("Tip: Use --create-piSeeds to auto-create piSeed files for orphaned Python files", lable.INFO)
 
     except Exception as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
         printIt(f'syncDirectoryEnhanced error:\n{tb_str}', lable.ERROR)
+        errors += 1
+
+    if errors > 0:
+        printIt(f"  • Errors: {errors}", lable.BLANK)
+
+#. ***** REMOVE after 8-20-2025
+def syncDirectory(directory: Path, options: dict):
     """Sync all Python files in a directory recursively"""
     try:
         # printIt(f"Processing directory: {directory}", lable.INFO)
@@ -1219,16 +1237,16 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
 
                 if file_type == "piDefGC":
                     # Handle as piDefGC (function definitions)
-                    piSeedFile = findPiDefGCSeedFile(py_file)
+                    piSeedFile = findPiDefGCSeedFile(py_file, options.get('dest_dir'))
 
                     if piSeedFile:
-                        changes = syncPythonDefToSeed(py_file, piSeedFile)
+                        changes = syncPythonDefToSeed(py_file, piSeedFile, options.get('dest_dir'))
                         if changes:
                             printIt(f" 06 Synced {len(changes)} changes to {piSeedFile.name}", lable.DEBUG)
                         processed += 1
                     else:
                         printIt(f"Creating new piDefGC piSeed file for: {defName}", lable.INFO)
-                        piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, py_file)
+                        piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, py_file, None, options.get('dest_dir'))
                         if piSeedFile:
                             created_seeds += 1
                         else:
@@ -1346,7 +1364,8 @@ def determineOptimalPiSeedType(pythonFile: Path) -> str:
         printIt(f"WARN: Error analyzing file type for {pythonFile.name}: {e}. Using default piClassGC.", lable.WARN)
         return "piClassGC"  # Safe fallback
 
-def createNewPiClassGCSeedFileEnhanced(className: str, pythonFile: Path, seed_file: Path | None = None) -> Optional[Path]:
+
+def createNewPiClassGCSeedFileEnhanced(className: str, pythonFile: Path, seed_file: Path | None = None, dest_dir: str | None = None) -> Optional[Path]:
     """
     Enhanced version of createNewPiClassGCSeedFile that better handles directory structures
     and creates more complete piSeed files from existing Python code.
@@ -1363,14 +1382,17 @@ def createNewPiClassGCSeedFileEnhanced(className: str, pythonFile: Path, seed_fi
             seedFileName = f"piSeed{nextNum}_piClassGC_{className}.pi"
             seedFilePath = seedPath.joinpath(seedFileName)
 
-        # Determine relative file directory from pythonFile
-        try:
-            # Get relative path from current directory
-            relativeDir = pythonFile.parent.relative_to(Path.cwd())
-            fileDirectory = str(relativeDir)
-        except ValueError:
-            # If not relative to cwd, use absolute path
-            fileDirectory = str(pythonFile.parent)
+        # Determine file directory - use dest_dir if provided, otherwise use pythonFile's directory
+        if dest_dir is not None:
+            fileDirectory = dest_dir
+        else:
+            try:
+                # Get relative path from current directory
+                relativeDir = pythonFile.parent.relative_to(Path.cwd())
+                fileDirectory = str(relativeDir)
+            except ValueError:
+                # If not relative to cwd, use absolute path
+                fileDirectory = str(pythonFile.parent)
 
         # Analyze the Python file to extract more information
         class_info = analyzePythonClassFile(pythonFile)
@@ -1425,7 +1447,44 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
         printIt(f"Error creating new piClassGC piSeed file for {className}: {e}", lable.ERROR)
         return None
 
-def createNewPiDefGCSeedFileEnhanced(defName: str, pythonFile: Path, seed_file: Path | None = None) -> Optional[Path]:
+
+def updatePiSeedFileDirectory(piSeedFile: Path, className: str, piSeedType: str, dest_dir: str) -> bool:
+    """
+    Update the fileDirectory in a piSeed file.
+
+    Args:
+        piSeedFile: Path to the piSeed file
+        className: Name of the class or definition
+        piSeedType: Type of piSeed file (piClassGC, piDefGC, piGenClass)
+        dest_dir: New destination directory
+
+    Returns:
+        bool: True if the file was updated, False otherwise
+    """
+    try:
+        # Read the piSeed file
+        with open(piSeedFile, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # Create the pattern to match the fileDirectory line
+        pattern = f"piValue {className}.piBody:{piSeedType}:fileDirectory '.*'"
+        replacement = f"piValue {className}.piBody:{piSeedType}:fileDirectory '{dest_dir}'"
+
+        # Replace the fileDirectory line
+        import re
+        new_content = re.sub(pattern, replacement, content)
+
+        # Write the updated content back to the file
+        with open(piSeedFile, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+
+        return True
+    except Exception as e:
+        printIt(
+            f"Error updating fileDirectory in {piSeedFile}: {e}", lable.ERROR)
+        return False
+
+def createNewPiDefGCSeedFileEnhanced(defName: str, pythonFile: Path, seed_file: Path | None = None, dest_dir: str | None = None) -> Optional[Path]:
     """
     Enhanced version of createNewPiDefGCSeedFile that better handles directory structures
     and creates more complete piSeed files from existing Python code.
@@ -1443,14 +1502,17 @@ def createNewPiDefGCSeedFileEnhanced(defName: str, pythonFile: Path, seed_file: 
             seedFileName = f"piSeed{nextNum}_piDefGC_{defName}.pi"
             seedFilePath = seedPath.joinpath(seedFileName)
 
-        # Determine relative file directory from pythonFile
-        try:
-            # Get relative path from current directory
-            relativeDir = pythonFile.parent.relative_to(Path.cwd())
-            fileDirectory = str(relativeDir)
-        except ValueError:
-            # If not relative to cwd, use absolute path
-            fileDirectory = str(pythonFile.parent)
+        # Determine file directory - use dest_dir if provided, otherwise use pythonFile's directory
+        if dest_dir is not None:
+            fileDirectory = dest_dir
+        else:
+            try:
+                # Get relative path from current directory
+                relativeDir = pythonFile.parent.relative_to(Path.cwd())
+                fileDirectory = str(relativeDir)
+            except ValueError:
+                # If not relative to cwd, use absolute path
+                fileDirectory = str(pythonFile.parent)
 
         # Analyze the Python file to extract more information
         def_info = analyzePythonDefFile(pythonFile)
@@ -1505,6 +1567,38 @@ piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from e
         printIt(f"Error creating new piDefGC piSeed file for {defName}: {e}", lable.ERROR)
         return None
 
+
+def extract_ImportFrom(node: ast.ImportFrom) -> Tuple[str, list]:
+    module_name = ''
+    imports = []
+    # Reconstruct the relative part based on 'level'
+    if node.level > 0:
+        module_name += "." * node.level
+    if node.module :
+        module_name += node.module
+        for alias in node.names:
+            import_name = alias.name
+            if alias.asname:
+                import_name = f"{alias.name} as {alias.asname}"
+            imports.append(import_name)
+    else:
+        # This case handles 'from . import some_name' or 'from .. import some_name'
+        # where the 'module' attribute is None. The full path is just the dots.
+        if node.level == 0:  # This means 'from __future__ import ...' for example
+            module_name = '__future__'
+            for alias in node.names:
+                import_name = alias.name
+                if alias.asname:
+                    import_name = f"{alias.name} as {alias.asname}"
+                imports.append(import_name)
+        else:
+            # The module_name is already just the dots
+            # 'from .. import some_name'
+            pass
+
+    return module_name, imports
+
+
 def analyzePythonClassFile(pythonFile: Path) -> Dict:
     """
     Analyze a Python file to extract class information for creating piSeed files.
@@ -1534,6 +1628,7 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                     info['imports'].append(import_name)
 
             elif isinstance(node, ast.ImportFrom):
+                module_name, imports = extract_ImportFrom(node)
                 if node.module:
                     module_name = node.module
                     imports = []
@@ -1543,10 +1638,10 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                             import_name = f"{alias.name} as {alias.asname}"
                         imports.append(import_name)
 
-                    info['from_imports'][module_name] = {
-                        'from': module_name,
-                        'import': ', '.join(imports)
-                    }
+                info['from_imports'][module_name] = {
+                    'from': module_name,
+                    'import': ', '.join(imports)
+                }
 
             elif isinstance(node, ast.ClassDef):
                 class_name = node.name
@@ -1626,19 +1721,12 @@ def analyzePythonDefFile(pythonFile: Path) -> Dict:
                     info['imports'].append(import_name)
 
             elif isinstance(node, ast.ImportFrom):
-                if node.module:
-                    module_name = node.module
-                    imports = []
-                    for alias in node.names:
-                        import_name = alias.name
-                        if alias.asname:
-                            import_name = f"{alias.name} as {alias.asname}"
-                        imports.append(import_name)
+                module_name, imports = extract_ImportFrom(node)
 
-                    info['from_imports'][module_name] = {
-                        'from': module_name,
-                        'import': ', '.join(imports)
-                    }
+                info['from_imports'][module_name] = {
+                    'from': module_name,
+                    'import': ', '.join(imports)
+                }
 
             elif isinstance(node, ast.FunctionDef):
                 info['functions'].append(node.name)
@@ -1687,12 +1775,16 @@ def findPiClassGCSeedFile(py_file: Path) -> Optional[Path]:
             f"Error finding piClassGC piSeed file for {className}: {e}", lable.ERROR)
         return None
 
-def findPiDefGCSeedFile(py_file: Path) -> Optional[Path]:
+
+def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given function definition name (piDefGC)"""
     try:
         defName = py_file.stem
         seedPath = getSeedPath()
-        py_file_dir = py_file.parent
+        if dest_dir is not None:
+            py_file_dir = dest_dir
+        else:
+            py_file_dir = py_file.parent
 
         # Look for piSeed files that contain piDefGC for this def name
         seedFiles = list(seedPath.glob(f"*_piDefGC_{defName}.pi"))
@@ -1747,7 +1839,8 @@ def findPiGenClassSeedFile(py_file: Path) -> Optional[Path]:
         printIt(f"Error finding piGenClass piSeed file for {className}: {e}", lable.ERROR)
         return None
 
-def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Path | None = None) -> Optional[Path]:
+
+def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Path | None = None, dest_dir: str | None = None) -> Optional[Path]:
     """
     Create a new piGenClass piSeed file for handling multiple classes in a single file.
     """
@@ -1763,14 +1856,17 @@ def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Pat
             seedFileName = f"piSeed{nextNum}_piGenClass_{className}.pi"
             seedFilePath = seedPath.joinpath(seedFileName)
 
-        # Determine relative file directory from pythonFile
-        try:
-            # Get relative path from current directory
-            relativeDir = pythonFile.parent.relative_to(Path.cwd())
-            fileDirectory = str(relativeDir)
-        except ValueError:
-            # If not relative to cwd, use absolute path
-            fileDirectory = str(pythonFile.parent)
+        # Determine file directory - use dest_dir if provided, otherwise use pythonFile's directory
+        if dest_dir is not None:
+            fileDirectory = dest_dir
+        else:
+            try:
+                # Get relative path from current directory
+                relativeDir = pythonFile.parent.relative_to(Path.cwd())
+                fileDirectory = str(relativeDir)
+            except ValueError:
+                # If not relative to cwd, use absolute path
+                fileDirectory = str(pythonFile.parent)
 
         # Analyze the Python file to extract class information
         class_info = analyzeMultiClassFile(pythonFile)
@@ -1976,19 +2072,12 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
                     info['imports'].append(import_name)
 
             elif isinstance(node, ast.ImportFrom):
-                if node.module:
-                    module_name = node.module
-                    imports = []
-                    for alias in node.names:
-                        import_name = alias.name
-                        if alias.asname:
-                            import_name = f"{alias.name} as {alias.asname}"
-                        imports.append(import_name)
+                module_name, imports = extract_ImportFrom(node)
 
-                    info['from_imports'][module_name] = {
-                        'from': module_name,
-                        'import': ', '.join(imports)
-                    }
+                info['from_imports'][module_name] = {
+                    'from': module_name,
+                    'import': ', '.join(imports)
+                }
 
             elif isinstance(node, ast.ClassDef):
                 class_name = node.name
@@ -2650,7 +2739,8 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
 
     return changes
 
-def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
+
+def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path, dest_dir: str | None = None) -> List[str]:
     """
     Sync changes from Python function definition file back to piDefGC piSeed file.
     Returns list of changes made.
@@ -2658,7 +2748,8 @@ def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
     changes = []
 
     # Use the comprehensive rebuilding approach for better reliability
-    rebuild_changes = rebuildDefSeedFromPython(pythonFile, piSeedFile)
+    rebuild_changes = rebuildDefSeedFromPython(
+        pythonFile, piSeedFile, dest_dir)
     if rebuild_changes:
         return rebuild_changes
 
@@ -4287,24 +4378,23 @@ def extractImportStatements(importNodes: List) -> Tuple[Dict[str, Dict[str, str]
         for node in importNodes:
             if isinstance(node, ast.ImportFrom):
                 # Handle "from module import item" statements
-                if node.module:
-                    module_name = node.module
+                module_name, imports = extract_ImportFrom(node)
 
-                    for alias in node.names:
-                        import_name = alias.name
-                        if alias.asname:
-                            import_name = f"{alias.name} as {alias.asname}"
+                # Clean module name for piSeed structure
+                clean_module = module_name.replace('.', '_').replace('-', '_')
+                escaped_module = module_name  # module_name.replace(".","//.")
 
-                        if module_name not in fromImports:
-                            fromImports[module_name] = {
-                                'from': module_name,
-                                'import': import_name
-                            }
-                        else:
-                            # Multiple imports from same module
-                            existing_import = fromImports[module_name]['import']
-                            if import_name not in existing_import:
-                                fromImports[module_name]['import'] = f"{existing_import}, {import_name}"
+                if module_name not in fromImports:
+                    fromImports[clean_module] = {
+                        'from': escaped_module,
+                        'import': ", ".join(imports)
+                    }
+                else:
+                    # Multiple imports from same module
+                    existing_import = fromImports[clean_module]['import']
+                    for aImport in imports:
+                        if aImport not in existing_import:
+                            fromImports[clean_module]['import'] = f"{existing_import}, {aImport}"
 
             elif isinstance(node, ast.Import):
                 # Handle "import module" statements
@@ -5120,7 +5210,8 @@ def updateDefSeedGlobalCode(seedContent: str, defName: str, globalCode: List[str
         printIt(f"Error updating def seed global code: {e}", lable.ERROR)
         return seedContent, False
 
-def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path) -> List[str]:
+
+def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path, dest_dir: str | None = None) -> List[str]:
     """
     Rebuild the entire piDefGC piSeed file from Python content.
     This is more reliable than trying to update individual sections.
@@ -5140,21 +5231,24 @@ def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path) -> List[str]:
         defName = pythonFile.stem
 
         # Determine file directory
-        try:
-            relativeDir = pythonFile.parent.relative_to(Path.cwd())
-            fileDirectory = str(relativeDir)
-        except ValueError:
-            fileDirectory = str(pythonFile.parent)
+        if dest_dir is not None:
+            fileDirectory = dest_dir
+        else:
+            try:
+                relativeDir = pythonFile.parent.relative_to(Path.cwd())
+                fileDirectory = str(relativeDir)
+            except ValueError:
+                fileDirectory = str(pythonFile.parent)
 
         # Parse Python file to extract all elements
         try:
             tree = ast.parse(pythonContent)
         except SyntaxError as e:
             printIt(f"WARN: Syntax error in {pythonFile.name}: {e}. Cannot create piSeed file.", lable.WARN)
-            return None
+            return []
         except Exception as e:
             printIt(f"WARN: Parse error in {pythonFile.name}: {e}. Cannot create piSeed file.", lable.WARN)
-            return None
+            return []
 
         # Extract elements
         regularImports = []
@@ -5174,22 +5268,15 @@ def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path) -> List[str]:
                     regularImports.append(import_name)
 
             elif isinstance(node, ast.ImportFrom):
-                if node.module:
-                    module_name = node.module
-                    imports = []
-                    for alias in node.names:
-                        import_name = alias.name
-                        if alias.asname:
-                            import_name = f"{alias.name} as {alias.asname}"
-                        imports.append(import_name)
+                module_name, imports  = extract_ImportFrom(node)
 
-                    # Clean module name for piSeed structure
-                    clean_module = module_name.replace('.', '_').replace('-', '_')
-                    fromImports[clean_module] = {
-                        'from': module_name,
-                        'import': ', '.join(imports)
-                    }
-
+                # Clean module name for piSeed structure
+                clean_module = module_name.replace('.', '_').replace('-', '_')
+                escaped_module = module_name # module_name.replace(".","//.")
+                fromImports[clean_module] = {
+                    'from': escaped_module,
+                    'import': ', '.join(imports)
+                }
             elif isinstance(node, ast.FunctionDef):
                 # Extract complete function definition
                 funcCode = extractMethodCode(pythonContent, node)
@@ -5467,12 +5554,14 @@ OPTIONS:
     --stats                Show detailed statistics and change information
     --filter <type>        Only sync specific file types (class|def|genclass)
     --exclude-pattern <p>  Exclude files matching glob pattern
+    --dest-dir <dir>       Specify destination directory for generated files
     --help                 Show this help message
 
 EXAMPLES:
     piGenCode syncCode                              # Sync all files
     piGenCode syncCode MyClass.py                   # Sync specific file
     piGenCode syncCode src/models/                  # Sync directory
+    piGenCode syncCode --dest-dir hold/<dirname>    # Set destination directory
     piGenCode syncCode --dry-run                    # Preview changes
     piGenCode syncCode --create-piSeeds             # Create piSeed files for specified files
     piGenCode syncCode --filter genclass            # Only sync piGenClass files
