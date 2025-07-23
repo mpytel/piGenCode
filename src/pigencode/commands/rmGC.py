@@ -66,7 +66,7 @@ def rmGC(argParse: ArgParse):
         if piSeedsDir.exists() and piSeedsDir.is_dir():
             try:
                 shutil.rmtree(piSeedsDir)
-                removed_dirs.append(f"piGerms ({piSeedsDir})")
+                removed_dirs.append(f"piSeeds ({piSeedsDir})")
                 printIt(
                     f"Removed directory: piSeeds ({piSeedsDir})", lable.INFO)
             except Exception as e:
@@ -85,7 +85,7 @@ def rmGC(argParse: ArgParse):
             printIt(f"Removed generated files:", lable.INFO)
             for file_info in removed_files:
                 printIt(f"  • {file_info}", lable.INFO)
-                
+
         if empty_dirs_removed:
             printIt(f"Removed empty directories:", lable.INFO)
             for dir_info in empty_dirs_removed:
@@ -224,7 +224,7 @@ def removeTrackedFilesInDirectory(directory: Path, trackingFile: Path, displayNa
                 printIt(f"Error removing file {file_path}: {e}", lable.ERROR)
         else:
             printIt(f"Tracked file not found: {file_path}", lable.WARN)
-    
+
     if removed_count > 0:
         printIt(f"Removed {removed_count} generated files from: {directory}", lable.INFO)
 
@@ -251,29 +251,29 @@ def check_and_remove_directory(directory: Path):
     """
     Check if a directory is empty (or contains only __pycache__) and remove it if so.
     Then recursively check parent directories.
-    
+
     Args:
         directory: Directory to check and potentially remove
     """
     global empty_dirs_removed
-    
+
     # Skip if directory doesn't exist or is not a directory
     if not directory.exists() or not directory.is_dir():
         return
-    
+
     # Skip certain directories that should never be removed
     if directory.name in ['.git', '.github', '.vscode', 'env', 'venv']:
         return
-    
+
     # Skip the current working directory and its parents
     cwd = Path.cwd()
     if directory == cwd or directory in cwd.parents:
         return
-    
+
     try:
         # First, check if directory is empty
         remaining_items = list(directory.iterdir())
-        
+
         if not remaining_items:
             # Directory is completely empty, remove it
             parent_dir = directory.parent
@@ -281,7 +281,7 @@ def check_and_remove_directory(directory: Path):
                 directory.rmdir()
                 printIt(f"Removed empty directory: {directory}", lable.INFO)
                 empty_dirs_removed.append(str(directory))
-                
+
                 # Recursively check parent
                 check_and_remove_directory(parent_dir)
             except Exception as e:
@@ -292,7 +292,7 @@ def check_and_remove_directory(directory: Path):
                 item for item in remaining_items
                 if not item.name.startswith('.') and item.name != '__pycache__'
             ]
-            
+
             if not significant_items:
                 # Only hidden files or __pycache__ remain
                 # Remove __pycache__ directories
@@ -303,7 +303,7 @@ def check_and_remove_directory(directory: Path):
                             printIt(f"Removed __pycache__ directory: {item}", lable.DEBUG)
                         except Exception as e:
                             printIt(f"Could not remove __pycache__ directory {item}: {e}", lable.DEBUG)
-                
+
                 # Check again if directory is now empty
                 remaining_items = list(directory.iterdir())
                 if not remaining_items:
@@ -312,7 +312,7 @@ def check_and_remove_directory(directory: Path):
                         directory.rmdir()
                         printIt(f"Removed empty directory: {directory}", lable.INFO)
                         empty_dirs_removed.append(str(directory))
-                        
+
                         # Recursively check parent
                         check_and_remove_directory(parent_dir)
                     except Exception as e:
