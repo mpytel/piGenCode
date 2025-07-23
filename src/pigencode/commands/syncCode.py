@@ -5,7 +5,6 @@ from pigencode.classes.argParse import ArgParse
 from pigencode.defs.logIt import printIt, lable
 from pigencode.defs.fileIO import getKeyItem, piGCDirs
 from pigencode.defs.getSeedPath import getSeedPath
-import difflib
 
 piSeedValuePattern = r'["\'](.*)["\'].*$'
 global options
@@ -700,6 +699,7 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
 
         # First, check for existing piSeed files of any type
         existingPiSeedFile, existingType = findExistingPiSeedFile(filePath)
+        print(existingPiSeedFile, existingType)
         if existingPiSeedFile:
             # Use existing piSeed file type
             file_type = existingType
@@ -715,7 +715,7 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
             # Try to find or create piSeed file based on optimal type
             if file_type == "piDefGC":
                 piSeedFile = findPiDefGCSeedFile(filePath, options.get('dest_dir'))
-                if not piSeedFile:
+                if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(f"DRY RUN: Would create new piDefGC piSeed file for: {className}", lable.INFO)
                         return  # Don't actually create in dry-run mode
@@ -725,7 +725,7 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                             className, filePath, None, options.get('dest_dir'))
             elif file_type == "piGenClass":
                 piSeedFile = findPiGenClassSeedFile(filePath)
-                if not piSeedFile:
+                if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(f"DRY RUN: Would create new piGenClass piSeed file for: {className}", lable.INFO)
                         return  # Don't actually create in dry-run mode
@@ -735,7 +735,7 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                             className, filePath, None, options.get('dest_dir'))
             else:  # piClassGC
                 piSeedFile = findPiClassGCSeedFile(filePath)
-                if not piSeedFile:
+                if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(f"DRY RUN: Would create new piClassGC piSeed file for: {className}", lable.INFO)
                         return  # Don't actually create in dry-run mode
@@ -1131,33 +1131,35 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                 if file_type == "piDefGC":
                     piSeedFile = findPiDefGCSeedFile(py_file, options.get('dest_dir'))
                     if not piSeedFile:
-                        piSeedFile = buildDefSeedFromPython(py_file, piSeedFile, options.get('dest_dir'))
+                        piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, py_file, None, options.get('dest_dir'))
                         if piSeedFile:
                             createdSeeds += 1
-                    else:
-                        changes = buildDefSeedFromPython(
-                            py_file, piSeedFile, options.get('dest_dir'))
+
+                    if piSeedFile:
+                        changes = syncPythonDefToSeed(py_file, piSeedFile, options.get('dest_dir'))
 
                 elif file_type == "piGenClass":
                     className = py_file.stem
                     piSeedFile = findPiGenClassSeedFile(py_file)
 
-                    if not piSeedFile:
+                    if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiGenClassSeedFile(className, py_file, None, options.get('dest_dir'))
                         if piSeedFile:
                             createdSeeds += 1
-                    else:
+
+                    if piSeedFile:
                         changes = syncPythonGenClassToSeed(py_file, piSeedFile)
 
                 else:  # piClassGC
                     className = py_file.stem
                     piSeedFile = findPiClassGCSeedFile(py_file)
 
-                    if not piSeedFile:
+                    if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiClassGCSeedFileEnhanced(className, py_file, None, options.get('dest_dir'))
                         if piSeedFile:
                             createdSeeds += 1
-                    else:
+
+                    if piSeedFile:
                         changes = syncPythonClassToSeed(py_file, piSeedFile, options)
 
                 # Validate results if requested
@@ -1167,7 +1169,7 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                 # Track results
                 if changes:
                     for change in changes:
-                        print('change', change)
+                        print(change)
                     totalChanges += len(changes)
                     if options.get('stats', False):
                         printIt(f"04 Synced {len(changes)} changes from {py_file.name}", lable.INFO)
@@ -1244,8 +1246,7 @@ def syncDirectory(directory: Path, options: dict):
                         processed += 1
                     else:
                         printIt(f"Creating new piDefGC piSeed file for: {defName}", lable.INFO)
-                        piSeedFile = buildDefSeedFromPython(
-                            defName, py_file, None, options.get('dest_dir'))
+                        piSeedFile = createNewPiDefGCSeedFileEnhanced(defName, py_file, None, options.get('dest_dir'))
                         if piSeedFile:
                             created_seeds += 1
                         else:
@@ -1550,12 +1551,10 @@ piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from e
                 seedContent += f"piValueA {defName}.piBody:piDefGC:constants \"{escaped_constant}\"\n"
 
         # Add function definitions if found
-        print('here00')
         if def_info.get('functions'):
             seedContent += f"piStructA00 {defName}.piBody:piDefGC:functionDefs\n"
             for func_name in def_info['functions']:
                 seedContent += f"piStructL01 {func_name} 'Function definition for {func_name}'\n"
-                print('here01',seedContent)
 
         # Write the new piSeed file
         with open(seedFilePath, 'w', encoding='utf-8') as f:
@@ -1731,11 +1730,6 @@ def analyzePythonDefFile(pythonFile: Path) -> Dict:
 
             elif isinstance(node, ast.FunctionDef):
                 info['functions'].append(node.name)
-
-                # Extract complete function definition
-                funcCode = extractMethodCode(content, node)
-                info['functionsCode'].append(node.name)
-                info['functions'][node.name].append(funcCode)
 
             elif isinstance(node, ast.Assign):
                 # Extract constants (module-level assignments)
@@ -2754,7 +2748,7 @@ def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path, dest_dir: str | None
     changes = []
 
     # Use the comprehensive rebuilding approach for better reliability
-    rebuild_changes = buildDefSeedFromPython(
+    rebuild_changes = rebuildDefSeedFromPython(
         pythonFile, piSeedFile, dest_dir)
     if rebuild_changes:
         return rebuild_changes
@@ -5216,44 +5210,12 @@ def updateDefSeedGlobalCode(seedContent: str, defName: str, globalCode: List[str
         printIt(f"Error updating def seed global code: {e}", lable.ERROR)
         return seedContent, False
 
-def print_string_diff(s1, s2, fromfile='Original String', tofile='Modified String'):
-    """
-    Prints the differences between two multi-line strings using difflib.
-    """
-    # Convert strings to lists of lines for difflib
-    list1 = s1.splitlines(keepends=True) # keepends=True keeps the newline characters
-    list2 = s2.splitlines(keepends=True)
 
-    print(f"--- Differences between '{fromfile}' and '{tofile}' ---")
-    # Use unified_diff for a common, human-readable format (like 'diff -u')
-    # The 'unified_diff' generator yields lines suitable for printing.
-    diff = difflib.unified_diff(
-        list1,
-        list2,
-        fromfile=fromfile,
-        tofile=tofile,
-        lineterm='' # Prevent difflib from adding extra newlines if keepends=True was used
-    )
-
-    for line in diff:
-        # Highlight lines with different prefixes for better readability
-        if line.startswith('+'):
-            print(f"\033[92m{line}\033[0m", end='') # Green for additions
-        elif line.startswith('-'):
-            print(f"\033[91m{line}\033[0m", end='') # Red for deletions
-        elif line.startswith('@'):
-            print(f"\033[94m{line}\033[0m", end='') # Blue for hunk headers
-        else:
-            print(line, end='') # Default for context lines
-
-    print("\n" + "=" * 60 + "\n")
-
-def buildDefSeedFromPython(pythonFile: Path, piSeedFile: Path | None = None, dest_dir: str | None = None) -> List[str]:
+def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path, dest_dir: str | None = None) -> List[str]:
     """
     Rebuild the entire piDefGC piSeed file from Python content.
     This is more reliable than trying to update individual sections.
     """
-    # print('buildDefSeedFromPython')
     changes = []
 
     try:
@@ -5261,22 +5223,12 @@ def buildDefSeedFromPython(pythonFile: Path, piSeedFile: Path | None = None, des
         with open(pythonFile, 'r', encoding='utf-8') as f:
             pythonContent = f.read()
 
-        defName = pythonFile.stem
-
         # Read the existing piSeed file to preserve basic info
-        if piSeedFile:
-            with open(piSeedFile, 'r', encoding='utf-8') as f:
-                seedContent = f.read()
-        else:
-            seedContent = ''
-            seedPath = getSeedPath()
-            nextNum = getNextPiSeedNumber()
-
-            # Create new piSeed file name
-            seedFileName = f"piSeed{nextNum}_piDefGC_{defName}.pi"
-            piSeedFile = seedPath.joinpath(seedFileName)
+        with open(piSeedFile, 'r', encoding='utf-8') as f:
+            seedContent = f.read()
 
         # Extract basic info from existing piSeed
+        defName = pythonFile.stem
 
         # Determine file directory
         if dest_dir is not None:
@@ -5412,30 +5364,24 @@ piValue {defName}.piBody:piDefGC:fileName {defName}
                 newSeedContent += f"piValueA {defName}.piBody:piDefGC:globalCode \"{escaped_line}\"\n"
 
         # Compare with existing content
-        if seedContent:
-            if newSeedContent.strip() != seedContent.strip():
-                #print('seedContent.strip()',seedContent.strip())
-                #print_string_diff(seedContent.strip(), newSeedContent.strip())
-                # Write the new content
-                with open(piSeedFile, 'w', encoding='utf-8') as f:
-                    f.write(newSeedContent)
-
-                # Determine what changed
-                if regularImports:
-                    changes.append("imports")
-                if fromImports:
-                    changes.append("fromImports")
-                if constants:
-                    changes.append("constants")
-                if functionDefs:
-                    changes.append("functionDefs")
-                if globalCode:
-                    changes.append("globalCode")
-                if headers:
-                    changes.append("headers")
-        else:
+        if newSeedContent.strip() != seedContent.strip():
+            # Write the new content
             with open(piSeedFile, 'w', encoding='utf-8') as f:
                 f.write(newSeedContent)
+
+            # Determine what changed
+            if regularImports:
+                changes.append("imports")
+            if fromImports:
+                changes.append("fromImports")
+            if constants:
+                changes.append("constants")
+            if functionDefs:
+                changes.append("functionDefs")
+            if globalCode:
+                changes.append("globalCode")
+            if headers:
+                changes.append("headers")
 
         return changes
 
