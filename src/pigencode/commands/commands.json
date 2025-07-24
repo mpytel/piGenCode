@@ -40,5 +40,10 @@
     "setDir_description": "set piGenCode directories using dirKey dirName pair",
     "dirKey": "Use list to show current set or dirKey = piClassGCDir, piDefGCDir, piSeedsDir, or piGermDir.",
     "dirName": "The directory path to set as value for dirKey"
+  },
+  "fileDiff": {
+    "fileDiff_description": "Show the differnces between two files.",
+    "origFile": "Original file name",
+    "newFile": "New file name"
   }
 }
