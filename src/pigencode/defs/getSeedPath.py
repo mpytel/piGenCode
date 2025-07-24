@@ -20,27 +20,6 @@ def getSeedPath() -> Path:
         writeBasePiSeeds(seedPath)
     return seedPath
 
-    # # Check current directory
-    # cwd = Path.cwd()
-    # if cwd.name == seedDirName:
-    #     seedPath = cwd
-    # else:
-    #     cwdDirs = [str(p.name) for p in cwd.iterdir() if p.is_dir()]
-    #     if seedDirName in cwdDirs:
-    #         seedPath = cwd.joinpath(seedDirName)
-
-    # if seedPath and seedPath.is_dir():
-    #     print(f'debug {str(seedPath)}')
-    #     print(f'debug {seedPath.relative_to(Path.cwd())}')
-    #     setKeyItem("piSeedsDir", str(seedPath.relative_to(Path.cwd())))
-    #     return seedPath
-    # else:
-    #     seedPath.mkdir(parents=True, exist_ok=True)
-    #     writeBasePiSeeds(seedPath)
-
-    return seedPath
-
-
 def writeBasePiSeeds(piSeedPath: Path):
 
     piSeeds = {
