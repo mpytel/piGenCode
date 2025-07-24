@@ -1,0 +1,8 @@
+Test piGenCode by executing the following four commands and comparing the python files generated in holdCode01/cmdpackage with the original truth files in testCode/cmdpackage.
+
+piGenCode rmGC
+piGenCode syncCode testCode/cmdpackage --dest-dir holdCode/cmdpackage
+piGenCode germSeed
+piGenCode genCode
+
+Use these steps to resolve all errors currently encountered and the issues found when generating python files in holdCode01/cmdpackage.
