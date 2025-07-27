@@ -710,7 +710,8 @@ class PiGenCode():
         self.__updatePiClassTrackingFile(fileName)
 
         # Use the base filename for the saved files dictionary
-        self.savedCodeFiles[baseFileName] = fileName
+        self.savedCodeFiles[fileName] = fileName
+
     def __genPiClass(self, piJsonFileName, verbose = False) -> None:
         self.pi_piClassGC = readJson(piJsonFileName)
         self.PiFileName = piJsonFileName

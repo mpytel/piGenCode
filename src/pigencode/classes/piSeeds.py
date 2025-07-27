@@ -1,7 +1,7 @@
 import shlex
 from traceback import format_exception
 from pigencode.defs.logIt import logIt, printIt, lable
-from re import Pattern, compile as reCompile
+from re import Pattern, compile as reCompile, match, Match
 from typing import Any
 
 class PiSeed():
@@ -140,8 +140,12 @@ PiFunctionsTokenREs = {
 #  piPiValuePiTitle(self.seeds.currPi.piTitle)
 # piSeedTitelSplit
 def piSeedTitelSplit(piValueTitle: str) -> tuple:
+    '''
+        splits the piValueTitle into the piPiTitleKey, piElemKeys
+        main.piBody:piDefGC:functionDefs:ensure_and_cd_to_directory
+        piPiTitleKey, piElemKeys: ('main', 'piBody:piDefGC:functionDefs:ensure_and_cd_to_directory')
+    '''
     try:
-        #print(f'piSeedTitelSplit: {piTitle}')
         piPiTitleKey, piElemKeys = None, None
         rtnMatch = PiSeedTypeREs[PiSeedTypes[1]].match(piValueTitle)
         if rtnMatch != None:
@@ -177,8 +181,21 @@ def readSeedPis(piFileName) -> list[tuple]:
             if not __chkReg.match(currLine) and len(currLine) > 1: # > 1 because blank lines contain \n char.
                 try:
                     # First try normal shlex parsing
-                    tokens = shlex.split(currLine)
-                    if len(tokens) == 3:
+                    # print('+ ', currLine)
+                    # tokens = shlex.split(currLine)
+                    # #splitPattern = r"^(\S+)\s+(\S+)\s+['\"]*(.+)['\"]*$"
+                    # print(currLine)
+                    # #splitPattern = r"^(\S+)\s+(\S+)\s+['\"]*(.*?)['\"]*$"
+                    splitPattern = r'^(\S+)\s+(\S+)\s+(?:["\'])(.*)(?:["\'])$'
+                    matchTokens: Match[str] | None = match(splitPattern, currLine)
+                    if matchTokens:
+                        # print('match')
+                        # print('matchTokens:', len(matchTokens.groups()))
+                        tokens = list(matchTokens.groups())
+                    else:
+                        # print('shlex')
+                        tokens = shlex.split(currLine)
+                    if len(tokens) == 3: #print('piSD0', tokens[2])
                         piType, piTitle, piSD = tokens
                     elif len(tokens) == 2:
                         piType, piTitle = tokens
@@ -191,8 +208,9 @@ def readSeedPis(piFileName) -> list[tuple]:
                             piSD = ' '.join(tokens[2:])
                         else:
                             raise Exception("2 or 3 piTokens only")
+                    # print(tokens)
+                    # print('piSD1', piSD)
                     piBaseList.append((inLineNumber,piType, piTitle, piSD))
-
                 except ValueError as ve:
                     # Handle shlex parsing errors (like unclosed quotes)
                     if "No closing quotation" in str(ve):

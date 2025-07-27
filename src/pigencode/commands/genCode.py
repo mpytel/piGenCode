@@ -32,8 +32,9 @@ def genCode(argParse: ArgParse):
         # Multiple arguments - new shortcut syntax
         savedCodeFiles = processShortcutSyntax(theArgs)
 
-    for savedCodeFile in savedCodeFiles:
-        printIt(f'{savedCodeFile} generated', lable.INFO)
+    for savedCodeFile in savedCodeFiles.values():
+        fileName = Path(savedCodeFile).relative_to(Path.cwd())
+        printIt(f'generated: {fileName} ', lable.INFO)
 
 def processNumberShortcut(number: int) -> dict:
     """

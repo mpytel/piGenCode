@@ -175,6 +175,10 @@ class PiGenDefCode():
             for functionName, functionLines in self.functionDefs.items():
                 if isinstance(functionLines, list):
                     for line in functionLines:
+                        if '\n' in line:
+                            print('- ', line)
+                            #line = str(line).replace('\\n', '\\\\n')
+                            #print('+ ', line)
                         # Fix docstring quotes: convert '''' to '''
                         if line.strip() == "''''":
                             rtnLines += "    '''\n"
@@ -257,7 +261,7 @@ class PiGenDefCode():
         # Update tracking file
         self.__updatePiDefTrackingFile(fileName)
 
-        self.savedCodeFiles[self.fileName] = fileName
+        self.savedCodeFiles[fileName] = fileName
 
     def __genPiDefFile(self, piJsonFileName, verbose=False) -> None:
         """Generate a Python function definition file from piDefGC JSON"""

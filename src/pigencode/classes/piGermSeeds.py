@@ -273,7 +273,8 @@ class PiGermSeeds():
 
                                     # Handle the final key
                                     final_key = piExDefDictKeys[-1]
-
+                                    # print('piExDefDictKeys', piExDefDictKeys)
+                                    # print('final_key', final_key)
                                     # Special handling for classDefCode structure - DISABLED
                                     # The nested classDefCode issue is caused by incorrect special handling
                                     # Let the normal structure handling take care of classDefCode
@@ -315,6 +316,7 @@ class PiGermSeeds():
                                                     if self.seeds.prevPi.piSD != "@property":
                                                         appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[final_key]+ "'"*3
                                                         aDict[final_key].append(appendStr)
+                                            #print('baseValue', baseValue)
                                             aDict[final_key].append(baseValue)
                                         else:
                                             # Handle case where target is a dictionary
@@ -330,6 +332,8 @@ class PiGermSeeds():
                                             else:
                                                 # Some other type, try to convert to list
                                                 aDict[final_key] = [baseValue]
+                                    #print('baseValue', baseValue)
+
                             else: raise Exception
                         else: raise Exception
                     else: raise Exception
@@ -419,7 +423,13 @@ class PiGermSeeds():
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
             printIt(tb_str,lable.ERROR)
             exit()
-    def chk4ExDef(self, piValue: str):
+    def chk4ExDef(self, piValue: str) -> str | dict:
+        '''
+            Check if there is a external definition of the piValue.
+            (PiDefault or PiStruc)
+
+            Returns:
+        '''
         rtnValue = piValue
         piExDefPITitle, piExDefValuePiTitle = piSeedTitelSplit(piValue)
         if piExDefPITitle:
@@ -434,19 +444,28 @@ class PiGermSeeds():
                         for piExDefDictKey in piExDefDictKeys:
                             aDict = aDict[piExDefDictKey]
                         rtnValue = aDict
+            else:
+                printIt(
+                    f'piSeedKey titles can not be numaric: {piExDefPITitle}\npiValue',lable.ERROR)
         return rtnValue
     def getTargetPi(self, piTitle, source = "") -> dict:
-        # piDictSourceTypes = ["piStructs","PiDefault", "PiStruc"]
+        '''
+            Check it piTitle has a PiDefault or PiStruc file.
+            The cashed self.piStructs dict is checked first.
+
+            Returns:
+                Dictionary of targetStruc pi.
+        '''
         debug00 = False
         debugTxt = f"{piTitle} from piStructs"
         targetStruc = {}
         if not source:
             try: targetStruc = self.piStructs[piTitle]
             except: pass
-            if not targetStruc:
+            if not targetStruc:  # check if PiDefault
                 targetStruc = readPiDefault(piTitle, verbose=False)
                 debugTxt = f"{piTitle} from readPiDefault"
-            if not targetStruc:
+            if not targetStruc:  # check if PiStruc
                 targetStruc = readPiStruc(piTitle, verbose=False)
                 debugTxt = f"{piTitle} from readPiStruc"
         else:
