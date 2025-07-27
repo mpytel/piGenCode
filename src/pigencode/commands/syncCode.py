@@ -696,7 +696,7 @@ def findExistingPiSeedFile(filePath: Path, options: dict) -> tuple:
     """
 
     dest_dir = options.get('dest_dir')
-    if dest_dir is not None:
+    if dest_dir is None:
         dest_dir = getDestDirForFile(filePath, options)
 
     # Check piClassGC first (most common for single classes)
@@ -742,11 +742,10 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
             options['create_piSeeds'] = True
 
         dest_dir = options.get('dest_dir')
-        if dest_dir is not None:
+        if dest_dir is None:
             dest_dir = getDestDirForFile(filePath, options)
         # First, check for existing piSeed files of any type
         existingPiSeedFile, existingType = findExistingPiSeedFile(filePath, options)
-        print(existingPiSeedFile, existingType)
         if existingPiSeedFile:
             # Use existing piSeed file type
             file_type = existingType
@@ -800,6 +799,9 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                             className, filePath, None, dest_dir)
 
         # Apply exclude pattern filter
+        # Tuple[filePath, str, str]
+        actual_type = determineOptimalPiSeedType(filePath)
+        files_to_process: list[Tuple[Path, str, str]] = [(filePath,actual_type,actual_type)]
         if options.get('exclude_pattern'):
             import fnmatch
             pattern = options['exclude_pattern']
@@ -932,7 +934,7 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                 for change in changes:
                     printIt(f"  • {change}", lable.DEBUG)
         else:
-            printIt(f"No changes needed for {filePath.name}", lable.INFO)
+            printIt(f"No changes needed for {filePath}", lable.INFO)
 
     except Exception as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
@@ -1805,6 +1807,7 @@ piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from e
         # Add constants if found
         if def_info.get('constants'):
             for constant in def_info['constants']:
+                # print('constant',constant)
                 escaped_constant = constant.replace('"', '\\"')
                 seedContent += f"piValueA {defName}.piBody:piDefGC:constants \"{escaped_constant}\"\n"
 
@@ -2063,13 +2066,23 @@ def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[
                 with open(seedFile, 'r', encoding='utf-8') as f:
                     content = f.read()
                     # Look for piDefGC line with this def name
-                    regex_pattern = rf"(piValue {defName}\.piBody:piDefGC:fileDirectory\s+'([^']+)')"
+                    fileDirectoryPattern = rf"(piValue {defName}\.piBody:piDefGC:fileDirectory\s+(.+))"
                     # Search for the pattern in the line
-                    match = re.search(regex_pattern, content, re.MULTILINE)
+                    match = re.search(fileDirectoryPattern, content, re.MULTILINE)
                     if match:
-                        fileDirectory = match.group(2)
-                        if (fileDirectory) == str(py_file_dir):
-                            return seedFile
+                        #print('content:', content)
+                        rawFileDirectory = match.group(2)
+                        match2 = re.search(piSeedValuePattern, rawFileDirectory)
+                        if match2:
+                            fileDirectory = match2.group(1)
+                            if fileDirectory == py_file_dir:
+                                return seedFile
+                            else:
+                                pass
+                                print('py_file_dir:', py_file_dir)
+                                print('fileDirectory:', fileDirectory)
+                                print('seedFile:', seedFile)
+                                print()
             except Exception:
                 continue
         return None
@@ -2185,8 +2198,6 @@ piValueA {className}.piBody:piGenClass:headers '# {className} classes - synced f
             for class_name, class_desc in class_info['classes'].items():
                 seedContent += f"piStructL01 {class_name} '{class_desc}'\n"
 
-        # Check if file has changed
-        seedFilePath
         # Write the new piSeed file
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
@@ -2375,7 +2386,8 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
                         if isinstance(base, ast.Name):
                             base_names.append(base.id)
                         elif isinstance(base, ast.Attribute):
-                            base_names.append(f"{base.value.id}.{base.attr}")
+                            if isinstance(base.value, ast.Name):
+                                base_names.append(f"{base.value.id}.{base.attr}")
                     inheritance_desc = f"inherits from {', '.join(base_names)}"
                 else:
                     inheritance_desc = "base class"
@@ -3136,13 +3148,15 @@ def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path, dest_dir: str | None
                     constantCode = extractAssignmentCode(pythonContent, node)
                     if constantCode:
                         constants.append(constantCode.replace('"', '\\"'))
-                elif isinstance(node, ast.If) and hasattr(node.test, 'left') and hasattr(node.test.left, 'id'):
+                elif isinstance(node, ast.If) and hasattr(node.test, 'left'):
                     # Handle if __name__ == '__main__': blocks
-                    if (node.test.left.id == '__name__' and
-                        hasattr(node.test.comparators[0], 's') and
-                            node.test.comparators[0].s == '__main__'):
-                        globalCode.extend(
-                            extractIfMainCode(pythonContent, node))
+                    if isinstance(node.test, ast.Compare):
+                        if isinstance(node.test.left, ast.Name):
+                            if (node.test.left.id == '__name__' and
+                                hasattr(node.test.comparators[0], 's') and
+                                    node.test.comparators[0].__getattribute__('s') == '__main__'):
+                                globalCode.extend(
+                                    extractIfMainCode(pythonContent, node))
 
             # Extract file comments and headers from the beginning of the file
             lines = pythonContent.split('\n')
@@ -4132,7 +4146,7 @@ def generateExpectedInitComponents(seedContent: str, className: str) -> Dict[str
         return {}
 
 
-def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, className: str) -> Dict[str, any]:
+def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, className: str) -> Dict[str, list[str]]:
     """
     Parse the actual __init__ method into components.
     Returns dict with: signature, preSuperInitCode, assignments, postSuperInitCode, initAppendCode
@@ -4151,10 +4165,10 @@ def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, classNa
                 break
 
         # Extract method lines
-        methodLines = lines[startLine:endLine]
+        methodLines: list[str] = lines[startLine:endLine]
 
         # Parse signature (method definition lines)
-        signature = []
+        signature: list[str] = []
         bodyStartIndex = 0
         for i, line in enumerate(methodLines):
             signature.append(line)
@@ -4163,7 +4177,7 @@ def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, classNa
                 break
 
         # Parse body lines (remove indentation)
-        bodyLines = []
+        bodyLines: list[str] = []
         for i in range(bodyStartIndex, len(methodLines)):
             line = methodLines[i]
             if line.strip():
@@ -4183,10 +4197,10 @@ def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, classNa
         expectedAssignments = extractExpectedAssignments(signature)
 
         # Analyze body components
-        preSuperInitCode = []
-        standard_assignments = []
-        postSuperInitCode = []
-        initAppendCode = []
+        preSuperInitCode: list[str] = []
+        standard_assignments: list[str] = []
+        postSuperInitCode: list[str] = []
+        initAppendCode: list[str] = []
 
         # Find super() call if it exists
         superCallIndex = -1
@@ -4236,7 +4250,7 @@ def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, classNa
                         line for line in bodyLines if line.strip()]
             else:
                 # No standard assignments, everything is custom
-                initAppendCode = [line for line in bodyLines if line.strip()]
+                initAppendCode: list[str] = [line for line in bodyLines if line.strip()]
 
         return {
             'signature': signature,
@@ -4272,12 +4286,12 @@ def extractExpectedAssignments(signature: List[str]) -> List[str]:
     return assignments
 
 
-def extractStandardAssignments(lines: List[str], expectedAssignments: List[str]) -> tuple:
+def extractStandardAssignments(lines: List[str], expectedAssignments: List[str]) -> tuple[list[str], list[str]]:
     """
     Extract standard assignments from lines and return (assignments, remaining_lines)
     """
-    found_assignments = []
-    remaining_lines = []
+    found_assignments: list[str]  = []
+    remaining_lines: list[str] = []
     expected_set = set(assign.strip() for assign in expectedAssignments)
 
     for line in lines:
@@ -4290,7 +4304,7 @@ def extractStandardAssignments(lines: List[str], expectedAssignments: List[str])
     return found_assignments, remaining_lines
 
 
-def compareInitComponents(expected: Dict[str, any], actual: Dict[str, any], seedContent: str, className: str) -> Dict[str, List[str]]:
+def compareInitComponents(expected: Dict[str, list[str]], actual: Dict[str, list[str]], seedContent: str, className: str) -> Dict[str, List[str]]:
     """
     Compare expected vs actual __init__ components and return only genuine differences.
     """
@@ -4629,27 +4643,32 @@ def updateSeedInitArguments(seedContent: str, className: str, initArgs: Dict[str
                     if argTypeMatch:
                         argName = argTypeMatch.group(1)
                         # Extract the type part after the pattern
-                        typePart = line[re.match(
-                            argTypePattern, line).end():].strip()
-                        if argName not in existingArgs:
-                            existingArgs[argName] = {
-                                'type': 'str', 'value': '""'}
-                        existingArgs[argName]['type'] = typePart
-                        i += 1
-                        continue
-
+                        typeAfterPattern = re.match(argTypePattern, line)
+                        if typeAfterPattern:
+                            typePart = line[typeAfterPattern.end():].strip()
+                            if argName not in existingArgs:
+                                existingArgs[argName] = {
+                                    'type': 'str', 'value': '""'}
+                            existingArgs[argName]['type'] = typePart
+                            i += 1
+                            continue
+                        else:
+                            printIt('No type part after pattern',lable.WARN)
                     # Extract argument value definitions
                     argValueMatch = re.match(argValuePattern, line)
                     if argValueMatch:
                         argName = argValueMatch.group(1)
                         # Extract the value part after the pattern
-                        valuePart = line[re.match(
-                            argValuePattern, line).end():].strip()
-                        if argName not in existingArgs:
-                            existingArgs[argName] = {
-                                'type': 'str', 'value': '""'}
-                        existingArgs[argName]['value'] = valuePart
-                        i += 1
+                        valueAfterPattern = re.match(argTypePattern, line)
+                        if valueAfterPattern:
+                            valuePart = line[valueAfterPattern.end():].strip()
+                            if argName not in existingArgs:
+                                existingArgs[argName] = {
+                                    'type': 'str', 'value': '""'}
+                            existingArgs[argName]['value'] = valuePart
+                            i += 1
+                        else:
+                            printIt('No value part after pattern', lable.WARN)
                         continue
 
                     # If we reach here, we're done with initArguments section
@@ -5785,12 +5804,12 @@ def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path, dest_dir: str |
 
             elif isinstance(node, ast.If):
                 # Handle if __name__ == '__main__': blocks
-                if (hasattr(node.test, 'left') and hasattr(node.test.left, 'id') and
-                    node.test.left.id == '__name__' and
-                    hasattr(node.test.comparators[0], 's') and
-                        node.test.comparators[0].s == '__main__'):
-                    globalCode.extend(extractIfMainCode(pythonContent, node))
-
+                if isinstance(node.test, ast.Compare):
+                    if isinstance(node.test.left, ast.Name):
+                        if (node.test.left.id == '__name__' and
+                            hasattr(node.test.comparators[0], 's') and
+                                node.test.comparators[0].__getattribute__('s') == '__main__'):
+                            globalCode.extend(extractIfMainCode(pythonContent, node))
         # Extract file headers from the beginning of the file
         lines = pythonContent.split('\n')
         for line in lines:
