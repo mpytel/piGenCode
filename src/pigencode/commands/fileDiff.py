@@ -55,9 +55,9 @@ def compare_python_files(file1_path, file2_path):
         lines1,
         lines2,
         fromfile=file1_path,
-        tofile=file2_path,
-        lineterm=''  # Ensures difflib doesn't add an extra newline if lines already have them
+        tofile=file2_path
     )
+        #lineterm=''  # Ensures difflib doesn't add an extra newline if lines already have them
 
     # 4. Print the differences with optional color coding
     print(f"\n--- Comparing '{file1_path}' and '{file2_path}' ---")

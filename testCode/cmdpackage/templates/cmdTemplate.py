@@ -338,7 +338,6 @@ def updateCMDJson(cmdObj: Commands, theArgs:  dict) -> None:
         argIndex += 1
     cmdObj.commands = commands
 """)
-
 modCmdStr = dedent("""import os, copy
 from ..defs.logIt import printIt, lable
 from ..classes.argParse import ArgParse
@@ -985,5 +984,4 @@ def germDbug(loc: str, currPi, nextPi):
         print("piTitle:", currPi.piTitle, nextPi.piTitle)
         print("piSD:", currPi.piSD, nextPi.piSD)
     print("--------------------")
-
 """))

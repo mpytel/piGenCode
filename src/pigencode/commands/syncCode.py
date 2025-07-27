@@ -1811,6 +1811,15 @@ piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from e
                 escaped_constant = constant.replace('"', '\\"')
                 seedContent += f"piValueA {defName}.piBody:piDefGC:constants \"{escaped_constant}\"\n"
 
+        # Add multi-line constants if found
+        if def_info.get('mlConstants'):
+            for var_name, constant_lines in def_info['mlConstants'].items():
+                seedContent += f"piStructA00 {defName}.piBody:piDefGC:mlConstants\n"
+                seedContent += f"piStructL01 {var_name} 'Multi-line constant {var_name}'\n"
+                for line in constant_lines:
+                    escaped_line = line.replace('"', '\\"')
+                    seedContent += f"piValueA {defName}.piBody:piDefGC:mlConstants:{var_name} \"{escaped_line}\"\n"
+
         # Add function definitions if found
         if def_info.get('functions'):
             seedContent += f"piStructA00 {defName}.piBody:piDefGC:functionDefs\n"
@@ -1976,7 +1985,8 @@ def analyzePythonDefFile(pythonFile: Path) -> Dict:
             'imports': [],
             'from_imports': {},
             'functions': [],
-            'constants': []
+            'constants': [],
+            'mlConstants': {}
         }
 
         # Extract imports, functions, and constants
@@ -2001,11 +2011,20 @@ def analyzePythonDefFile(pythonFile: Path) -> Dict:
 
             elif isinstance(node, ast.Assign):
                 # Extract constants (module-level assignments)
-                lines = content.split('\n')
-                line_num = node.lineno - 1
-                if line_num < len(lines):
-                    constant_line = lines[line_num].strip()
-                    info['constants'].append(constant_line)
+                constantCode = extractAssignmentCode(content, node)
+                if constantCode:
+                    # Check if this is a multi-line constant
+                    # Multi-line if: contains newlines OR contains triple quotes (multi-line strings)
+                    if '\n' in constantCode or '"""' in constantCode or "'''" in constantCode:
+                        # Multi-line constant - extract variable name and store in mlConstants
+                        lines = constantCode.split('\n')
+                        first_line = lines[0].strip()
+                        if '=' in first_line:
+                            var_name = first_line.split('=')[0].strip()
+                            info['mlConstants'][var_name] = constantCode.split('\n')
+                    else:
+                        # Single-line constant
+                        info['constants'].append(constantCode)
 
         return info
 
@@ -2357,6 +2376,7 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
             'from_imports': {},
             'classes': {},
             'constants': [],
+            'mlConstants': {},
             'functions': []
         }
 
@@ -2399,11 +2419,20 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
 
             elif isinstance(node, ast.Assign):
                 # Extract constants (module-level assignments)
-                lines = content.split('\n')
-                line_num = node.lineno - 1
-                if line_num < len(lines):
-                    constant_line = lines[line_num].strip()
-                    info['constants'].append(constant_line)
+                constantCode = extractAssignmentCode(content, node)
+                if constantCode:
+                    # Check if this is a multi-line constant
+                    # Multi-line if: contains newlines OR contains triple quotes (multi-line strings)
+                    if '\n' in constantCode or '"""' in constantCode or "'''" in constantCode:
+                        # Multi-line constant - extract variable name and store in mlConstants
+                        lines = constantCode.split('\n')
+                        first_line = lines[0].strip()
+                        if '=' in first_line:
+                            var_name = first_line.split('=')[0].strip()
+                            info['mlConstants'][var_name] = constantCode.split('\n')
+                    else:
+                        # Single-line constant
+                        info['constants'].append(constantCode)
 
         return info
 
@@ -5068,13 +5097,65 @@ def updateSeedImports(seedContent: str, className: str, regularImports: List[str
 
 
 def extractAssignmentCode(pythonContent: str, assignNode: ast.Assign) -> Optional[str]:
-    """Extract assignment code (constants) from AST node"""
+    """Extract assignment code (constants) from AST node, handling multi-line strings and parentheses"""
     try:
         lines = pythonContent.split('\n')
-        line_num = assignNode.lineno - 1
-        if line_num < len(lines):
-            return lines[line_num].strip()
-        return None
+        start_line = assignNode.lineno - 1
+        
+        if start_line >= len(lines):
+            return None
+        
+        # Use AST end_lineno information if available (Python 3.8+)
+        if hasattr(assignNode, 'end_lineno') and assignNode.end_lineno is not None:
+            end_line = assignNode.end_lineno - 1
+            
+            if start_line == end_line:
+                # Single-line assignment
+                return lines[start_line].strip()
+            else:
+                # Multi-line assignment
+                result_lines = []
+                for i in range(start_line, end_line + 1):
+                    if i < len(lines):
+                        result_lines.append(lines[i].rstrip())
+                return '\n'.join(result_lines)
+        
+        # Fallback for older Python versions or when end_lineno is not available
+        first_line = lines[start_line].strip()
+        
+        # Check if this is a multi-line string assignment (be more precise about triple quotes)
+        has_triple_double = '"""' in first_line
+        has_triple_single = "'''" in first_line
+        
+        if has_triple_double or has_triple_single:
+            # This is a multi-line string, need to find the end
+            quote_type = '"""' if has_triple_double else "'''"
+            
+            # Count quotes in first line to see if it's complete
+            quote_count = first_line.count(quote_type)
+            
+            if quote_count >= 2:
+                # Complete multi-line string on one line (e.g., var = """text""")
+                return first_line
+            elif quote_count == 1:
+                # Multi-line string spans multiple lines
+                result_lines = [first_line]
+                
+                # Find the closing quote
+                for i in range(start_line + 1, len(lines)):
+                    line = lines[i]
+                    result_lines.append(line.rstrip())  # Preserve indentation but remove trailing whitespace
+                    
+                    if quote_type in line:
+                        # Found closing quote, we're done
+                        break
+                
+                return '\n'.join(result_lines)
+        
+        # For simple cases, just return the first line
+        # (This avoids the complex delimiter counting that was causing issues)
+        return first_line
+        
     except Exception as e:
         printIt(f"Error extracting assignment code: {e}", lable.ERROR)
         return None
@@ -5768,6 +5849,7 @@ def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path, dest_dir: str |
         regularImports = []
         fromImports = {}
         constants = []
+        mlConstants = {}
         functionDefs = {}
         globalCode = []
         headers = []
@@ -5800,7 +5882,18 @@ def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path, dest_dir: str |
                 # Extract constants (module-level assignments)
                 constantCode = extractAssignmentCode(pythonContent, node)
                 if constantCode:
-                    constants.append(constantCode)
+                    # Check if this is a multi-line constant
+                    # Multi-line if: contains newlines OR contains triple quotes (multi-line strings)
+                    if '\n' in constantCode or '"""' in constantCode or "'''" in constantCode:
+                        # Multi-line constant - extract variable name and store in mlConstants
+                        lines = constantCode.split('\n')
+                        first_line = lines[0].strip()
+                        if '=' in first_line:
+                            var_name = first_line.split('=')[0].strip()
+                            mlConstants[var_name] = constantCode.split('\n')
+                    else:
+                        # Single-line constant
+                        constants.append(constantCode)
 
             elif isinstance(node, ast.If):
                 # Handle if __name__ == '__main__': blocks
@@ -5870,6 +5963,18 @@ piValue {defName}.piBody:piDefGC:fileName {defName}
                 escaped_constant = constant.replace('"', '\\"')
                 newSeedContent += f"piValueA {defName}.piBody:piDefGC:constants \"{escaped_constant}\"\n"
 
+        # Add multi-line constants
+        if mlConstants:
+            newSeedContent += f"piStructA00 {defName}.piBody:piDefGC:mlConstants\n"
+            # First add all the structure definitions
+            for var_name in mlConstants.keys():
+                newSeedContent += f"piStructL01 {var_name} 'Multi-line constant {var_name}'\n"
+            # Then add the actual constant lines
+            for var_name, constant_lines in mlConstants.items():
+                for line in constant_lines:
+                    escaped_line = line.replace('"', '\\"')
+                    newSeedContent += f"piValueA {defName}.piBody:piDefGC:mlConstants:{var_name} \"{escaped_line}\"\n"
+
         # Add function definitions
         if functionDefs:
             newSeedContent += f"piStructA00 {defName}.piBody:piDefGC:functionDefs\n"
@@ -5901,6 +6006,8 @@ piValue {defName}.piBody:piDefGC:fileName {defName}
                 changes.append("fromImports")
             if constants:
                 changes.append("constants")
+            if mlConstants:
+                changes.append("mlConstants")
             if functionDefs:
                 changes.append("functionDefs")
             if globalCode:

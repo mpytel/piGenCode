@@ -207,7 +207,9 @@ def readSeedPis(piFileName) -> list[tuple]:
                             piTitle = tokens[1]
                             piSD = ' '.join(tokens[2:])
                         else:
+                            print(tokens)
                             raise Exception("2 or 3 piTokens only")
+                            exit()
                     # print(tokens)
                     # print('piSD1', piSD)
                     piBaseList.append((inLineNumber,piType, piTitle, piSD))

@@ -51,6 +51,9 @@ class PiGenDefCode():
         try: self.constants = self.piDefGC["constants"]
         except: self.constants = []
 
+        try: self.mlConstants = self.piDefGC["mlConstants"]
+        except: self.mlConstants = {}
+
         try: self.globalCode = self.piDefGC["globalCode"]
         except: self.globalCode = []
 
@@ -160,7 +163,22 @@ class PiGenDefCode():
         # Constants from constants list
         if len(self.constants) > 0:
             for constantLine in self.constants:
-                rtnLines += f'{constantLine}\n'
+                # Unescape quotes that were escaped during syncCode process
+                unescaped_line = constantLine.replace('\\"', '"')
+                rtnLines += f'{unescaped_line}\n'
+
+        # Multi-line constants from mlConstants dictionary
+        if len(self.mlConstants) > 0:
+            for constantName, constantLines in self.mlConstants.items():
+                if isinstance(constantLines, list):
+                    for line in constantLines:
+                        # Unescape quotes that were escaped during syncCode process
+                        unescaped_line = line.replace('\\"', '"')
+                        rtnLines += f'{unescaped_line}\n'
+                else:
+                    # Handle case where it's stored as a single string
+                    unescaped_line = constantLines.replace('\\"', '"')
+                    rtnLines += f'{unescaped_line}\n'
 
         if rtnLines:
             rtnLines += '\n'
@@ -183,7 +201,9 @@ class PiGenDefCode():
                         if line.strip() == "''''":
                             rtnLines += "    '''\n"
                         else:
-                            rtnLines += f'{line}\n'
+                            # Unescape quotes that were escaped during syncCode process
+                            unescaped_line = line.replace('\\"', '"')
+                            rtnLines += f'{unescaped_line}\n'
                     rtnLines += '\n'  # Add blank line after each function
                 else:
                     printIt(f'Warning: Function {functionName} is not a list of lines', lable.WARN)
@@ -196,7 +216,9 @@ class PiGenDefCode():
 
         if len(self.globalCode) > 0:
             for globalCodeLine in self.globalCode:
-                rtnLines += f'{globalCodeLine}\n'
+                # Unescape quotes that were escaped during syncCode process
+                unescaped_line = globalCodeLine.replace('\\"', '"')
+                rtnLines += f'{unescaped_line}\n'
 
         return rtnLines
 

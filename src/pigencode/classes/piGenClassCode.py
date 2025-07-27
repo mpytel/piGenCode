@@ -72,7 +72,9 @@ class PiGenClassCode():
         # Add constants
         if self.constants:
             for constant in self.constants:
-                code_lines.append(constant)
+                # Unescape quotes that were escaped during syncCode process
+                unescaped_constant = constant.replace('\\"', '"')
+                code_lines.append(unescaped_constant)
             code_lines.append("")  # Blank line after constants
 
         # Add class definitions
@@ -83,7 +85,9 @@ class PiGenClassCode():
 
                 # Add class code lines
                 for line in class_code:
-                    code_lines.append(line)
+                    # Unescape quotes that were escaped during syncCode process
+                    unescaped_line = line.replace('\\"', '"')
+                    code_lines.append(unescaped_line)
 
                 # Add blank line between classes (except after the last one)
                 if i < len(class_names) - 1:
@@ -94,7 +98,9 @@ class PiGenClassCode():
             if self.classDefs:  # Add blank line before global code if we have classes
                 code_lines.append("")
             for line in self.globalCode:
-                code_lines.append(line)
+                # Unescape quotes that were escaped during syncCode process
+                unescaped_line = line.replace('\\"', '"')
+                code_lines.append(unescaped_line)
 
         return '\n'.join(code_lines)
 

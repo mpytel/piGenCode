@@ -159,7 +159,9 @@ class PiGenCode():
     def __appednCodeLine(self,codeLine,iniLevel=0):
         indent = self.indent
         if len(codeLine) > 0:
-            rtnLines = indent*iniLevel + codeLine + '\n'
+            # Unescape quotes that were escaped during syncCode process
+            unescaped_line = codeLine.replace('\\"', '"')
+            rtnLines = indent*iniLevel + unescaped_line + '\n'
         else:
             rtnLines = codeLine + '\n'
         return rtnLines
@@ -457,7 +459,9 @@ class PiGenCode():
         indent = self.indent
         rtnLines = ""
         for JsonCodeLine in self.jsonCode:
-            rtnLines += indent*iniLevel + JsonCodeLine + '\n'
+            # Unescape quotes that were escaped during syncCode process
+            unescaped_line = JsonCodeLine.replace('\\"', '"')
+            rtnLines += indent*iniLevel + unescaped_line + '\n'
         return rtnLines
     def __addStrCodeLines(self, iniLevel=0):
         rtnLines = ""
@@ -640,7 +644,9 @@ class PiGenCode():
         rtnLines = ''
         if len(self.globalCode) > 0:
             for globalCode in self.globalCode:
-                rtnLines += f'{globalCode}\n'
+                # Unescape quotes that were escaped during syncCode process
+                unescaped_line = globalCode.replace('\\"', '"')
+                rtnLines += f'{unescaped_line}\n'
         return rtnLines
 
     def __setPiClassDir(self):
