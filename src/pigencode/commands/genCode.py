@@ -33,7 +33,7 @@ def genCode(argParse: ArgParse):
         savedCodeFiles = processShortcutSyntax(theArgs)
 
     for savedCodeFile in savedCodeFiles.values():
-        fileName = Path(savedCodeFile).relative_to(Path.cwd())
+        fileName = Path(savedCodeFile).resolve().relative_to(Path.cwd().resolve())
         printIt(f'generated: {fileName} ', lable.INFO)
 
 def processNumberShortcut(number: int) -> dict:

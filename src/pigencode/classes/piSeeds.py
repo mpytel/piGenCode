@@ -193,8 +193,11 @@ def readSeedPis(piFileName) -> list[tuple]:
                         # print('matchTokens:', len(matchTokens.groups()))
                         tokens = list(matchTokens.groups())
                     else:
-                        # print('shlex')
+                        #print('shlex')
+                        # preserve singel quote strings if present.
+                        currLine = currLine.replace("'", "\\'")
                         tokens = shlex.split(currLine)
+                        #print('tokens', tokens)
                     if len(tokens) == 3: #print('piSD0', tokens[2])
                         piType, piTitle, piSD = tokens
                     elif len(tokens) == 2:

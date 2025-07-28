@@ -1200,11 +1200,11 @@ def getDestDirForFile(py_file, options) -> str:
     target = options['target_file']
     try:
         # Get relative path from current directory
-        relativeDir = py_file.parent.relative_to(
+        relativeDir = py_file.parent.resolve().relative_to(
             Path.cwd())
         dest_dir = str(relativeDir).replace(
             target, dest_dir)
-        print(f'replace({target}, {dest_dir})')
+        # print(f'getDestDirForFile: {py_file.name} -> {dest_dir}')
     except ValueError:
         # If not relative to cwd, use absolute path
         #print('py_file.parent', py_file.parent)
@@ -1653,7 +1653,7 @@ def createNewPiClassGCSeedFileEnhanced(className: str, pythonFile: Path, seed_fi
 
         # print('createNewPiClassGCSeedFileEnhanced-fileDirectory',fileDirectory)
 
-        # Create enhanced piClassGC piSeed content
+        # Create enhanced piClassGC piSeed content following the exact order from piStruct_piClassGC.json
         seedContent = f"""piClassGC {className} 'Generated piClassGC for {className} class'
 piValue {className}.piProlog pi.piProlog
 piValue {className}.piBase:piType piClassGC
@@ -1661,27 +1661,36 @@ piValue {className}.piBase:piTitle {className}
 piValue {className}.piBase:piSD 'Python class {className} generated from existing code'
 piValue {className}.piBody:piClassGC:fileDirectory '{fileDirectory}'
 piValue {className}.piBody:piClassGC:fileName {className}
-piValue {className}.piBody:piClassGC:piClassName {className}
 piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from existing code'
 """
 
-        # Add imports if found
+        # 1. Add imports if found
         if class_info.get('imports'):
             for imp in class_info['imports']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:imports {imp}\n"
 
-        # Add from imports if found
-        if class_info.get('from_imports'):
-            seedContent += f"piStructA00 {className}.piBody:piClassGC:fromImports\n"
-            for module_name, import_info in class_info['from_imports'].items():
-                clean_module = module_name.replace('.', '_').replace('-', '_')
-                seedContent += f"piStructC01 fromImports {clean_module}.\n"
-            for module_name, import_info in class_info['from_imports'].items():
-                clean_module = module_name.replace('.', '_').replace('-', '_')
-                seedContent += f"piValue {className}.piBody:piClassGC:fromImports:{clean_module}:from \"{import_info['from']}\"\n"
-                seedContent += f"piValue {className}.piBody:piClassGC:fromImports:{clean_module}:import \"{import_info['import']}\"\n"
+        # 2. Add from imports if found (temporarily disabled to fix ordering issue)
+        # if class_info.get('from_imports'):
+        #     seedContent += f"piStructA00 {className}.piBody:piClassGC:fromImports\n"
+        #     for module_name, import_info in class_info['from_imports'].items():
+        #         clean_module = module_name.replace('.', '_').replace('-', '_')
+        #         seedContent += f"piStructC01 fromImports {clean_module}.\n"
+        #     for module_name, import_info in class_info['from_imports'].items():
+        #         clean_module = module_name.replace('.', '_').replace('-', '_')
+        #         seedContent += f"piValue {className}.piBody:piClassGC:fromImports:{clean_module}:from \"{import_info['from']}\"\n"
+        #         seedContent += f"piValue {className}.piBody:piClassGC:fromImports:{clean_module}:import \"{import_info['import']}\"\n"
 
-        # Add constructor arguments if found
+        # 3. Add fromPiClasses (empty for now)
+        # 4. Add rawFromImports (empty for now)
+
+        # 5. Add globals (will be added by sync function)
+
+        # 6. Add piClassName
+        seedContent += f"piValue {className}.piBody:piClassGC:piClassName {className}\n"
+
+        # 7. Add inheritance (empty for now)
+
+        # 8. Add constructor arguments if found
         if class_info.get('init_args'):
             seedContent += f"piStructA00 {className}.piBody:piClassGC:initArguments\n"
             for arg_name in class_info['init_args']:
@@ -1691,6 +1700,21 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
                 arg_value = arg_info.get('value', '""')
                 seedContent += f"piValue {className}.piBody:piClassGC:initArguments:{arg_name}:type {arg_type}\n"
                 seedContent += f"piValue {className}.piBody:piClassGC:initArguments:{arg_name}:value {arg_value}\n"
+
+        # 9. Add classComment (empty for now)
+        # 10. Add preSuperInitCode (empty for now)
+        # 11. Add postSuperInitCode (empty for now)
+
+        # 12. Add init method body if found
+        if class_info.get('init_body'):
+            for init_line in class_info['init_body']:
+                seedContent += f"piValueA {className}.piBody:piClassGC:initAppendCode \"{init_line}\"\n"
+
+        # 13. Add genProps (empty for now)
+        # 14. Add strCode (will be added by sync function)
+        # 15. Add jsonCode (will be added by sync function)
+        # 16. Add classDefCode (will be added by sync function)
+        # 17. Add globalCode (will be added by sync function)
 
         # Write the new piSeed file
         with open(seedFilePath, 'w', encoding='utf-8') as f:
@@ -1960,6 +1984,34 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                                                     default.value)
 
                         info['init_args'] = init_args
+
+                        # Also extract the __init__ method body for initAppendCode
+                        init_body = []
+                        for stmt in item.body:
+                            if isinstance(stmt, ast.Assign):
+                                # Extract assignment statements like self.switchFlags = switchFlags
+                                line_num = stmt.lineno - 1
+                                if line_num < len(content.split('\n')):
+                                    assign_line = content.split('\n')[line_num].strip()
+
+                                    # Skip auto-generated assignments (self.param = param)
+                                    # These are already handled by __genInitCodeLines
+                                    is_auto_generated = False
+                                    for arg_name in init_args:
+                                        if assign_line == f"self.{arg_name} = {arg_name}":
+                                            is_auto_generated = True
+                                            break
+
+                                    if not is_auto_generated:
+                                        init_body.append(assign_line)
+                            elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+                                # Extract method calls like self.optSwitches = readOptSwitches()
+                                line_num = stmt.lineno - 1
+                                if line_num < len(content.split('\n')):
+                                    call_line = content.split('\n')[line_num].strip()
+                                    init_body.append(call_line)
+
+                        info['init_body'] = init_body
                         break
 
         return info
@@ -2098,10 +2150,10 @@ def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[
                                 return seedFile
                             else:
                                 pass
-                                print('py_file_dir:', py_file_dir)
-                                print('fileDirectory:', fileDirectory)
-                                print('seedFile:', seedFile)
-                                print()
+                                # print('py_file_dir:', py_file_dir)
+                                # print('fileDirectory:', fileDirectory)
+                                # print('seedFile:', seedFile)
+                                # print()
             except Exception:
                 continue
         return None
@@ -2896,6 +2948,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
             classNode = None
             globalFunctions = []
             importStatements = []
+            moduleAssignments = []  # Add this to capture module-level assignments
 
             for node in tree.body:
                 if isinstance(node, ast.ClassDef) and node.name.lower() == className.lower():
@@ -2906,6 +2959,9 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                 elif isinstance(node, (ast.Import, ast.ImportFrom)):
                     # Import statements
                     importStatements.append(node)
+                elif isinstance(node, ast.Assign):
+                    # Module-level variable assignments (like rcFileDir, rcFileName)
+                    moduleAssignments.append(node)
 
             if classNode:
                 # Process each method in the class
@@ -3085,13 +3141,37 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                         changes.append("imports")
 
             # Handle global functions and code
-            if globalFunctions:
+            if globalFunctions or moduleAssignments:
                 globalCode = []
+                moduleGlobals = {}
+
+                # Process module-level assignments first (these go in globals, not globalCode)
+                for assignment in moduleAssignments:
+                    assignmentCode = extractAssignmentCode(pythonContent, assignment)
+                    if assignmentCode:
+                        # Parse the assignment to extract variable name and value
+                        # Format: "varName = value"
+                        if ' = ' in assignmentCode:
+                            varName, varValue = assignmentCode.split(' = ', 1)
+                            # Only strip whitespace from varName, preserve quotes in varValue
+                            moduleGlobals[varName.strip()] = varValue
+
+                # Add global functions to globalCode
                 for func in globalFunctions:
                     funcCode = extractMethodCode(pythonContent, func)
                     globalCode.extend(funcCode)
                     globalCode.append("")  # Add blank line between functions
 
+                # Update globals section if we have module assignments
+                if moduleGlobals:
+                    newSeedContent, changed = updateSeedGlobals(
+                        seedContent, className, moduleGlobals
+                    )
+                    if changed:
+                        seedContent = newSeedContent
+                        changes.append("globals")
+
+                # Update globalCode section if we have global functions
                 if globalCode:
                     # Remove trailing blank lines more robustly
                     globalCode = removeTrailingBlankLines(globalCode)
@@ -3105,6 +3185,9 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
 
             # Write updated piSeed file if changes were made
             if changes:
+                # Rebuild the piSeed file in the correct order
+                seedContent = rebuildPiSeedInCorrectOrder(seedContent, className)
+
                 with open(piSeedFile, 'w', encoding='utf-8') as f:
                     f.write(seedContent)
 
@@ -4682,13 +4765,15 @@ def updateSeedInitArguments(seedContent: str, className: str, initArgs: Dict[str
                             i += 1
                             continue
                         else:
-                            printIt('No type part after pattern',lable.WARN)
+                            printIt(f'No type part after pattern for line: {line.strip()}', lable.WARN)
+                            i += 1  # Always advance to prevent infinite loop
+                            continue
                     # Extract argument value definitions
                     argValueMatch = re.match(argValuePattern, line)
                     if argValueMatch:
                         argName = argValueMatch.group(1)
-                        # Extract the value part after the pattern
-                        valueAfterPattern = re.match(argTypePattern, line)
+                        # Extract the value part after the pattern - use argValuePattern not argTypePattern!
+                        valueAfterPattern = re.match(argValuePattern, line)
                         if valueAfterPattern:
                             valuePart = line[valueAfterPattern.end():].strip()
                             if argName not in existingArgs:
@@ -4697,7 +4782,8 @@ def updateSeedInitArguments(seedContent: str, className: str, initArgs: Dict[str
                             existingArgs[argName]['value'] = valuePart
                             i += 1
                         else:
-                            printIt('No value part after pattern', lable.WARN)
+                            printIt(f'No value part after pattern for line: {line.strip()}', lable.WARN)
+                            i += 1  # Always advance to prevent infinite loop
                         continue
 
                     # If we reach here, we're done with initArguments section
@@ -5010,7 +5096,396 @@ def updateSeedFromImports(seedContent: str, className: str, fromImports: Dict[st
         return seedContent, False
 
 
+def updateSeedGlobals(seedContent: str, className: str, moduleGlobals: Dict[str, str]) -> Tuple[str, bool]:
+    """
+    Update globals section in the piSeed file content for module-level assignments.
+    Returns (updated_content, was_changed)
+    """
+    if not moduleGlobals:
+        return seedContent, False
+
+    lines = seedContent.split('\n')
+    newLines = []
+    changed = False
+    i = 0
+
+    # Find the globals section or create it
+    globalsPattern = rf'^piStructA00\s+{re.escape(className)}\.piBody:piClassGC:globals\s*$'
+    foundGlobals = False
+
+    while i < len(lines):
+        line = lines[i]
+
+        # Check if we found the globals structure declaration
+        if re.match(globalsPattern, line):
+            foundGlobals = True
+            newLines.append(line)
+            i += 1
+
+            # Extract existing globals
+            existingGlobals = {}
+            while i < len(lines):
+                line = lines[i]
+
+                # Check for global variable definitions
+                globalVarPattern = rf'^piValue\s+{re.escape(className)}\.piBody:piClassGC:globals:(\w+)\s+(.+)$'
+                globalVarMatch = re.match(globalVarPattern, line)
+
+                if globalVarMatch:
+                    varName = globalVarMatch.group(1)
+                    varValue = globalVarMatch.group(2)
+                    existingGlobals[varName] = varValue
+                    i += 1
+                    continue
+
+                # If we reach here, we're done with globals section
+                break
+
+            # Compare and update globals
+            for varName, varValue in moduleGlobals.items():
+                if varName not in existingGlobals or existingGlobals[varName] != varValue:
+                    newLines.append(f'piValue {className}.piBody:piClassGC:globals:{varName} {varValue}')
+                    changed = True
+                elif varName in existingGlobals:
+                    # Keep existing line
+                    newLines.append(f'piValue {className}.piBody:piClassGC:globals:{varName} {existingGlobals[varName]}')
+
+            # Continue with the rest of the file
+            continue
+        else:
+            newLines.append(line)
+            i += 1
+
+    # If globals section doesn't exist, create it after the class structure
+    if not foundGlobals and moduleGlobals:
+        # Find where to insert globals section (after piClassName line)
+        insertIndex = -1
+        for idx, line in enumerate(newLines):
+            classNamePattern = rf'^piValue\s+{re.escape(className)}\.piBody:piClassGC:piClassName\s+'
+            if re.match(classNamePattern, line):
+                insertIndex = idx + 1
+                break
+
+        if insertIndex != -1:
+            # Insert globals structure and values
+            newLines.insert(insertIndex, f'piStructA00 {className}.piBody:piClassGC:globals')
+            insertIndex += 1
+            for varName, varValue in moduleGlobals.items():
+                newLines.insert(insertIndex, f'piValue {className}.piBody:piClassGC:globals:{varName} {varValue}')
+                insertIndex += 1
+            changed = True
+
+    if changed:
+        return '\n'.join(newLines), True
+    else:
+        return seedContent, False
+
+
 def updateSeedImports(seedContent: str, className: str, regularImports: List[str]) -> Tuple[str, bool]:
+    """Update regular imports in piSeed file"""
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+
+        # Find existing imports
+        existing_imports = set()
+        for line in lines:
+            if f'{className}.piBody:piClassGC:imports' in line and 'fromImports' not in line:
+                # Extract import name from line
+                parts = line.split()
+                if len(parts) >= 2:
+                    existing_imports.add(parts[-1])
+
+        # Add new imports that don't exist
+        imports_to_add = []
+        for imp in regularImports:
+            if imp not in existing_imports:
+                imports_to_add.append(f"piValueA {className}.piBody:piClassGC:imports {imp}")
+                changed = True
+
+        # Insert imports after headers
+        for i, line in enumerate(lines):
+            newLines.append(line)
+            if f'{className}.piBody:piClassGC:headers' in line:
+                # Add new imports after headers
+                newLines.extend(imports_to_add)
+
+        if changed:
+            return '\n'.join(newLines), True
+        else:
+            return seedContent, False
+
+    except Exception as e:
+        printIt(f"Error updating seed imports: {e}", lable.ERROR)
+        return seedContent, False
+
+
+def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
+    """
+    Rebuild piSeed file content in the correct order according to piStruct_piClassGC.json.
+    This ensures all elements appear in the proper sequence.
+    """
+    try:
+        lines = seedContent.split('\n')
+
+        # Parse existing content into sections
+        sections = {
+            'header': [],
+            'fileDirectory': '',
+            'fileName': '',
+            'headers': [],
+            'imports': [],
+            'fromImports': {},
+            'fromPiClasses': [],
+            'rawFromImports': [],
+            'globals': {},
+            'piClassName': '',
+            'inheritance': [],
+            'initArguments': {},
+            'classComment': [],
+            'preSuperInitCode': [],
+            'postSuperInitCode': [],
+            'initAppendCode': [],
+            'genProps': '',
+            'strCode': [],
+            'jsonCode': [],
+            'classDefCode': {},
+            'globalCode': []
+        }
+
+        # Parse the existing content
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+
+            # Skip empty lines
+            if not line:
+                i += 1
+                continue
+
+            # Header lines (piClassGC, piProlog, piBase)
+            if (line.startswith(f'piClassGC {className}') or
+                line.startswith(f'piValue {className}.piProlog') or
+                line.startswith(f'piValue {className}.piBase')):
+                sections['header'].append(line)
+
+            # fileDirectory
+            elif f'{className}.piBody:piClassGC:fileDirectory' in line:
+                sections['fileDirectory'] = line
+
+            # fileName
+            elif f'{className}.piBody:piClassGC:fileName' in line:
+                sections['fileName'] = line
+
+            # headers
+            elif f'{className}.piBody:piClassGC:headers' in line:
+                sections['headers'].append(line)
+
+            # imports
+            elif f'{className}.piBody:piClassGC:imports' in line and 'fromImports' not in line:
+                sections['imports'].append(line)
+
+            # fromImports
+            elif f'{className}.piBody:piClassGC:fromImports' in line:
+                sections['fromImports'][line] = line
+
+            # globals
+            elif f'{className}.piBody:piClassGC:globals' in line:
+                sections['globals'][line] = line
+
+            # piClassName
+            elif f'{className}.piBody:piClassGC:piClassName' in line:
+                sections['piClassName'] = line
+
+            # initArguments
+            elif f'{className}.piBody:piClassGC:initArguments' in line:
+                sections['initArguments'][line] = line
+
+            # piStructC01 lines (argument definitions, fromImports definitions, etc.)
+            elif line.startswith('piStructC01'):
+                if 'argument' in line:
+                    sections['initArguments'][line] = line
+                elif 'fromImports' in line:
+                    sections['fromImports'][line] = line
+                # Add other piStructC01 types as needed
+
+            # initAppendCode
+            elif f'{className}.piBody:piClassGC:initAppendCode' in line:
+                sections['initAppendCode'].append(line)
+
+            # strCode
+            elif f'{className}.piBody:piClassGC:strCode' in line:
+                sections['strCode'].append(line)
+
+            # jsonCode
+            elif f'{className}.piBody:piClassGC:jsonCode' in line:
+                sections['jsonCode'].append(line)
+
+            # classDefCode
+            elif f'{className}.piBody:piClassGC:classDefCode' in line:
+                sections['classDefCode'][line] = line
+
+            # globalCode
+            elif f'{className}.piBody:piClassGC:globalCode' in line:
+                sections['globalCode'].append(line)
+
+            i += 1
+
+        # Rebuild in correct order
+        result = []
+
+        # 1. Header
+        result.extend(sections['header'])
+
+        # 2. fileDirectory
+        if sections['fileDirectory']:
+            result.append(sections['fileDirectory'])
+
+        # 3. fileName
+        if sections['fileName']:
+            result.append(sections['fileName'])
+
+        # 4. headers
+        result.extend(sections['headers'])
+
+        # 5. imports
+        result.extend(sections['imports'])
+
+        # 6. fromImports
+        result.extend(sections['fromImports'].values())
+
+        # 7. fromPiClasses (skip for now)
+        # 8. rawFromImports (skip for now)
+
+        # 9. globals
+        result.extend(sections['globals'].values())
+
+        # 10. piClassName
+        if sections['piClassName']:
+            result.append(sections['piClassName'])
+
+        # 11. inheritance (skip for now)
+
+        # 12. initArguments
+        result.extend(sections['initArguments'].values())
+
+        # 13. classComment (skip for now)
+        # 14. preSuperInitCode (skip for now)
+        # 15. postSuperInitCode (skip for now)
+
+        # 16. initAppendCode
+        result.extend(sections['initAppendCode'])
+
+        # 17. genProps (skip for now)
+
+        # 18. strCode
+        result.extend(sections['strCode'])
+
+        # 19. jsonCode
+        result.extend(sections['jsonCode'])
+
+        # 20. classDefCode
+        result.extend(sections['classDefCode'].values())
+
+        # 21. globalCode
+        result.extend(sections['globalCode'])
+
+        return '\n'.join(result)
+
+    except Exception as e:
+        printIt(f"Error rebuilding piSeed order: {e}", lable.ERROR)
+        return seedContent
+
+    """
+    Update regular imports in the piSeed file content.
+    Returns (updated_content, was_changed)
+    """
+    if not regularImports:
+        return seedContent, False
+
+    lines = seedContent.split('\n')
+    newLines = []
+    changed = False
+    i = 0
+
+    # Find the imports section or create it
+    importsPattern = rf'^piStructA00\s+{re.escape(className)}\.piBody:piClassGC:imports\s*$'
+    foundImports = False
+
+    while i < len(lines):
+        line = lines[i]
+
+        # Check if we found the imports structure declaration
+        if re.match(importsPattern, line):
+            foundImports = True
+            newLines.append(line)
+            i += 1
+
+            # Extract existing imports
+            existingImports = set()
+            while i < len(lines):
+                line = lines[i]
+
+                # Check for import definitions
+                importPattern = rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:imports\s+(.+)$'
+                importMatch = re.match(importPattern, line)
+
+                if importMatch:
+                    importName = importMatch.group(1)
+                    existingImports.add(importName)
+                    i += 1
+                    continue
+
+                # If we reach here, we're done with imports section
+                break
+
+            # Compare and update imports
+            for importName in regularImports:
+                if importName not in existingImports:
+                    newLines.append(f'piValueA {className}.piBody:piClassGC:imports {importName}')
+                    changed = True
+                else:
+                    # Keep existing import
+                    newLines.append(f'piValueA {className}.piBody:piClassGC:imports {importName}')
+
+            # Continue with the rest of the file
+            continue
+        else:
+            newLines.append(line)
+            i += 1
+
+    # If imports section doesn't exist, create it
+    if not foundImports and regularImports:
+        # Find where to insert imports section (after headers)
+        insertIndex = -1
+        for idx, line in enumerate(newLines):
+            headersPattern = rf'^piStructA00\s+{re.escape(className)}\.piBody:piClassGC:headers\s*$'
+            if re.match(headersPattern, line):
+                # Find end of headers section
+                j = idx + 1
+                while j < len(newLines):
+                    if not re.match(rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:headers\s+', newLines[j]):
+                        break
+                    j += 1
+                insertIndex = j
+                break
+
+        if insertIndex != -1:
+            # Insert imports structure and values
+            newLines.insert(insertIndex, f'piStructA00 {className}.piBody:piClassGC:imports')
+            insertIndex += 1
+            for importName in regularImports:
+                newLines.insert(insertIndex, f'piValueA {className}.piBody:piClassGC:imports {importName}')
+                insertIndex += 1
+            changed = True
+
+    if changed:
+        return '\n'.join(newLines), True
+    else:
+        return seedContent, False
+
+
     """
     Update regular imports in the piSeed file content.
     Returns (updated_content, was_changed)
@@ -5096,19 +5571,51 @@ def updateSeedImports(seedContent: str, className: str, regularImports: List[str
 # Helper functions for piDefGC synchronization
 
 
+def extractCallCode(pythonContent: str, exprNode: ast.Expr) -> Optional[str]:
+    """Extract expression code from AST node (like method calls, assignments)"""
+    try:
+        lines = pythonContent.split('\n')
+        start_line = exprNode.lineno - 1
+
+        if start_line >= len(lines):
+            return None
+
+        # Use AST end_lineno information if available (Python 3.8+)
+        if hasattr(exprNode, 'end_lineno') and exprNode.end_lineno is not None:
+            end_line = exprNode.end_lineno - 1
+
+            if start_line == end_line:
+                # Single-line expression
+                return lines[start_line].strip()
+            else:
+                # Multi-line expression
+                result_lines = []
+                for i in range(start_line, end_line + 1):
+                    if i < len(lines):
+                        result_lines.append(lines[i].rstrip())
+                return '\n'.join(result_lines)
+
+        # Fallback for older Python versions
+        return lines[start_line].strip()
+
+    except Exception as e:
+        printIt(f"Error extracting call code: {e}", lable.ERROR)
+        return None
+
+
 def extractAssignmentCode(pythonContent: str, assignNode: ast.Assign) -> Optional[str]:
     """Extract assignment code (constants) from AST node, handling multi-line strings and parentheses"""
     try:
         lines = pythonContent.split('\n')
         start_line = assignNode.lineno - 1
-        
+
         if start_line >= len(lines):
             return None
-        
+
         # Use AST end_lineno information if available (Python 3.8+)
         if hasattr(assignNode, 'end_lineno') and assignNode.end_lineno is not None:
             end_line = assignNode.end_lineno - 1
-            
+
             if start_line == end_line:
                 # Single-line assignment
                 return lines[start_line].strip()
@@ -5119,43 +5626,43 @@ def extractAssignmentCode(pythonContent: str, assignNode: ast.Assign) -> Optiona
                     if i < len(lines):
                         result_lines.append(lines[i].rstrip())
                 return '\n'.join(result_lines)
-        
+
         # Fallback for older Python versions or when end_lineno is not available
         first_line = lines[start_line].strip()
-        
+
         # Check if this is a multi-line string assignment (be more precise about triple quotes)
         has_triple_double = '"""' in first_line
         has_triple_single = "'''" in first_line
-        
+
         if has_triple_double or has_triple_single:
             # This is a multi-line string, need to find the end
             quote_type = '"""' if has_triple_double else "'''"
-            
+
             # Count quotes in first line to see if it's complete
             quote_count = first_line.count(quote_type)
-            
+
             if quote_count >= 2:
                 # Complete multi-line string on one line (e.g., var = """text""")
                 return first_line
             elif quote_count == 1:
                 # Multi-line string spans multiple lines
                 result_lines = [first_line]
-                
+
                 # Find the closing quote
                 for i in range(start_line + 1, len(lines)):
                     line = lines[i]
                     result_lines.append(line.rstrip())  # Preserve indentation but remove trailing whitespace
-                    
+
                     if quote_type in line:
                         # Found closing quote, we're done
                         break
-                
+
                 return '\n'.join(result_lines)
-        
+
         # For simple cases, just return the first line
         # (This avoids the complex delimiter counting that was causing issues)
         return first_line
-        
+
     except Exception as e:
         printIt(f"Error extracting assignment code: {e}", lable.ERROR)
         return None
