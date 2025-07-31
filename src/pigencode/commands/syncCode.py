@@ -2,12 +2,14 @@ import os
 import re
 import ast
 import traceback
+from json import dumps
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Set
 from pigencode.classes.argParse import ArgParse
 from pigencode.defs.logIt import printIt, lable
 from pigencode.defs.fileIO import getKeyItem, piGCDirs
 from pigencode.defs.getSeedPath import getSeedPath
+from pigencode.classes.piSeeds import extractPiSeed
 
 piSeedValuePattern = r'["\'](.*)["\'].*$'
 global options
@@ -671,7 +673,6 @@ def syncCode(argParse: ArgParse):
             # Single file
             syncSingleFileEnhanced(target, options)
         elif targetPath.is_dir():
-
             # Directory - process all Python files recursively
             syncDirectoryEnhanced(targetPath, options)
         else:
@@ -688,16 +689,12 @@ def syncCode(argParse: ArgParse):
         syncAllFilesEnhanced(options)
 
 
-def findExistingPiSeedFile(filePath: Path, options: dict) -> tuple:
+def findExistingPiSeedFile(filePath: Path, dest_dir: str) -> tuple:
     """
     Find existing piSeed file for a class, checking all types.
     Returns (piSeedFile_path, piSeed_type) or (None, None) if not found.
     Priority: piClassGC -> piGenClass -> piDefGC
     """
-
-    dest_dir = options.get('dest_dir')
-    if dest_dir is None:
-        dest_dir = getDestDirForFile(filePath, options)
 
     # Check piClassGC first (most common for single classes)
     piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
@@ -742,10 +739,10 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
             options['create_piSeeds'] = True
 
         dest_dir = options.get('dest_dir')
-        if dest_dir is None:
-            dest_dir = getDestDirForFile(filePath, options)
+        if dest_dir: dest_dir = getDestDirForFile(filePath, options)
         # First, check for existing piSeed files of any type
-        existingPiSeedFile, existingType = findExistingPiSeedFile(filePath, options)
+        existingPiSeedFile, existingType = findExistingPiSeedFile(filePath, dest_dir)
+
         if existingPiSeedFile:
             # Use existing piSeed file type
             file_type = existingType
@@ -774,7 +771,9 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                         piSeedFile = createNewPiDefGCSeedFileEnhanced(
                             className, filePath, None, dest_dir)
             elif file_type == "piGenClass":
-                piSeedFile = findPiGenClassSeedFile(filePath)
+                piSeedFile = findPiGenClassSeedFile(filePath, dest_dir)
+                print('piSeedFile', piSeedFile)
+
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(
@@ -786,7 +785,7 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                         piSeedFile = createNewPiGenClassSeedFile(
                             className, filePath, None, dest_dir)
             else:  # piClassGC
-                piSeedFile = findPiClassGCSeedFile(filePath)
+                piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(
@@ -795,6 +794,8 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                     else:
                         printIt(
                             f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
+                        print('seedContent01')
+
                         piSeedFile = createNewPiClassGCSeedFileEnhanced(
                             className, filePath, None, dest_dir)
 
@@ -824,17 +825,13 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
 
                     # Use the same prioritized detection logic as actual sync
                     # First check for existing piSeed files (prioritized)
-                    piSeedFile = findPiClassGCSeedFile(filePath)
+                    piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
                     if piSeedFile:
                         continue  # Has piClassGC piSeed
 
-                    piSeedFile = findPiGenClassSeedFile(filePath)
+                    piSeedFile = findPiGenClassSeedFile(filePath, dest_dir)
                     if piSeedFile:
                         continue  # Has piGenClass piSeed
-
-                dest_dir = options.get('dest_dir')
-                if dest_dir is not None:
-                    dest_dir = getDestDirForFile(filePath, options)
 
                 piSeedFile = findPiDefGCSeedFile(filePath, dest_dir)
                 if not piSeedFile and options.get('create_piSeeds', False):
@@ -845,13 +842,10 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                     else:
                         printIt(
                             f"Creating new piDefGC piSeed file for: {className}", lable.INFO)
-                        dest_dir = options.get('dest_dir')
-                        if dest_dir is not None:
-                            dest_dir = getDestDirForFile(filePath, options)
                         piSeedFile = createNewPiDefGCSeedFileEnhanced(
                             className, filePath, None, dest_dir)
             elif file_type == "piGenClass":
-                piSeedFile = findPiGenClassSeedFile(filePath)
+                piSeedFile = findPiGenClassSeedFile(filePath, dest_dir)
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(
@@ -861,9 +855,9 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                         printIt(
                             f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
                         piSeedFile = createNewPiGenClassSeedFile(
-                            className, filePath, None, options.get('dest_dir'))
+                            className, filePath, None, dest_dir)
             else:  # piClassGC
-                piSeedFile = findPiClassGCSeedFile(filePath)
+                piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(
@@ -872,9 +866,6 @@ def syncSingleFileEnhanced(fileName: str, options: dict):
                     else:
                         printIt(
                             f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
-                        dest_dir = options.get('dest_dir')
-                        if dest_dir is not None:
-                            dest_dir = getDestDirForFile(filePath, options)
                         piSeedFile = createNewPiClassGCSeedFileEnhanced(
                             className, filePath, None, dest_dir)
 
@@ -1041,20 +1032,18 @@ def syncAllFilesEnhanced(options: dict):
                 for filePath, file_type, dir_type in files_to_process:
                     className = filePath.stem
                     piSeedFile = None
+                    dest_dir = options.get('dest_dir')
+                    if dest_dir: dest_dir = getDestDirForFile(filePath, options)
 
                     # Use the same prioritized detection logic as actual sync
                     # First check for existing piSeed files (prioritized)
-                    piSeedFile = findPiClassGCSeedFile(filePath)
+                    piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
                     if piSeedFile:
                         continue  # Has piClassGC piSeed
 
-                    piSeedFile = findPiGenClassSeedFile(filePath)
+                    piSeedFile = findPiGenClassSeedFile(filePath, dest_dir)
                     if piSeedFile:
                         continue  # Has piGenClass piSeed
-
-                    dest_dir = options.get('dest_dir')
-                    if dest_dir is not None:
-                        dest_dir = getDestDirForFile(filePath, options)
 
                     piSeedFile = findPiDefGCSeedFile(
                         filePath, dest_dir)
@@ -1099,18 +1088,15 @@ def syncAllFilesEnhanced(options: dict):
         # Process files
         for filePath, file_type, dir_type in files_to_process:
             try:
+
+                dest_dir = options.get('dest_dir')
+                if dest_dir: dest_dir = getDestDirForFile(filePath, options)
                 # Determine optimal piSeed type for each file
                 optimal_type = determineOptimalPiSeedType(filePath)
 
                 if optimal_type == "piDefGC":
                     defName = filePath.stem
-
-                    dest_dir = options.get('dest_dir')
-                    if dest_dir is not None:
-                        dest_dir = getDestDirForFile(filePath, options)
-
                     piSeedFile = findPiDefGCSeedFile(filePath, dest_dir)
-
                     if piSeedFile and options.get('create_piSeeds', True):
                         changes = syncPythonDefToSeed(
                             filePath, piSeedFile, dest_dir)
@@ -1130,8 +1116,7 @@ def syncAllFilesEnhanced(options: dict):
 
                 elif optimal_type == "piGenClass":
                     className = filePath.stem
-                    piSeedFile = findPiGenClassSeedFile(filePath)
-
+                    piSeedFile = findPiGenClassSeedFile(filePath, dest_dir)
                     if piSeedFile and options.get('create_piSeeds', True):
                         changes = syncPythonGenClassToSeed(
                             filePath, piSeedFile)
@@ -1143,7 +1128,7 @@ def syncAllFilesEnhanced(options: dict):
                         processedFiles += 1
                     else:
                         piSeedFile = createNewPiGenClassSeedFile(
-                            className, filePath, None, options.get('dest_dir'))
+                            className, filePath, None, dest_dir)
                         if piSeedFile:
                             createdSeeds += 1
                         else:
@@ -1151,8 +1136,7 @@ def syncAllFilesEnhanced(options: dict):
 
                 else:  # piClassGC
                     className = filePath.stem
-                    piSeedFile = findPiClassGCSeedFile(filePath)
-
+                    piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
                     if piSeedFile and options.get('create_piSeeds', True):
                         changes = syncPythonClassToSeed(
                             filePath, piSeedFile, options)
@@ -1163,9 +1147,6 @@ def syncAllFilesEnhanced(options: dict):
                                     f"04 Synced {len(changes)} changes from {filePath.name}", lable.INFO)
                         processedFiles += 1
                     else:
-                        dest_dir = options.get('dest_dir')
-                        if dest_dir is not None:
-                            dest_dir = getDestDirForFile(filePath, options)
                         piSeedFile = createNewPiClassGCSeedFileEnhanced(
                             className, filePath, None, dest_dir)
                         if piSeedFile:
@@ -1195,23 +1176,85 @@ def syncAllFilesEnhanced(options: dict):
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
         printIt(f'syncAllFilesEnhanced error:\n{tb_str}', lable.ERROR)
 
-def getDestDirForFile(py_file, options) -> str:
-    dest_dir = options['dest_dir']
-    target = options['target_file']
-    try:
-        # Get relative path from current directory
-        relativeDir = py_file.parent.resolve().relative_to(
-            Path.cwd())
-        dest_dir = str(relativeDir).replace(
-            target, dest_dir)
-        # print(f'getDestDirForFile: {py_file.name} -> {dest_dir}')
-    except ValueError:
-        # If not relative to cwd, use absolute path
-        #print('py_file.parent', py_file.parent)
-        dest_dir = str(py_file.parent).replace(
-            target, dest_dir)
-        #print(f'Error_replace({target}, {dest_dir})')
-    return dest_dir
+def getDestDirForFile(py_file: Path, options) -> str:
+    """
+    Replaces a source path based on a destination path, matching up to
+    the last common parent directory.
+
+    If the source path ends with a file name (e.g., 'logIt.py'), the new
+    path will end at the parent directory of that file.
+
+    Args:
+        source_path: The original path string.
+        destination_path: The replacement path string.
+
+    Returns:
+        The new path string.
+    """
+    # Normalize paths to handle different OS separators and remove redundant parts
+    source_path_str = str(py_file)
+    destination_path_str = options['dest_dir']
+
+    # Handle the case where the destination path is empty
+    if not destination_path_str:
+        source_path = Path(source_path_str)
+        # Use Path.suffix to check for a file extension
+        if source_path.is_file():
+            return str(source_path.parent)
+        return str(source_path)
+
+    # Convert string paths to pathlib Path objects
+    source_path = Path(source_path_str)
+    destination_path = Path(destination_path_str)
+
+    # Use Path.parts to get the path components as a tuple
+    source_parts = source_path.parts
+    dest_parts = destination_path.parts
+
+    # Find the last common directory component
+    common_dir_idx_in_source = -1
+    common_dir_idx_in_dest = -1
+
+    # Iterate from the end of source_parts to find the last common component
+    for i in range(len(source_parts) - 1, -1, -1):
+        part = source_parts[i]
+        try:
+            dest_idx = dest_parts.index(part)
+            common_dir_idx_in_source = i
+            common_dir_idx_in_dest = dest_idx
+            break
+        except ValueError:
+            continue
+
+    # Determine the parts of the source path to append
+    path_to_append = []
+    if common_dir_idx_in_source != -1:
+        # Use Path.suffix to check for a file extension
+        is_file = source_path.suffix != ''
+
+        # Append all parts of the source path from the common directory onwards
+        # If it's a file, we stop at its parent directory
+        if is_file:
+            path_to_append = list(
+                source_parts[common_dir_idx_in_source + 1:-1])
+        else:
+            path_to_append = list(source_parts[common_dir_idx_in_source + 1:])
+
+        # Combine the destination path up to the common directory with the appended parts
+        final_parts = list(
+            dest_parts[:common_dir_idx_in_dest + 1]) + path_to_append
+    else:
+        # If no common directory is found, the logic is to replace the first part
+        # of the source path with the entire destination path.
+        is_file = source_path.suffix != ''
+        if is_file:
+            path_to_append = list(source_parts[1:-1])
+        else:
+            path_to_append = list(source_parts[1:])
+        final_parts = list(dest_parts) + path_to_append
+
+    # Use Path.joinpath to join the final parts
+    return str(Path().joinpath(*final_parts))
 
 def syncDirectoryEnhanced(directory: Path, options: dict):
     """Enhanced directory sync with piGenClass support and filtering"""
@@ -1254,22 +1297,19 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                     className = py_file.stem
                     piSeedFile = None
 
+                    dest_dir = options.get('dest_dir')
+                    if dest_dir: dest_dir = getDestDirForFile(py_file, options)
                     # Use the same prioritized detection logic as actual sync
                     # First check for existing piSeed files (prioritized)
-                    piSeedFile = findPiClassGCSeedFile(py_file)
+                    piSeedFile = findPiClassGCSeedFile(py_file, dest_dir)
                     if piSeedFile:
                         continue  # Has piClassGC piSeed
 
-                    piSeedFile = findPiGenClassSeedFile(py_file)
+                    piSeedFile = findPiGenClassSeedFile(py_file, dest_dir)
                     if piSeedFile:
                         continue  # Has piGenClass piSeed
 
-                    dest_dir = options.get('dest_dir')
-                    if dest_dir is not None:
-                        dest_dir = getDestDirForFile(py_file, options)
-
-                    piSeedFile = findPiDefGCSeedFile(
-                        py_file, dest_dir)
+                    piSeedFile = findPiDefGCSeedFile(py_file, dest_dir)
                     if piSeedFile:
                         continue  # Has piDefGC piSeed
 
@@ -1318,6 +1358,8 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
         for py_file in python_files:
             defName = py_file.stem
             try:
+                dest_dir = options.get('dest_dir')
+                if dest_dir: dest_dir = getDestDirForFile(py_file, options)
                 # Determine file type
                 file_type = determineOptimalPiSeedType(py_file)
 
@@ -1336,30 +1378,22 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                 piSeedFile = None
 
                 if file_type == "piDefGC":
-                    dest_dir = options.get('dest_dir')
-                    if dest_dir is not None:
-                        dest_dir = getDestDirForFile(py_file, options)
                     piSeedFile = findPiDefGCSeedFile(py_file, dest_dir)
                     if not piSeedFile and options.get('create_piSeeds', False):
-                        # Determine file directory - use dest_dir if provided, otherwise use pythonFile's directory
-                        dest_dir = options.get('dest_dir')
-                        if dest_dir is not None:
-                            dest_dir = getDestDirForFile(py_file, options)
                         piSeedFile = createNewPiDefGCSeedFileEnhanced(
                             defName, py_file, None, dest_dir)
                         if piSeedFile:
                             createdSeeds += 1
-
                     if piSeedFile:
                         changes = syncPythonDefToSeed(
                             py_file, piSeedFile, dest_dir)
 
                 elif file_type == "piGenClass":
                     className = py_file.stem
-                    piSeedFile = findPiGenClassSeedFile(py_file)
+                    piSeedFile = findPiGenClassSeedFile(py_file, dest_dir)
                     if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiGenClassSeedFile(
-                            className, py_file, None, options.get('dest_dir'))
+                            className, py_file, None, dest_dir)
                         if piSeedFile:
                             createdSeeds += 1
 
@@ -1370,10 +1404,6 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
                     className = py_file.stem
                     piSeedFile = findPiClassGCSeedFile(py_file)
                     if not piSeedFile and options.get('create_piSeeds', False):
-                        dest_dir = options.get('dest_dir')
-                        if dest_dir is not None:
-                            dest_dir = getDestDirForFile(py_file, options)
-
                         piSeedFile = createNewPiClassGCSeedFileEnhanced(
                             className, py_file, None, dest_dir)
                         if piSeedFile:
@@ -1425,135 +1455,6 @@ def syncDirectoryEnhanced(directory: Path, options: dict):
 
     if errors > 0:
         printIt(f"  • Errors: {errors}", lable.BLANK)
-
-# . ***** REMOVE after 8-20-2025
-
-
-def syncDirectory(directory: Path, options: dict):
-    """Sync all Python files in a directory recursively"""
-    try:
-        # printIt(f"Processing directory: {directory}", lable.INFO)
-
-        # Find all Python files recursively
-        python_files: List[Path] = []
-        for py_file in directory.rglob("*.py"):
-            # Skip __pycache__ and other system directories
-            if "__pycache__" in str(py_file) or ".git" in str(py_file):
-                continue
-            python_files.append(py_file)
-
-        if not python_files:
-            printIt(f"No Python files found in {directory}", lable.WARN)
-            return
-
-        # printIt(f"Found {len(python_files)} Python files to process", lable.INFO)
-
-        processed = 0
-        created_seeds = 0
-        errors = 0
-
-        for py_file in python_files:
-            try:
-                # printIt(f"Processing: {py_file}", lable.DEBUG)
-                defName = py_file.stem
-                # Determine the best piSeed type for this file
-                file_type = determineOptimalPiSeedType(py_file)
-
-                if file_type == "piDefGC":
-                    # Handle as piDefGC (function definitions)
-                    dest_dir = options.get('dest_dir')
-                    if dest_dir is not None:
-                        dest_dir = getDestDirForFile(py_file, options)
-                    piSeedFile = findPiDefGCSeedFile(
-                        py_file, dest_dir)
-
-                    if piSeedFile:
-                        changes = syncPythonDefToSeed(
-                            py_file, piSeedFile, dest_dir)
-                        if changes:
-                            printIt(
-                                f" 06 Synced {len(changes)} changes to {piSeedFile.name}", lable.DEBUG)
-                        processed += 1
-                    else:
-                        printIt(
-                            f"Creating new piDefGC piSeed file for: {defName}", lable.INFO)
-                        dest_dir = options.get('dest_dir')
-                        if dest_dir is not None:
-                            dest_dir = getDestDirForFile(py_file, options)
-                        piSeedFile = createNewPiDefGCSeedFileEnhanced(
-                            defName, py_file, None, dest_dir)
-                        if piSeedFile:
-                            created_seeds += 1
-                        else:
-                            printIt(
-                                f"  Failed to create piSeed file for {defName}", lable.ERROR)
-                            errors += 1
-
-                elif file_type == "piGenClass":
-                    # Handle as piGenClass (multiple classes)
-                    className = py_file.stem
-                    piSeedFile = findPiGenClassSeedFile(py_file)
-
-                    if piSeedFile:
-                        changes = syncPythonGenClassToSeed(py_file, piSeedFile)
-                        if changes:
-                            printIt(
-                                f" 07 Synced {len(changes)} changes to {piSeedFile.name}", lable.DEBUG)
-                        processed += 1
-                    else:
-                        printIt(
-                            f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
-                        piSeedFile = createNewPiGenClassSeedFile(
-                            className, py_file)
-                        if piSeedFile:
-                            created_seeds += 1
-                        else:
-                            printIt(
-                                f"  Failed to create piSeed file for {className}", lable.ERROR)
-                            errors += 1
-
-                else:  # piClassGC
-                    # Handle as piClassGC (single class)
-                    className = py_file.stem
-                    piSeedFile = findPiClassGCSeedFile(py_file)
-
-                    if piSeedFile:
-                        changes = syncPythonClassToSeed(
-                            py_file, piSeedFile, options)
-                        if changes:
-                            printIt(
-                                f" 08 Synced {len(changes)} changes to {piSeedFile.name}", lable.DEBUG)
-                        processed += 1
-                    else:
-                        printIt(
-                            f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
-                        dest_dir = options.get('dest_dir')
-                        if dest_dir is not None:
-                            dest_dir = getDestDirForFile(py_file, options)
-                        piSeedFile = createNewPiClassGCSeedFileEnhanced(
-                            className, py_file, None, dest_dir)
-                        if piSeedFile:
-                            created_seeds += 1
-                        else:
-                            printIt(
-                                f"  Failed to create piSeed file for {className}", lable.ERROR)
-                            errors += 1
-
-            except Exception as e:
-                lineNum = f"{e.__traceback__.tb_lineno})" if e.__traceback__ is not None else ""
-                printIt(
-                    f"Error processing {py_file}: {e} {lineNum}", lable.ERROR)
-                errors += 1
-
-        # Summary
-        # printIt(f"Directory sync complete:", lable.INFO)
-        # printIt(f"  Processed: {processed} files", lable.BLANK)
-        printIt(f"  • Created piSeed files: {created_seeds}", lable.BLANK)
-        printIt(f"  • Errors: {errors}", lable.BLANK)
-
-    except Exception as e:
-        tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(f'syncDirectory error:\n{tb_str}', lable.ERROR)
 
 
 def determineOptimalPiSeedType(pythonFile: Path) -> str:
@@ -1713,13 +1614,24 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
         # 13. Add genProps (empty for now)
         # 14. Add strCode (will be added by sync function)
         # 15. Add jsonCode (will be added by sync function)
-        # 16. Add classDefCode (will be added by sync function)
+
+        # 16. Add classDefCode (class methods)
+        if class_info.get('class_methods'):
+            # First, create the structure entries for each method
+            seedContent += f"piStructA00 {className}.piBody:piClassGC:classDefCode\n"
+            for method_name in class_info['class_methods'].keys():
+                seedContent += f"piStructL01 {method_name} 'Method {method_name} extracted from existing code'\n"
+
+            # Then add the actual code lines for each method
+            for method_name, method_code in class_info['class_methods'].items():
+                for line in method_code:
+                    seedContent += f"piValueA {className}.piBody:piClassGC:classDefCode:{method_name} \"{line}\"\n"
+
         # 17. Add globalCode (will be added by sync function)
 
         # Write the new piSeed file
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
-
         printIt(
             f"Created new piClassGC piSeed file: {seedFileName}", lable.INFO)
         return seedFilePath
@@ -1942,77 +1854,114 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                 class_name = node.name
                 info['classes'].append(class_name)
 
-                # Look for __init__ method to extract arguments
+                # Extract all methods from the class
+                class_methods = {}
+                init_args = {}
+                init_body = []
+
                 for item in node.body:
-                    if isinstance(item, ast.FunctionDef) and item.name == '__init__':
-                        init_args = {}
-                        for arg in item.args.args:
-                            if arg.arg != 'self':
-                                arg_info = {
-                                    'type': 'str',  # Default type
-                                    'value': '""'   # Default value
-                                }
+                    if isinstance(item, ast.FunctionDef):
+                        method_name = item.name
 
-                                # Try to infer type from annotation
-                                if arg.annotation:
-                                    if isinstance(arg.annotation, ast.Name):
-                                        arg_info['type'] = arg.annotation.id
-                                    elif isinstance(arg.annotation, ast.Constant):
-                                        arg_info['type'] = str(
-                                            arg.annotation.value)
+                        if method_name == '__init__':
+                            # Special handling for __init__ method
+                            for arg in item.args.args:
+                                if arg.arg != 'self':
+                                    arg_info = {
+                                        'type': 'str',  # Default type
+                                        'value': '""'   # Default value
+                                    }
 
-                                init_args[arg.arg] = arg_info
+                                    # Try to infer type from annotation
+                                    if arg.annotation:
+                                        if isinstance(arg.annotation, ast.Name):
+                                            arg_info['type'] = arg.annotation.id
+                                        elif isinstance(arg.annotation, ast.Constant):
+                                            arg_info['type'] = str(arg.annotation.value)
 
-                        # Process default values
-                        if item.args.defaults:
-                            num_defaults = len(item.args.defaults)
-                            num_args = len(item.args.args) - \
-                                1  # Exclude 'self'
+                                    init_args[arg.arg] = arg_info
 
-                            for i, default in enumerate(item.args.defaults):
-                                arg_index = num_args - num_defaults + i
-                                if arg_index >= 0:
-                                    # +1 to skip 'self'
-                                    arg_name = item.args.args[arg_index + 1].arg
+                            # Process default values
+                            if item.args.defaults:
+                                num_defaults = len(item.args.defaults)
+                                num_args = len(item.args.args) - 1  # Exclude 'self'
 
-                                    if arg_name in init_args:
-                                        if isinstance(default, ast.Constant):
-                                            if isinstance(default.value, str):
-                                                init_args[arg_name]['value'] = f'"{default.value}"'
-                                            else:
-                                                init_args[arg_name]['value'] = str(
-                                                    default.value)
+                                for i, default in enumerate(item.args.defaults):
+                                    arg_index = num_args - num_defaults + i
+                                    if arg_index >= 0:
+                                        arg_name = item.args.args[arg_index + 1].arg  # +1 to skip 'self'
 
-                        info['init_args'] = init_args
+                                        if arg_name in init_args:
+                                            if isinstance(default, ast.Constant):
+                                                if isinstance(default.value, str):
+                                                    init_args[arg_name]['value'] = f'"{default.value}"'
+                                                else:
+                                                    init_args[arg_name]['value'] = str(default.value)
 
-                        # Also extract the __init__ method body for initAppendCode
-                        init_body = []
-                        for stmt in item.body:
-                            if isinstance(stmt, ast.Assign):
-                                # Extract assignment statements like self.switchFlags = switchFlags
-                                line_num = stmt.lineno - 1
-                                if line_num < len(content.split('\n')):
-                                    assign_line = content.split('\n')[line_num].strip()
+                            # Extract the __init__ method body for initAppendCode
+                            for stmt in item.body:
+                                if isinstance(stmt, ast.Assign):
+                                    # Extract assignment statements like self.switchFlags = switchFlags
+                                    line_num = stmt.lineno - 1
+                                    if line_num < len(content.split('\n')):
+                                        assign_line = content.split('\n')[line_num].strip()
 
-                                    # Skip auto-generated assignments (self.param = param)
-                                    # These are already handled by __genInitCodeLines
-                                    is_auto_generated = False
-                                    for arg_name in init_args:
-                                        if assign_line == f"self.{arg_name} = {arg_name}":
-                                            is_auto_generated = True
-                                            break
+                                        # Skip auto-generated assignments (self.param = param)
+                                        # These are already handled by __genInitCodeLines
+                                        is_auto_generated = False
+                                        for arg_name in init_args:
+                                            if assign_line == f"self.{arg_name} = {arg_name}":
+                                                is_auto_generated = True
+                                                break
 
-                                    if not is_auto_generated:
-                                        init_body.append(assign_line)
-                            elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
-                                # Extract method calls like self.optSwitches = readOptSwitches()
-                                line_num = stmt.lineno - 1
-                                if line_num < len(content.split('\n')):
-                                    call_line = content.split('\n')[line_num].strip()
-                                    init_body.append(call_line)
+                                        if not is_auto_generated:
+                                            init_body.append(assign_line)
+                                elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+                                    # Extract method calls like self.optSwitches = readOptSwitches()
+                                    line_num = stmt.lineno - 1
+                                    if line_num < len(content.split('\n')):
+                                        call_line = content.split('\n')[line_num].strip()
+                                        init_body.append(call_line)
+                                elif isinstance(stmt, ast.If):
+                                    # Extract if statements like if self.packageOK: self.packageOK = self._chkBaseDirs()
+                                    line_num = stmt.lineno - 1
+                                    if line_num < len(content.split('\n')):
+                                        if_line = content.split('\n')[line_num].strip()
+                                        init_body.append(if_line)
 
-                        info['init_body'] = init_body
-                        break
+                                        # Also extract the body of the if statement
+                                        for if_stmt in stmt.body:
+                                            if isinstance(if_stmt, ast.Assign):
+                                                if_body_line_num = if_stmt.lineno - 1
+                                                if if_body_line_num < len(content.split('\n')):
+                                                    if_body_line = content.split('\n')[if_body_line_num].strip()
+                                                    init_body.append(if_body_line)
+
+                                        # Handle else clause if present
+                                        if stmt.orelse:
+                                            for else_stmt in stmt.orelse:
+                                                if isinstance(else_stmt, ast.Assign):
+                                                    else_line_num = else_stmt.lineno - 1
+                                                    if else_line_num < len(content.split('\n')):
+                                                        else_line = content.split('\n')[else_line_num].strip()
+                                                        init_body.append(else_line)
+                                                elif isinstance(else_stmt, ast.If):
+                                                    # Handle elif
+                                                    elif_line_num = else_stmt.lineno - 1
+                                                    if elif_line_num < len(content.split('\n')):
+                                                        elif_line = content.split('\n')[elif_line_num].strip()
+                                                        init_body.append(elif_line)
+
+                        else:
+                            # Extract other class methods for classDefCode
+                            method_code = extractMethodCode(content, item)
+                            if method_code:
+                                class_methods[method_name] = method_code
+
+                info['init_args'] = init_args
+                info['init_body'] = init_body
+                info['class_methods'] = class_methods
+                break  # Assuming single class per file for piClassGC
 
         return info
 
@@ -2148,12 +2097,6 @@ def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[
                             fileDirectory = match2.group(1)
                             if fileDirectory == py_file_dir:
                                 return seedFile
-                            else:
-                                pass
-                                # print('py_file_dir:', py_file_dir)
-                                # print('fileDirectory:', fileDirectory)
-                                # print('seedFile:', seedFile)
-                                # print()
             except Exception:
                 continue
         return None
@@ -2163,7 +2106,6 @@ def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[
             f"Error finding piDefGC piSeed file for {defName}: {e} {lineNum}", lable.ERROR)
         return None
 
-
 def findPiGenClassSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given class name (piGenClass)"""
     try:
@@ -2171,24 +2113,27 @@ def findPiGenClassSeedFile(py_file: Path, dest_dir: str | None = None) -> Option
         seedPath = getSeedPath()
         if dest_dir is not None:
             py_file_dir = dest_dir
+
         else:
             py_file_dir = py_file.parent
 
         # Look for piSeed files that contain piGenClass for this class
         seedFiles = list(seedPath.glob(f"*_piGenClass_{className}.pi"))
-
         for seedFile in seedFiles:
             try:
                 with open(seedFile, 'r', encoding='utf-8') as f:
                     content = f.read()
                     # Look for piClassGC line with this def name
-                    regex_pattern = rf"(piValue {className}\.piBody:piGenClass:fileDirectory\s+'([^']+)')"
+                    fileDirectoryPattern = rf"(piValue {className}\.piBody:piGenClass:fileDirectory\s+'([^']+)')"
                     # Search for the pattern in the line
-                    match = re.search(regex_pattern, content, re.MULTILINE)
+                    match = re.search(fileDirectoryPattern, content, re.MULTILINE)
                     if match:
-                        fileDirectory = match.group(2)
-                        if (fileDirectory) == str(py_file_dir):
-                            return seedFile
+                        rawFileDirectory = match.group(2)
+                        match2 = re.search(piSeedValuePattern, rawFileDirectory)
+                        if match2:
+                            fileDirectory = match2.group(1)
+                            if fileDirectory == py_file_dir:
+                                return seedFile
             except Exception:
                 continue
         return None
@@ -2215,6 +2160,7 @@ def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Pat
             seedFilePath = seedPath.joinpath(seedFileName)
 
         # Determine file directory - use dest_dir if provided, otherwise use pythonFile's directory
+        # Determine file directory
         if dest_dir is not None:
             fileDirectory = dest_dir
         else:
@@ -2228,6 +2174,7 @@ def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Pat
 
         # Analyze the Python file to extract class information
         class_info = analyzeMultiClassFile(pythonFile)
+        print(list(class_info.keys()))
         # print('createNewPiGenClassSeedFile-fileDirectory',fileDirectory)
 
         # Create piGenClass piSeed content
@@ -2885,7 +2832,7 @@ def createNewPiDefGCSeedFile(defName: str, pythonFile: Path, seed_file: Path | N
             except ValueError:
                 # If not relative to cwd, use absolute path
                 fileDirectory = str(pythonFile.parent)
-        #print('createNewPiDefGCSeedFile-fileDirectory',fileDirectory)
+
         # Create basic piDefGC piSeed content
         seedContent = f"""piDefGC {defName} 'Generated piDefGC for {defName} function definitions'
 piValue {defName}.piProlog pi.piProlog
@@ -2916,7 +2863,6 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
     Returns list of changes made.
     """
     changes = []
-
     if options is None:
         options = {}
 
@@ -2928,7 +2874,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
         # Read the piSeed file
         with open(piSeedFile, 'r', encoding='utf-8') as f:
             seedContent = f.read()
-
+        # print('seedContent00', seedContent)
         # Parse Python file to extract methods and code elements
         try:
             tree = ast.parse(pythonContent)
@@ -3047,7 +2993,6 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                                         printIt(
                                             f"PRESERVE: {codeElementName} for {className} - preserving pattern", lable.DEBUG)
                                     continue  # Skip this sync
-
                                 # Real changes detected - sync them
                                 if methodCode:
                                     if codeElementName == 'classDefCode':
@@ -3065,6 +3010,8 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                                         seedContent = newSeedContent
                                         changes.append(
                                             f"{codeElementName} ({methodName})")
+
+
 
             # Handle import statements
             if importStatements:
@@ -3186,7 +3133,8 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
             # Write updated piSeed file if changes were made
             if changes:
                 # Rebuild the piSeed file in the correct order
-                seedContent = rebuildPiSeedInCorrectOrder(seedContent, className)
+                seedContent = rebuildPiSeedInCorrectOrder(
+                    seedContent, className)
 
                 with open(piSeedFile, 'w', encoding='utf-8') as f:
                     f.write(seedContent)
@@ -3318,7 +3266,7 @@ def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path, dest_dir: str | None
                         seedContent, defName, regularImports)
                     if changed:
                         seedContent = newSeedContent
-                        print('changes.append("imports")')
+                        # print('changes.append("imports")')
                         changes.append("imports")
 
                 if fromImports:
@@ -3326,7 +3274,7 @@ def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path, dest_dir: str | None
                         seedContent, defName, fromImports)
                     if changed:
                         seedContent = newSeedContent
-                        print('changes.append("fromImports")')
+                        # print('changes.append("fromImports")')
                         changes.append("fromImports")
 
             # Update constants
@@ -3343,7 +3291,7 @@ def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path, dest_dir: str | None
                     seedContent, defName, functionDefs)
                 if changed:
                     seedContent = newSeedContent
-                    print('changes.append("functionDefs")')
+                    # print('changes.append("functionDefs")')
                     changes.append("functionDefs")
 
             # Update global code
@@ -3352,7 +3300,7 @@ def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path, dest_dir: str | None
                     seedContent, defName, globalCode)
                 if changed:
                     seedContent = newSeedContent
-                    print('changes.append("globalCode")')
+                    # print('changes.append("globalCode")')
                     changes.append("globalCode")
 
             # Write updated piSeed file if changes were made
@@ -3383,11 +3331,12 @@ def mapMethodToCodeElement(methodName: str) -> Optional[str]:
     if methodName in method_mapping:
         return method_mapping[methodName]
 
-    # For other methods, they go into classDefCode
-    if not methodName.startswith('_'):  # Skip private methods
-        return 'classDefCode'
+    # Skip special Python methods (double underscore methods except __str__ and __init__)
+    if methodName.startswith('__') and methodName.endswith('__'):
+        return None
 
-    return None
+    # All other methods (including private methods with single underscore) go into classDefCode
+    return 'classDefCode'
 
 
 def removeTrailingBlankLines(lines: List[str]) -> List[str]:
@@ -3454,7 +3403,6 @@ def extractMethodCode(pythonContent: str, methodNode: ast.FunctionDef) -> List[s
     except Exception as e:
         printIt(f"Error extracting method code: {e}", lable.ERROR)
         return []
-        return []
 
 
 def updateSeedClassDefCode(seedContent: str, className: str, methodName: str, methodCode: List[str]) -> Tuple[str, bool]:
@@ -3468,6 +3416,9 @@ def updateSeedClassDefCode(seedContent: str, className: str, methodName: str, me
     Returns (updated_content, was_changed)
     """
     try:
+        # print('---------seedContent--------')
+        # print(seedContent)
+        # print('-----------------')
         lines = seedContent.split('\n')
         newLines = []
         changed = False
@@ -3893,7 +3844,6 @@ def extractJsonCodeWithComparison(pythonContent: str, jsonNode: ast.FunctionDef,
 
     except Exception as e:
         printIt(f"Error in enhanced jsonCode extraction: {e}", lable.ERROR)
-        import traceback
         printIt(f"Traceback: {traceback.format_exc()}", lable.ERROR)
         return extractJsonCode_original(pythonContent, jsonNode, className)
 
@@ -4020,7 +3970,6 @@ def extractStrCodeWithComparison(pythonContent: str, strNode: ast.FunctionDef, c
 
     except Exception as e:
         printIt(f"Error in enhanced strCode extraction: {e}", lable.ERROR)
-        import traceback
         printIt(f"Traceback: {traceback.format_exc()}", lable.ERROR)
         return extractStrCode_original(pythonContent, strNode, className)
 
@@ -4374,7 +4323,6 @@ def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, classNa
 
     except Exception as e:
         printIt(f"Error parsing actual init method: {e}", lable.ERROR)
-        import traceback
         printIt(f"Traceback: {traceback.format_exc()}", lable.ERROR)
         return {}
 
@@ -4498,7 +4446,6 @@ def compareInitComponents(expected: Dict[str, list[str]], actual: Dict[str, list
 
     except Exception as e:
         printIt(f"Error comparing init components: {e}", lable.ERROR)
-        import traceback
         printIt(f"Traceback: {traceback.format_exc()}", lable.ERROR)
         return result
 
@@ -5228,7 +5175,6 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
     """
     try:
         lines = seedContent.split('\n')
-
         # Parse existing content into sections
         sections = {
             'header': [],
@@ -5286,51 +5232,145 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
             elif f'{className}.piBody:piClassGC:imports' in line and 'fromImports' not in line:
                 sections['imports'].append(line)
 
+            # fromPiClasses  piValueA piPi.piBody:piClassGC:fromPiClasses "PiRealmBody"
+            elif f'{className}.piBody:piClassGC:fromPiClasses' in line:
+                sections['fromPiClasses'].append(line)
+
+            # rawFromImports
+            elif f'{className}.piBody:piClassGC:rawFromImports' in line:
+                sections['rawFromImports'].append(line)
+
+            # inheritance
+            elif f'{className}.piBody:piClassGC:inheritance' in line:
+                sections['inheritance'].append(line)
+
             # fromImports
             elif f'{className}.piBody:piClassGC:fromImports' in line:
-                sections['fromImports'][line] = line
+                while True:
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piStructA' in piType and piTitle == f'{className}.piBody:piClassGC:fromImports':
+                            sections['fromImports']['piStructA'] = line
+                        elif 'piStructC' in piType:
+                            currDef = piSD
+                            if currDef[-1] == '.': # strip . copy over key
+                                currDef = currDef[:-1]
+                            # print('currDef01',currDef)
+                            sections['fromImports'][currDef] = []
+                            sections['fromImports'][currDef].append(line)
+                        elif 'fromImports' in piTitle:
+                            currDef = piTitle.split(':')[-2]
+                            # print('currDef02',currDef)
+                            sections['fromImports'][currDef].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
 
             # globals
             elif f'{className}.piBody:piClassGC:globals' in line:
-                sections['globals'][line] = line
-
+                while True:
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piStructA' in piType and piTitle == f'{className}.piBody:piClassGC:globals':
+                            sections['globals']['lines'] = []
+                            sections['globals']['lines'].append(line)
+                        elif 'piValue' == piType:
+                            sections['globals']['lines'].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
             # piClassName
             elif f'{className}.piBody:piClassGC:piClassName' in line:
                 sections['piClassName'] = line
-
+            # classComment
+            elif f'{className}.piBody:piClassGC:classComment' in line:
+                sections['classComment'] = line
+            # preSuperInitCode
+            elif f'{className}.piBody:piClassGC:preSuperInitCode' in line:
+                sections['preSuperInitCode'] = line
+            # postSuperInitCode
+            elif f'{className}.piBody:piClassGC:postSuperInitCode' in line:
+                sections['postSuperInitCode'] = line
             # initArguments
             elif f'{className}.piBody:piClassGC:initArguments' in line:
-                sections['initArguments'][line] = line
-
-            # piStructC01 lines (argument definitions, fromImports definitions, etc.)
-            elif line.startswith('piStructC01'):
-                if 'argument' in line:
-                    sections['initArguments'][line] = line
-                elif 'fromImports' in line:
-                    sections['fromImports'][line] = line
-                # Add other piStructC01 types as needed
+                while True:
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piStructA' in piType and piTitle == f'{className}.piBody:piClassGC:initArguments':
+                            sections['initArguments']['piStructA'] = line
+                        elif 'piStructC' in piType:
+                            currDef = piSD
+                            if currDef[-1] == '.': # strip . copy over key
+                                currDef = currDef[:-1]
+                            # print('currDef01',currDef)
+                            sections['initArguments'][currDef] = []
+                            sections['initArguments'][currDef].append(line)
+                        elif 'initArguments' in piTitle:
+                            currDef = piTitle.split(':')[-2]
+                            # print('currDef02',currDef)
+                            sections['initArguments'][currDef].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
 
             # initAppendCode
             elif f'{className}.piBody:piClassGC:initAppendCode' in line:
                 sections['initAppendCode'].append(line)
-
+            # genProps
+            elif f'{className}.piBody:piClassGC:genProps' in line:
+                sections['genProps'].append(line)
             # strCode
             elif f'{className}.piBody:piClassGC:strCode' in line:
                 sections['strCode'].append(line)
-
             # jsonCode
             elif f'{className}.piBody:piClassGC:jsonCode' in line:
                 sections['jsonCode'].append(line)
 
             # classDefCode
             elif f'{className}.piBody:piClassGC:classDefCode' in line:
-                sections['classDefCode'][line] = line
+                while True:
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piStructA' in piType and piTitle == f'{className}.piBody:piClassGC:classDefCode':
+                            sections['classDefCode']['piStructA'] = line
+                        elif 'piStructL' in piType:
+                            currDef = piTitle
+                            sections['classDefCode'][currDef] = []
+                            sections['classDefCode'][currDef].append(line)
+                        elif 'piValueA' in piType and 'classDefCode' in piTitle:
+                            currDef = piTitle.split(':')[-1]
+                            sections['classDefCode'][currDef].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
+                    if i >= len(lines):
+                        break
+                # print(dumps(sections['classDefCode'],indent=2))
+                # exit()
 
             # globalCode
             elif f'{className}.piBody:piClassGC:globalCode' in line:
-                sections['globalCode'].append(line)
-
+                while True:
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piValueA' in piType:
+                            sections['globalCode'].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
+                    if i >= len(lines): break
             i += 1
+        #  ------ end with ----
 
         # Rebuild in correct order
         result = []
@@ -5353,31 +5393,66 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
         result.extend(sections['imports'])
 
         # 6. fromImports
-        result.extend(sections['fromImports'].values())
+        fromImports = sections['fromImports']
+        if fromImports:
+            capturedLines = []
+            for currDef, lines in fromImports.items():
+                # print('** currDef', currDef)
+                if currDef == 'piStructA':
+                    # here lines is a string for fist line declaring fromImports append
+                    result.extend([lines])
+                else:
+                    # here lines is a list for all piValueA classDefCode code
+                    # print('** currDef', currDef)
+                    # print('** lines',lines)
+                    assert len(lines) == 3
+                    result.extend(lines[:1])
+                    capturedLines.extend(lines[1:])
+            result.extend(capturedLines)
 
-        # 7. fromPiClasses (skip for now)
-        # 8. rawFromImports (skip for now)
+        # 7. fromPiClasses
+        result.extend(sections['fromPiClasses'])
+
+        # 8. rawFromImports
+        result.extend(sections['rawFromImports'])
 
         # 9. globals
-        result.extend(sections['globals'].values())
+        if sections['globals']:
+            result.extend(sections['globals']['lines'])
 
         # 10. piClassName
         if sections['piClassName']:
             result.append(sections['piClassName'])
 
-        # 11. inheritance (skip for now)
+        # 11. inheritance
+        if sections['inheritance']:
+            result.append(sections['inheritance'])
 
         # 12. initArguments
-        result.extend(sections['initArguments'].values())
+        capturedLines = []
+        initArguments = sections['initArguments']
+        if initArguments:
+            for currDef, lines in initArguments.items():
+                if currDef == 'piStructA':
+                    # here lines is a string for fist line declaring classDefCode append
+                    result.extend([lines])
+                else:
+                    result.extend(lines[:1])
+                    capturedLines.extend(lines[1:])
+            result.extend(capturedLines)
 
-        # 13. classComment (skip for now)
-        # 14. preSuperInitCode (skip for now)
-        # 15. postSuperInitCode (skip for now)
+        # 13. classComment
+        result.extend(sections['classComment'])
+        # 14. preSuperInitCode
+        result.extend(sections['preSuperInitCode'])
+        # 15. postSuperInitCode
+        result.extend(sections['postSuperInitCode'])
 
         # 16. initAppendCode
         result.extend(sections['initAppendCode'])
 
-        # 17. genProps (skip for now)
+        # 17. genProps
+        result.extend(sections['genProps'])
 
         # 18. strCode
         result.extend(sections['strCode'])
@@ -5386,15 +5461,26 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
         result.extend(sections['jsonCode'])
 
         # 20. classDefCode
-        result.extend(sections['classDefCode'].values())
+        capturedLines = []
+        classDefCode = sections['classDefCode']
+        if classDefCode:
+            for currDef, lines in classDefCode.items():
+                if currDef == 'piStructA':
+                    # here lines is a string for fist line declaring classDefCode append
+                    result.extend([lines])
+                else:
+                    result.extend(lines[:1])
+                    capturedLines.extend(lines[1:])
+            result.extend(capturedLines)
 
         # 21. globalCode
+        #print("sections['globalCode']", sections['globalCode'])
         result.extend(sections['globalCode'])
-
         return '\n'.join(result)
 
     except Exception as e:
         printIt(f"Error rebuilding piSeed order: {e}", lable.ERROR)
+        printIt(f"Traceback: {traceback.format_exc()}", lable.ERROR)
         return seedContent
 
     """

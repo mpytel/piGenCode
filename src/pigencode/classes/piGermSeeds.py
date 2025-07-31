@@ -2,7 +2,7 @@ import os, datetime, copy, json, re, traceback
 from pigencode.defs.fileIO import readRC, writeRC
 from pigencode.defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles, PiGenClassFiles
 from pigencode.defs.piID import getPiMD5, getPiID
-from pigencode.defs.logIt import logIt, printIt, germDbug, lable
+from pigencode.defs.logIt import logIt, printIt, germDbug, lable, cStr, color
 from .piSeeds import PiSeeds, PiSeedTypes, piSeedTitelSplit
 from .piSeedRegistry import pi_seed_registry, register_pi_seed_handler
 
@@ -11,6 +11,7 @@ class piDictLevelError(Exception):
 class piPiStrucNotFound(Exception):
     pass
 class piIncorectPiValuePath(Exception):
+
     pass
 
 class PiGermSeeds():
@@ -122,7 +123,6 @@ class PiGermSeeds():
             writePi(targetPi, verbose=False)
             self.seeds.next()
     def germinate_piClassGC(self):
-        # print('in germinate_piClassGC"',self.seeds.currPi)
         try:
             while self.seeds.currIndex < self.seeds.seedCount:
                 if self.seeds.currPi.piSeedType == PiSeedTypes[3]:
@@ -131,6 +131,7 @@ class PiGermSeeds():
                     baseTitle = self.seeds.currPi.piTitle
                     baseLineNumber = int(self.seeds.currPi.lineNumber)
                     targetPi = self.getTargetPi(baseType,source=self.piDictSourceTypes[2])
+                    if not targetPi: raise piPiStrucNotFound(f'Need to germinate {baseType} piStruct.')
                     targetPi["piBase"]["piTitle"] = baseTitle
                     targetPi["piBase"]["piSD"] = self.seeds.currPi.piSD
                     piMD5 = getPiMD5(targetPi["piIndexer"])
@@ -151,8 +152,8 @@ class PiGermSeeds():
             printIt(f'{self.seeds.currPi.piTitle}',lable.IncorectPiValuePath)
             print('here00')
             exit()
-        except piPiStrucNotFound:
-            printIt("germinate_piClassGC", lable.DEBUG)
+        except piPiStrucNotFound as e1:
+            printIt(f"germinate_piClassGC: '{cStr(str(e1),color.GREEN)}'", lable.DEBUG)
             raise piPiStrucNotFound
         except StopIteration:
             # print("germinate_piClassGC", "StopIteration")
@@ -467,7 +468,7 @@ class PiGermSeeds():
                 debugTxt = f"{piTitle} from readPiDefault"
             if not targetStruc:  # check if PiStruc
                 targetStruc = readPiStruc(piTitle, verbose=False)
-                debugTxt = f"{piTitle} from readPiStruc"
+                debugTxt = f"{piTitle} from readPiStruc01: {targetStruc}"
         else:
             if source == self.piDictSourceTypes[0]:
                 try: targetStruc = self.piStructs[piTitle]
@@ -477,9 +478,10 @@ class PiGermSeeds():
                 debugTxt = f"{piTitle} from readPiDefault"
             elif source == self.piDictSourceTypes[2]:
                 targetStruc = readPiStruc(piTitle, verbose=False)
-                debugTxt = f"{piTitle} from readPiStruc"
+                debugTxt = f"{piTitle} from readPiStruc02: {targetStruc}"
             else: pass
-        if debug00: print(debugTxt)
+        if debug00:
+            print('DEBUG', debugTxt)
         return targetStruc
     def germinatePiValues(self, piTitle=""):
         try:

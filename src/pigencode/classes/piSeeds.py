@@ -180,42 +180,8 @@ def readSeedPis(piFileName) -> list[tuple]:
                 break
             if not __chkReg.match(currLine) and len(currLine) > 1: # > 1 because blank lines contain \n char.
                 try:
-                    # First try normal shlex parsing
-                    # print('+ ', currLine)
-                    # tokens = shlex.split(currLine)
-                    # #splitPattern = r"^(\S+)\s+(\S+)\s+['\"]*(.+)['\"]*$"
-                    # print(currLine)
-                    # #splitPattern = r"^(\S+)\s+(\S+)\s+['\"]*(.*?)['\"]*$"
-                    splitPattern = r'^(\S+)\s+(\S+)\s+(?:["\'])(.*)(?:["\'])$'
-                    matchTokens: Match[str] | None = match(splitPattern, currLine)
-                    if matchTokens:
-                        # print('match')
-                        # print('matchTokens:', len(matchTokens.groups()))
-                        tokens = list(matchTokens.groups())
-                    else:
-                        #print('shlex')
-                        # preserve singel quote strings if present.
-                        currLine = currLine.replace("'", "\\'")
-                        tokens = shlex.split(currLine)
-                        #print('tokens', tokens)
-                    if len(tokens) == 3: #print('piSD0', tokens[2])
-                        piType, piTitle, piSD = tokens
-                    elif len(tokens) == 2:
-                        piType, piTitle = tokens
-                        piSD = ""
-                    else:
-                        # If we get more than 3 tokens, try to handle it by joining the extra parts as piSD
-                        if len(tokens) > 3:
-                            piType = tokens[0]
-                            piTitle = tokens[1]
-                            piSD = ' '.join(tokens[2:])
-                        else:
-                            print(tokens)
-                            raise Exception("2 or 3 piTokens only")
-                            exit()
-                    # print(tokens)
-                    # print('piSD1', piSD)
-                    piBaseList.append((inLineNumber,piType, piTitle, piSD))
+                    piType, piTitle, piSD = extractPiSeed(currLine)
+                    piBaseList.append((inLineNumber, piType, piTitle, piSD))
                 except ValueError as ve:
                     # Handle shlex parsing errors (like unclosed quotes)
                     if "No closing quotation" in str(ve):
@@ -248,3 +214,42 @@ def readSeedPis(piFileName) -> list[tuple]:
                     printIt(f'current line: {currLine}\n{tb_str}',lable.ERROR)
             inLineNumber += 1
     return piBaseList
+
+
+def extractPiSeed(currLine) -> tuple[str, str, str]:
+    # First try normal shlex parsing
+    # print('+ ', currLine)
+    # tokens = shlex.split(currLine)
+    # #splitPattern = r"^(\S+)\s+(\S+)\s+['\"]*(.+)['\"]*$"
+    # print(currLine)
+    # #splitPattern = r"^(\S+)\s+(\S+)\s+['\"]*(.*?)['\"]*$"
+    splitPattern = r'^(\S+)\s+(\S+)\s+(?:["\'])(.*)(?:["\'])$'
+    matchTokens: Match[str] | None = match(
+        splitPattern, currLine)
+    if matchTokens:
+        # print('match')
+        # print('matchTokens:', len(matchTokens.groups()))
+        tokens = list(matchTokens.groups())
+    else:
+        # print('shlex')
+        # preserve singel quote strings if present.
+        currLine = currLine.replace("'", "\\'")
+        tokens = shlex.split(currLine)
+        # print('tokens', tokens)
+    if len(tokens) == 3:  # print('piSD0', tokens[2])
+        piType, piTitle, piSD = tokens
+    elif len(tokens) == 2:
+        piType, piTitle = tokens
+        piSD = ""
+    else:
+        # If we get more than 3 tokens, try to handle it by joining the extra parts as piSD
+        if len(tokens) > 3:
+            piType = tokens[0]
+            piTitle = tokens[1]
+            piSD = ' '.join(tokens[2:])
+        else:
+            print(tokens)
+            raise Exception("2 or 3 piTokens only")
+    # print(tokens)
+    # print('piSD1', piSD)
+    return (piType, piTitle, piSD)
