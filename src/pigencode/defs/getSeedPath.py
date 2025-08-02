@@ -1,5 +1,5 @@
 from pathlib import Path
-from pigencode.defs.fileIO import getKeyItem, setKeyItem, piGCDirs
+from ..defs.fileIO import getKeyItem, setKeyItem, piGCDirs
 
 # def getSeedPath() -> Path:
 #     seedPath = Path(getKeyItem(piGCDirs[0]))

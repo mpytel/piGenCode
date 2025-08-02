@@ -1,6 +1,6 @@
 import shlex
 from traceback import format_exception
-from pigencode.defs.logIt import logIt, printIt, lable
+from ..defs.logIt import logIt, printIt, lable
 from re import Pattern, compile as reCompile, match, Match
 from typing import Any
 

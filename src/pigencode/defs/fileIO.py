@@ -2,7 +2,7 @@ from json import load, loads, dump, JSONDecodeError
 from traceback import format_exception
 from pathlib import Path
 import difflib
-from pigencode.defs.logIt import printIt, lable, logIt, cStr, color
+from ..defs.logIt import printIt, lable, logIt, cStr, color
 
 cswPath = Path.cwd()
 rcFileName = Path.cwd()

@@ -4,7 +4,7 @@ Replaces exec() calls with a cleaner, more maintainable approach.
 """
 
 from typing import Dict, Callable, Any, Protocol
-from pigencode.defs.logIt import printIt, lable
+from ..defs.logIt import printIt, lable
 
 
 class PiSeedHandler(Protocol):

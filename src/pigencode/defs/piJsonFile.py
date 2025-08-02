@@ -5,9 +5,9 @@ from pathlib import Path
 from json import load, loads, dump, dumps, JSONDecodeError
 from re import compile as reCompile
 from .logIt import logIt, printIt, lable
-from pigencode.classes.piSeeds import PiSeedTypes, PiSeed, PiSeedTypeREs
-from pigencode.defs.fileIO import readRC, writeRC, getKeyItem, setKeyItem, piGenCodeDirs, piGCDirs
-from pigencode.defs.piID import getPiIDs
+from ..classes.piSeeds import PiSeedTypes, PiSeed, PiSeedTypeREs
+from ..defs.fileIO import readRC, writeRC, getKeyItem, setKeyItem, piGenCodeDirs, piGCDirs
+from ..defs.piID import getPiIDs
 
 def readJson(fileName: str, verbose=True) -> dict:
     rtnDict = {}

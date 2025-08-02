@@ -2,8 +2,8 @@ import os
 import sys
 import argparse
 import shlex
-from pigencode.defs.logIt import color, cStr
-from pigencode.commands.commands import Commands, cmdDescriptionTagStr
+from ..defs.logIt import color, cStr
+from ..commands.commands import Commands, cmdDescriptionTagStr
 
 
 class PiHelpFormatter(argparse.RawTextHelpFormatter):

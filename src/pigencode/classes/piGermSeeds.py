@@ -1,8 +1,8 @@
 import os, datetime, copy, json, re, traceback
-from pigencode.defs.fileIO import readRC, writeRC
-from pigencode.defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles, PiGenClassFiles
-from pigencode.defs.piID import getPiMD5, getPiID
-from pigencode.defs.logIt import logIt, printIt, germDbug, lable, cStr, color
+from ..defs.fileIO import readRC, writeRC
+from ..defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles, PiGenClassFiles
+from ..defs.piID import getPiMD5, getPiID
+from ..defs.logIt import logIt, printIt, germDbug, lable, cStr, color
 from .piSeeds import PiSeeds, PiSeedTypes, piSeedTitelSplit
 from .piSeedRegistry import pi_seed_registry, register_pi_seed_handler
 
@@ -654,7 +654,6 @@ class PiGermSeeds():
                     if dprint02: germDbug("S", self.seeds.currPi, self.seeds.nextPi)
                     piPiTitleKey, piElemKeys = piSeedTitelSplit(self.seeds.currPi.piTitle)
                     try:
-                        #print(list(piPiTitleKey,self.piStructs.keys()))
                         targetPi = self.getTargetPi(piPiTitleKey)
                         aDict = targetPi
                         piElemKeys = piElemKeys.split(":")
