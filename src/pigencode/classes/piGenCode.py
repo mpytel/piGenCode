@@ -726,7 +726,7 @@ class PiGenCode():
         self.__setPiClassDir()
         piClassLines = self.__genClassLines()
         piClassLines = self.__genAboveClassLines() + piClassLines + self.__genBellowClassLines()
-        piClassLines += f'\n{self.piClassName}_PI = ' + json.dumps(self.pi_piClassGC,indent=4)
+        # piClassLines += f'\n{self.piClassName}_PI = ' + json.dumps(self.pi_piClassGC,indent=4)
         self.__savePiClass(piClassLines, verbose)
         logIt("GenPiClass: " + piJsonFileName)
     def genPiClasses(self, genFileName='', verbose = False):
