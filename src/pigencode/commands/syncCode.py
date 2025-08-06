@@ -2,9 +2,9 @@ import os
 import re
 import ast
 import traceback
-from json import dumps
+from json import dumps, dump
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Set
+from typing import Dict, List, Tuple, Optional, Set, Any
 from ..classes.argParse import ArgParse
 from ..defs.logIt import printIt, lable
 from ..defs.fileIO import getKeyItem, piGCDirs
@@ -14,10 +14,12 @@ from ..classes.piGenCode import PiGenCode
 
 piSeedValuePattern = r'["\'](.*)["\'].*$'
 global options
+global devExept
+devExept = True
 global showDefNames
 # showDefNames = lable.ABORTPRT
 # showDefNames = lable.IMPORT
-showDefNames = lable.ABORTPRT
+showDefNames = lable.IMPORT
 showDefNames01 = lable.ABORTPRT
 showDefNames02 = lable.ABORTPRT
 showDefNames03 = lable.ABORTPRT
@@ -699,7 +701,7 @@ def syncCode(argParse: ArgParse):
         syncAllFiles(options)
 
 
-def findExistingPiSeedFile(filePath: Path, dest_dir: str) -> tuple:
+def findExistingPiSeedFile(filePath: Path, dest_dir: str) -> tuple[Path | None, str | None]:
     """
     Find existing piSeed file for a class, checking all types.
     Returns (piSeedFile_path, piSeed_type) or (None, None) if not found.
@@ -797,6 +799,7 @@ def syncSingleFile(fileName: str, options: dict):
                             f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
                         piSeedFile = createNewPiGenClassSeedFile(
                             className, filePath, None, dest_dir)
+
             else:  # piClassGC
                 piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
                 if not piSeedFile and options.get('create_piSeeds', False):
@@ -808,10 +811,9 @@ def syncSingleFile(fileName: str, options: dict):
                         printIt(
                             f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
                         print('seedContent01')
-
                         piSeedFile = createNewPiClassGCSeedFile(
                             className, filePath, None, dest_dir)
-
+                        return
         # Apply exclude pattern filter
         # Tuple[filePath, str, str]
         actual_type = determineOptimalPiSeedType(filePath)
@@ -829,7 +831,6 @@ def syncSingleFile(fileName: str, options: dict):
 
         if options.get('dry_run', False):
             printIt("DRY RUN MODE - No changes will be made", lable.WARN)
-
             if options.get('create_piSeeds', False):
                 # Only show files that actually need piSeed creation
                 files_needing_piSeeds = []
@@ -919,12 +920,13 @@ def syncSingleFile(fileName: str, options: dict):
 
         # Sync based on the determined file type
         changes = []
-        if file_type == "piDefGC":
-            changes = syncPythonDefToSeed(filePath, piSeedFile, dest_dir)
-        elif file_type == "piGenClass":
-            changes = syncPythonGenClassToSeed(filePath, piSeedFile)
-        else:  # piClassGC
-            changes = syncPythonClassToSeed(filePath, piSeedFile, options)
+        if existingPiSeedFile:
+            if file_type == "piDefGC":
+                changes = syncPythonDefToSeed(filePath, piSeedFile, dest_dir)
+            elif file_type == "piGenClass":
+                changes = syncPythonGenClassToSeed(filePath, piSeedFile)
+            else:  # piClassGC
+                changes = syncPythonClassToSeed(filePath, piSeedFile, options)
 
         # Validate results if requested
         if options.get('validate', False) and piSeedFile:
@@ -1296,7 +1298,7 @@ def syncDirectory(directory: Path, options: dict):
                 f"No Python files found in directory: {directory}", lable.INFO)
             return
 
-        # Apply exclude pattern filter
+        # Apply exclude file pattern filter
         if options.get('exclude_pattern'):
             import fnmatch
             pattern = options['exclude_pattern']
@@ -1304,7 +1306,6 @@ def syncDirectory(directory: Path, options: dict):
                 f for f in python_files if not fnmatch.fnmatch(f.name, pattern)]
 
         # printIt(f"Found {len(python_files)} Python files in {directory}", lable.INFO)
-        # if piSeed file doew not exist force create all piSeeds
         if not Path(getKeyItem(piGCDirs[0])).is_dir():
             options['create_piSeeds'] = True
 
@@ -1386,7 +1387,6 @@ def syncDirectory(directory: Path, options: dict):
                     dest_dir = getDestDirForFile(py_file, options)
                 # Determine file type
                 file_type = determineOptimalPiSeedType(py_file)
-
                 # Apply filter if specified
                 if options.get('filter_type'):
                     filter_map = {'class': 'piClassGC', 'def': 'piDefGC', 'genclass': 'piGenClass'}
@@ -1394,6 +1394,7 @@ def syncDirectory(directory: Path, options: dict):
                         if options.get('stats', False):
                             printIt(f"Skipping {py_file.name} - doesn't match filter", lable.DEBUG)
                         continue
+                # here is where one file is processed
 
                 # Process based on type
                 changes = []
@@ -1416,7 +1417,6 @@ def syncDirectory(directory: Path, options: dict):
                         piSeedFile = createNewPiGenClassSeedFile(className, py_file, None, dest_dir)
                         if piSeedFile:
                             createdSeeds += 1
-
                     if piSeedFile:
                         changes = syncPythonGenClassToSeed(py_file, piSeedFile)
 
@@ -1428,7 +1428,6 @@ def syncDirectory(directory: Path, options: dict):
                             className, py_file, None, dest_dir)
                         if piSeedFile:
                             createdSeeds += 1
-
                     if piSeedFile:
                         changes = syncPythonClassToSeed(py_file, piSeedFile, options)
 
@@ -1509,7 +1508,6 @@ def determineOptimalPiSeedType(pythonFile: Path) -> str:
                 classes.append(node)
             elif isinstance(node, ast.FunctionDef):
                 functions.append(node)
-
         # Decision logic
         if len(classes) == 0:
             return "piDefGC"  # No classes, use function definitions
@@ -1521,18 +1519,14 @@ def determineOptimalPiSeedType(pythonFile: Path) -> str:
 
             # Check for inheritance
             if class_node.bases:
-                return "piGenClass"  # Has inheritance, use piGenClass
-
-            # Check for complex methods
-            method_count = sum(
-                1 for item in class_node.body if isinstance(item, ast.FunctionDef))
-            if method_count > 3:  # More than __init__, __str__, json
-                return "piGenClass"  # Complex class, use piGenClass
-
-            # Simple single class, use piClassGC for backward compatibility
-            return "piClassGC"
-
-        return "piDefGC"  # Default fallback
+                inherited_classes = []
+                for base_node in class_node.bases:
+                    # We check for ast.Name nodes, which represent simple class names
+                    if isinstance(base_node, ast.Name):
+                        inherited_classes.append(base_node.id)
+                if 'PiPi' in inherited_classes:
+                    return "piClassGC"
+            return "piGenClass"  # Has inheritance, use piGenClass
 
     except Exception as e:
         printIt(
@@ -1569,9 +1563,7 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
 
         # Analyze the Python file to extract more information
         class_info = analyzePythonClassFile(pythonFile)
-
-        # print('createNewPiClassGCSeedFile-fileDirectory',fileDirectory)
-
+        # print(dumps(class_info, indent=2))
         # Create  piClassGC piSeed content following the exact order from piStruct_piClassGC.json
         seedContent = f"""piClassGC {className} 'Generated piClassGC for {className} class'
 piValue {className}.piProlog pi.piProlog
@@ -1583,23 +1575,25 @@ piValue {className}.piBody:piClassGC:fileName {className}
 piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from existing code'
 """
 
+
+        # 2. Add from imports if found (temporarily disabled to fix ordering issue)
+        if class_info.get('from_imports'):
+            seedContent += f"piStructA00 {className}.piBody:piClassGC:fromImports\n"
+            for module_name, import_info in class_info['from_imports'].items():
+                clean_module = module_name.replace('.', '_').replace('-', '_')
+                seedContent += f"piStructC01 fromImports {clean_module}.\n"
+            for module_name, import_info in class_info['from_imports'].items():
+                clean_module = module_name.replace('.', '_').replace('-', '_')
+                seedContent += f"piValue {className}.piBody:piClassGC:fromImports:{clean_module}:from \"{import_info['from']}\"\n"
+                seedContent += f"piValue {className}.piBody:piClassGC:fromImports:{clean_module}:import \"{import_info['import']}\"\n"
+
         # 1. Add imports if found
         if class_info.get('imports'):
             for imp in class_info['imports']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:imports {imp}\n"
-
-        # 2. Add from imports if found (temporarily disabled to fix ordering issue)
-        # if class_info.get('from_imports'):
-        #     seedContent += f"piStructA00 {className}.piBody:piClassGC:fromImports\n"
-        #     for module_name, import_info in class_info['from_imports'].items():
-        #         clean_module = module_name.replace('.', '_').replace('-', '_')
-        #         seedContent += f"piStructC01 fromImports {clean_module}.\n"
-        #     for module_name, import_info in class_info['from_imports'].items():
-        #         clean_module = module_name.replace('.', '_').replace('-', '_')
-        #         seedContent += f"piValue {className}.piBody:piClassGC:fromImports:{clean_module}:from \"{import_info['from']}\"\n"
-        #         seedContent += f"piValue {className}.piBody:piClassGC:fromImports:{clean_module}:import \"{import_info['import']}\"\n"
-
+                print(imp)
         # 3. Add fromPiClasses (empty for now)
+
         # 4. Add rawFromImports (empty for now)
 
         # 5. Add globals (will be added by sync function)
@@ -1621,15 +1615,21 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
                 seedContent += f"piValue {className}.piBody:piClassGC:initArguments:{arg_name}:value {arg_value}\n"
 
         # 9. Add classComment (empty for now)
-        # 10. Add preSuperInitCode (empty for now)
-        # 11. Add postSuperInitCode (empty for now)
 
+        # 10. Add preSuperInitCode
+        # 11. Add postSuperInitCode
         # 12. Add init method body if found
+        if class_info.get('init_preSuper'):
+            for init_line in class_info['init_preSuper']:
+                seedContent += f"piValueA {className}.piBody:piClassGC:preSuperInitCode \"{init_line}\"\n"
+        if class_info.get('init_postSuper'):
+            for init_line in class_info['init_postSuper']:
+                seedContent += f"piValueA {className}.piBody:piClassGC:postSuperInitCode \"{init_line}\"\n"
         if class_info.get('init_body'):
             for init_line in class_info['init_body']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:initAppendCode \"{init_line}\"\n"
-
         # 13. Add genProps (empty for now)
+
         # 14. Add strCode (will be added by sync function)
         # 15. Add jsonCode (will be added by sync function)
 
@@ -1641,14 +1641,14 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
             for method_name in class_info['class_methods'].keys():
                 methodNameSeeds[method_name] = f"piStructL01 {method_name} 'Method {method_name} extracted from existing code'\n"
             # Then add the actual code lines for each method
-            docStrPattern = r''
             chk4ADocString = True
             line: str
-            inLine = 0
             method_code: list
             methodContent = ''
             for method_name, method_code in class_info['class_methods'].items():
-                while inLine < len(method_code)
+                # Look thugh method_code and extract the docString if any
+                inLine = 0
+                while inLine < len(method_code):
                     line = method_code[inLine]
                     if chk4ADocString:
                         if '"""' in line or "'''" in line:
@@ -1658,9 +1658,10 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
                         pass
                     else:
                         methodContent += f"piValueA {className}.piBody:piClassGC:classDefCode:{method_name} \"{line}\"\n"
+                    inLine += 1
                 seedContent += methodNameSeeds[method_name]
+            seedContent += methodContent
         # 17. Add globalCode (will be added by sync function)
-
         # Write the new piSeed file
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
@@ -1673,16 +1674,17 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
             f"Error creating new piClassGC piSeed file for {className}: {e}", lable.ERROR)
         return None
 
-def getDocString(inLine: int, method_name: str, memethodNameSeeds: dict, method_code: list) -> str:
+def getDocString(inLine: int, method_name: str, memethodNameSeeds: dict, method_code: list) -> Tuple[str, int]:
     mlLines = ''
     origStr = memethodNameSeeds[method_name]
     line: str
-    inLine = 0
-    for line in method_code:
+    inLine2 = inLine
+    while inLine2 < len(method_code):
+        line = method_code[inLine2]
         if mlLines:
             if line.strip().endswith(('"""', "'''")):
                 methodNameSeed = origStr.replace(f"'Method {method_name} extracted from existing code'",mlLines[:-1])
-                return methodNameSeed
+                return methodNameSeed, inLine2 + 1
             else:
                 mlLines += line.strip() + '\n'
         else:
@@ -1691,10 +1693,11 @@ def getDocString(inLine: int, method_name: str, memethodNameSeeds: dict, method_
                     newStr = line.strip().replace('"""','')
                     newStr = newStr.replace("'''",'')
                     methodNameSeed = origStr.replace(f"'Method {method_name} extracted from existing code'",f"'{newStr}'")
-                    return methodNameSeed
+                    return methodNameSeed, inLine2 + 1
                 else:
                     mlLines = line + '\n'
-    return origStr
+        inLine2 += 1
+    return origStr, inLine
 
 def updatePiSeedFileDirectory(piSeedFile: Path, className: str, piSeedType: str, dest_dir: str) -> bool:
     """
@@ -1709,7 +1712,7 @@ def updatePiSeedFileDirectory(piSeedFile: Path, className: str, piSeedType: str,
     Returns:
         bool: True if the file was updated, False otherwise
     """
-    printIt('updatePiSeedFileDirectory', showDefNames)
+    printIt('updatePiSeedFileDirectory', showDefNames03)
     try:
         # Read the piSeed file
         with open(piSeedFile, 'r', encoding='utf-8') as f:
@@ -1764,7 +1767,7 @@ def createNewPiDefGCSeedFile(defName: str, pythonFile: Path, seed_file: Path | N
         # Analyze the Python file to extract more information
         def_info = analyzePythonDefFile(pythonFile)
 
-        # print('createNewPiDefGCSeedFile-fileDirectory',fileDirectory)
+        #print('createNewPiDefGCSeedFile-fileDirectory',fileDirectory)
         # Create enhanced piDefGC piSeed content
         seedContent = f"""piDefGC {defName} 'Generated piDefGC for {defName} function definitions'
 piValue {defName}.piProlog pi.piProlog
@@ -1795,7 +1798,7 @@ piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from e
         # Add constants if found
         if def_info.get('constants'):
             for constant in def_info['constants']:
-                # print('constant',constant)
+                #print('constant',constant)
                 escaped_constant = constant.replace('"', '\\"')
                 seedContent += f"piValueA {defName}.piBody:piDefGC:constants \"{escaped_constant}\"\n"
 
@@ -1868,7 +1871,8 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
     try:
         with open(pythonFile, 'r', encoding='utf-8') as f:
             content = f.read()
-
+        contentList = content.split('\n')
+        lenContent = len(contentList)
         tree = ast.parse(content)
 
         info = {
@@ -1876,9 +1880,12 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
             'from_imports': {},
             'classes': [],
             'init_args': {},
+            'init_body': [],
+            'init_preSupe': [],
+            'init_postSuper': [],
+            'class_methods': {},
             'methods': []
         }
-
         # Extract imports and classes
         for node in tree.body:
             if isinstance(node, ast.Import):
@@ -1887,6 +1894,7 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                     if alias.asname:
                         import_name = f"{alias.name} as {alias.asname}"
                     info['imports'].append(import_name)
+                    print(import_name)
 
             elif isinstance(node, ast.ImportFrom):
                 module_name, imports = extract_ImportFrom(node)
@@ -1912,6 +1920,8 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                 class_methods = {}
                 init_args = {}
                 init_body = []
+                init_preSuper = []
+                init_postSuper = []
 
                 for item in node.body:
                     if isinstance(item, ast.FunctionDef):
@@ -1939,8 +1949,7 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                             # Process default values
                             if item.args.defaults:
                                 num_defaults = len(item.args.defaults)
-                                num_args = len(item.args.args) - \
-                                    1  # Exclude 'self'
+                                num_args = len(item.args.args) - 1  # Exclude 'self'
 
                                 for i, default in enumerate(item.args.defaults):
                                     arg_index = num_args - num_defaults + i
@@ -1961,9 +1970,8 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                                 if isinstance(stmt, ast.Assign):
                                     # Extract assignment statements like self.switchFlags = switchFlags
                                     line_num = stmt.lineno - 1
-                                    if line_num < len(content.split('\n')):
-                                        assign_line = content.split(
-                                            '\n')[line_num].strip()
+                                    if line_num < lenContent:
+                                        assign_line = contentList[line_num].strip()
 
                                         # Skip auto-generated assignments (self.param = param)
                                         # These are already handled by __genInitCodeLines
@@ -1974,69 +1982,105 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                                                 break
 
                                         if not is_auto_generated:
-                                            init_body.append(assign_line)
+                                            if init_preSuper:
+                                                init_postSuper.append(assign_line)
+                                            else:
+                                                init_body.append(assign_line)
+
                                 elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
                                     # Extract method calls like self.optSwitches = readOptSwitches()
                                     line_num = stmt.lineno - 1
-                                    if line_num < len(content.split('\n')):
-                                        call_line = content.split(
-                                            '\n')[line_num].strip()
-                                        init_body.append(call_line)
+                                    if line_num < lenContent:
+                                        call_line = contentList[line_num].strip()
+                                        if "super(" in call_line:
+                                            init_preSuper.extend(init_body)
+                                            init_body = []
+                                            openParentheses = call_line.count('(') - call_line.count(')')
+                                            while openParentheses:
+                                                line_num += 1
+                                                call_line = contentList[line_num].strip()
+                                                openParentheses = openParentheses + call_line.count('(') - call_line.count(')')
+                                        else:
+                                            if init_preSuper:
+                                                init_postSuper.append(call_line)
+                                            else:
+                                                init_body.append(call_line)
                                 elif isinstance(stmt, ast.If):
                                     # Extract if statements like if self.packageOK: self.packageOK = self._chkBaseDirs()
                                     line_num = stmt.lineno - 1
-                                    if line_num < len(content.split('\n')):
-                                        if_line = content.split(
-                                            '\n')[line_num].strip()
-                                        init_body.append(if_line)
+                                    if line_num < lenContent:
+                                        removeLSpaceCount = len(contentList[line_num])
+                                        if_line = contentList[line_num].lstrip()
+                                        removeLSpaceCount -= len(if_line)
+                                        if_line = if_line.strip()
+                                        if init_preSuper:
+                                            init_postSuper.append(if_line)
+                                        else:
+                                            init_body.append(if_line)
 
                                         # Also extract the body of the if statement
                                         for if_stmt in stmt.body:
                                             if isinstance(if_stmt, ast.Assign):
                                                 if_body_line_num = if_stmt.lineno - 1
-                                                if if_body_line_num < len(content.split('\n')):
-                                                    if_body_line = content.split(
-                                                        '\n')[if_body_line_num].strip()
-                                                    init_body.append(
-                                                        if_body_line)
+                                                if if_body_line_num < lenContent:
+                                                    if_body_line = contentList[if_body_line_num][removeLSpaceCount:]
+                                                    if_body_line = if_body_line.rstrip()
+                                                    if init_preSuper:
+                                                        init_postSuper.append(if_body_line)
+                                                    else:
+                                                        init_body.append(if_body_line)
 
                                         # Handle else clause if present
                                         if stmt.orelse:
                                             for else_stmt in stmt.orelse:
                                                 if isinstance(else_stmt, ast.Assign):
                                                     else_line_num = else_stmt.lineno - 1
-                                                    if else_line_num < len(content.split('\n')):
-                                                        else_line = content.split(
-                                                            '\n')[else_line_num].strip()
-                                                        init_body.append(
-                                                            else_line)
+                                                    if else_line_num < lenContent:
+                                                        else_line = contentList[else_line_num][removeLSpaceCount:]
+                                                        else_line = else_line.rstrip()
+                                                        if init_preSuper:
+                                                            init_postSuper.append(else_line)
+                                                        else:
+                                                            init_body.append(else_line)
                                                 elif isinstance(else_stmt, ast.If):
                                                     # Handle elif
                                                     elif_line_num = else_stmt.lineno - 1
-                                                    if elif_line_num < len(content.split('\n')):
-                                                        elif_line = content.split(
-                                                            '\n')[elif_line_num].strip()
-                                                        init_body.append(
-                                                            elif_line)
-
+                                                    if elif_line_num < lenContent:
+                                                        elif_line = contentList[elif_line_num][removeLSpaceCount:]
+                                                        elif_line = elif_line.rstrip()
+                                                        if init_preSuper:
+                                                            init_postSuper.append(elif_line)
+                                                        else:
+                                                            init_body.append(elif_line)
                         else:
                             # Extract other class methods for classDefCode
-                            method_code = extractMethodCode(content, item)
+                            isProperty, method_code = extractMethodCode(method_name, content, item)
                             if method_code:
-                                class_methods[method_name] = method_code
+                                if isProperty:
+                                    if method_name in class_methods:
+                                        class_methods[method_name].extend(method_code)
+                                    else:
+                                        class_methods[method_name] = method_code
+                                else:
+                                    class_methods[method_name] = method_code
 
                 info['init_args'] = init_args
+                info['init_preSuper'] = init_preSuper
+                info['init_postSuper'] = init_postSuper
                 info['init_body'] = init_body
                 info['class_methods'] = class_methods
-                break  # Assuming single class per file for piClassGC
+                print(class_methods, dumps(info['class_methods'],indent=2))
 
+                break  # Assuming single class per file for piClassGC
+        printPythonFileInfo(pythonFile, info)
         return info
 
     except Exception as e:
-        printIt(
-            f"Error analyzing Python class file {pythonFile}: {e}", lable.ERROR)
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def analyzePythonClassFile', lable.ERROR)
+        printIt(f"Error analyzing Python class file {pythonFile}: {e}", lable.ERROR)
         return {}
-
 
 def analyzePythonDefFile(pythonFile: Path) -> Dict:
     """
@@ -2095,14 +2139,115 @@ def analyzePythonDefFile(pythonFile: Path) -> Dict:
                     else:
                         # Single-line constant
                         info['constants'].append(constantCode)
-
+        printPythonFileInfo(pythonFile, info)
         return info
 
     except Exception as e:
-        printIt(
-            f"Error analyzing Python def file {pythonFile}: {e}", lable.ERROR)
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def analyzePythonDefFile', lable.ERROR)
+        printIt(f"Error analyzing Python def file {pythonFile}: {e}", lable.ERROR)
         return {}
 
+def analyzeMultiClassFile(pythonFile: Path) -> Dict:
+    """
+    Analyze a Python file to extract multiple class information for creating piGenClass files.
+    Returns dict with imports, from_imports, classes, constants, etc. (piGenClass)
+    """
+    printIt('analyzeMultiClassFile', showDefNames)
+    try:
+        with open(pythonFile, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        tree = ast.parse(content)
+
+        info = {
+            'imports': [],
+            'from_imports': {},
+            'classes': {},
+            'constants': [],
+            'mlConstants': {},
+            'functions': []
+        }
+
+        # Extract imports, classes, and other elements
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    import_name = alias.name
+                    if alias.asname:
+                        import_name = f"{alias.name} as {alias.asname}"
+                    info['imports'].append(import_name)
+
+            elif isinstance(node, ast.ImportFrom):
+                module_name, imports = extract_ImportFrom(node)
+
+                info['from_imports'][module_name] = {
+                    'from': module_name,
+                    'import': ', '.join(imports)
+                }
+
+            elif isinstance(node, ast.ClassDef):
+                class_name = node.name
+                # Create description based on inheritance
+                if node.bases:
+                    base_names = []
+                    for base in node.bases:
+                        if isinstance(base, ast.Name):
+                            base_names.append(base.id)
+                        elif isinstance(base, ast.Attribute):
+                            if isinstance(base.value, ast.Name):
+                                base_names.append(
+                                    f"{base.value.id}.{base.attr}")
+                    inheritance_desc = f"inherits from {', '.join(base_names)}"
+                else:
+                    inheritance_desc = "base class"
+
+                info['classes'][class_name] = f"Class {class_name} - {inheritance_desc}"
+
+            elif isinstance(node, ast.FunctionDef):
+                isPropertry, funcCode = extractMethodCode('functions', content, node)
+                info['functions'].extend(funcCode)
+
+            elif isinstance(node, ast.Assign):
+                # Extract constants (module-level assignments)
+                constantCode = extractAssignmentCode(content, node)
+                if constantCode:
+                    # Check if this is a multi-line constant
+                    # Multi-line if: contains newlines OR contains triple quotes (multi-line strings)
+                    if '\n' in constantCode or '"""' in constantCode or "'''" in constantCode:
+                        # Multi-line constant - extract variable name and store in mlConstants
+                        lines = constantCode.split('\n')
+                        first_line = lines[0].strip()
+                        if '=' in first_line:
+                            var_name = first_line.split('=')[0].strip()
+                            info['mlConstants'][var_name] = constantCode.split('\n')
+                    else:
+                        # Single-line constant
+                        info['constants'].append(constantCode)
+        printPythonFileInfo(pythonFile, info)
+        return info
+
+    except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def analyzeMultiClassFile', lable.ERROR)
+        printIt(
+            f"Error analyzing multi-class file {pythonFile}: {e}", lable.ERROR)
+        return {}
+
+def printPythonFileInfo(pythonFile: Path, info: Dict[str, Any]):
+    dumpDir = Path('dump/').joinpath(pythonFile.parent)
+    dumpDir.mkdir(parents=True, exist_ok=True)
+    dumpFile = dumpDir.joinpath(pythonFile.stem + '.json')
+    with open(dumpFile, 'w') as wf:
+        dump(info, wf, indent=2)
+
+# Example usage:
+my_file = Path('testCode/pi/defs/piUtil.py')
+file_info = {"version": "1.0", "author": "gemini"}
+
+printPythonFileInfo(my_file, file_info)
 
 def findPiClassGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given class name (piClassGC)"""
@@ -2134,6 +2279,9 @@ def findPiClassGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optiona
                 continue
         return None
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def findPiClassGCSeedFile', lable.ERROR)
         printIt(
             f"Error finding piClassGC piSeed file for {className}: {e}", lable.ERROR)
         return None
@@ -2162,7 +2310,7 @@ def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[
                     match = re.search(fileDirectoryPattern,
                                       content, re.MULTILINE)
                     if match:
-                        # print('content:', content)
+                        #print('content:', content)
                         rawFileDirectory = match.group(2)
                         match2 = re.search(
                             piSeedValuePattern, rawFileDirectory)
@@ -2174,9 +2322,11 @@ def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[
                 continue
         return None
     except Exception as e:
-        lineNum = f"{e.__traceback__.tb_lineno})" if e.__traceback__ is not None else ""
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def findPiDefGCSeedFile', lable.ERROR)
         printIt(
-            f"Error finding piDefGC piSeed file for {defName}: {e} {lineNum}", lable.ERROR)
+            f"Error finding piDefGC piSeed file for {defName}: {e}", lable.ERROR)
         return None
 
 
@@ -2215,6 +2365,9 @@ def findPiGenClassSeedFile(py_file: Path, dest_dir: str | None = None) -> Option
                 continue
         return None
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def findPiGenClassSeedFile', lable.ERROR)
         printIt(
             f"Error finding piGenClass piSeed file for {className}: {e}", lable.ERROR)
         return None
@@ -2252,8 +2405,8 @@ def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Pat
 
         # Analyze the Python file to extract class information
         class_info = analyzeMultiClassFile(pythonFile)
-        # print(list(class_info.keys()))
-        # print('createNewPiGenClassSeedFile-fileDirectory',fileDirectory)
+        #print(list(class_info.keys()))
+        #print('createNewPiGenClassSeedFile-fileDirectory',fileDirectory)
 
         # Create piGenClass piSeed content
         seedContent = f"""piGenClass {className} 'Generated piGenClass for {className} multi-class file'
@@ -2331,6 +2484,9 @@ piValueA {className}.piBody:piGenClass:headers '# {className} classes - synced f
         return seedFilePath
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def createNewPiGenClassSeedFile', lable.ERROR)
         printIt(
             f"Error creating new piGenClass piSeed file for {className}: {e}", lable.ERROR)
         return None
@@ -2381,7 +2537,7 @@ def syncPythonGenClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
                         constants.append(constantCode)
                 elif isinstance(node, ast.FunctionDef):
                     # Global functions
-                    funcCode = extractMethodCode(pythonContent, node)
+                    isPropertry, funcCode = extractMethodCode('global', pythonContent, item)
                     globalCode.extend(funcCode)
                     globalCode.append("")  # Add blank line between functions
 
@@ -2460,97 +2616,13 @@ def syncPythonGenClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
                 f"Syntax error in Python file {pythonFile}: {e}", lable.ERROR)
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def syncPythonGenClassToSeed', lable.ERROR)
         printIt(
             f"Error syncing {pythonFile} to {piSeedFile}: {e}", lable.ERROR)
 
     return changes
-
-
-def analyzeMultiClassFile(pythonFile: Path) -> Dict:
-    """
-    Analyze a Python file to extract multiple class information for creating piGenClass files.
-    Returns dict with imports, from_imports, classes, constants, etc. (piGenClass)
-    """
-    printIt('analyzeMultiClassFile', showDefNames)
-    try:
-        with open(pythonFile, 'r', encoding='utf-8') as f:
-            content = f.read()
-
-        tree = ast.parse(content)
-
-        info = {
-            'imports': [],
-            'from_imports': {},
-            'classes': {},
-            'constants': [],
-            'mlConstants': {},
-            'functions': []
-        }
-
-        # Extract imports, classes, and other elements
-        for node in tree.body:
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    import_name = alias.name
-                    if alias.asname:
-                        import_name = f"{alias.name} as {alias.asname}"
-                    info['imports'].append(import_name)
-
-            elif isinstance(node, ast.ImportFrom):
-                module_name, imports = extract_ImportFrom(node)
-
-                info['from_imports'][module_name] = {
-                    'from': module_name,
-                    'import': ', '.join(imports)
-                }
-
-            elif isinstance(node, ast.ClassDef):
-                class_name = node.name
-                # Create description based on inheritance
-                if node.bases:
-                    base_names = []
-                    for base in node.bases:
-                        if isinstance(base, ast.Name):
-                            base_names.append(base.id)
-                        elif isinstance(base, ast.Attribute):
-                            if isinstance(base.value, ast.Name):
-                                base_names.append(
-                                    f"{base.value.id}.{base.attr}")
-                    inheritance_desc = f"inherits from {', '.join(base_names)}"
-                else:
-                    inheritance_desc = "base class"
-
-                info['classes'][class_name] = f"Class {class_name} - {inheritance_desc}"
-
-            elif isinstance(node, ast.FunctionDef):
-                funcCode = extractMethodCode(content, node)
-                info['functions'].extend(funcCode)
-
-            elif isinstance(node, ast.Assign):
-                # Extract constants (module-level assignments)
-                constantCode = extractAssignmentCode(content, node)
-                if constantCode:
-                    # Check if this is a multi-line constant
-                    # Multi-line if: contains newlines OR contains triple quotes (multi-line strings)
-                    if '\n' in constantCode or '"""' in constantCode or "'''" in constantCode:
-                        # Multi-line constant - extract variable name and store in mlConstants
-                        lines = constantCode.split('\n')
-                        first_line = lines[0].strip()
-                        if '=' in first_line:
-                            var_name = first_line.split('=')[0].strip()
-                            info['mlConstants'][var_name] = constantCode.split(
-                                '\n')
-                    else:
-                        # Single-line constant
-                        info['constants'].append(constantCode)
-
-        return info
-
-    except Exception as e:
-        printIt(
-            f"Error analyzing multi-class file {pythonFile}: {e}", lable.ERROR)
-        return {}
-
 
 def extractCompleteClassCode(pythonContent: str, classNode: ast.ClassDef) -> List[str]:
     """Extract the complete code for a class including all methods and nested classes"""
@@ -2890,8 +2962,9 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
         # Read the piSeed file
         with open(piSeedFile, 'r', encoding='utf-8') as f:
             seedContent = f.read()
-        # print('seedContent00', seedContent)
+        #print('seedContent00', seedContent)
         # Parse Python file to extract methods and code elements
+
         try:
             tree = ast.parse(pythonContent)
         except SyntaxError as e:
@@ -2956,15 +3029,13 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                             # Extract and sync initArguments only if no elegant references exist
                             initArgs = extractInitArguments(item)
                             if initArgs and not hasElegantValueReferences(seedContent, className):
-                                newSeedContent, changed = updateSeedInitArguments(
-                                    seedContent, className, initArgs
-                                )
+                                newSeedContent, changed = updateSeedInitArguments(seedContent, className, initArgs)
                                 if changed:
                                     seedContent = newSeedContent
                                     changes.append("initArguments")
                         elif methodName == '__str__':
                             # IMPROVED LOGIC: Always extract and check for real changes
-                            methodCode = extractMethodCode(pythonContent, item)
+                            isPropertry, methodCode = extractMethodCode(methodName, pythonContent, item)
                             if methodCode:
                                 # Use intelligent pattern detection
                                 if shouldPreserveElegantPattern(seedContent, className, 'strCode', methodCode, options):
@@ -2997,11 +3068,9 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                                     changes.append("jsonCode (json)")
                         else:
                             # Map Python method names to piSeed code element names
-                            codeElementName = mapMethodToCodeElement(
-                                methodName)
+                            codeElementName = mapMethodToCodeElement(methodName)
                             if codeElementName:
-                                methodCode = extractMethodCode(
-                                    pythonContent, item)
+                                isPropertry, methodCode = extractMethodCode(codeElementName, pythonContent, item)
 
                                 # IMPROVED LOGIC: Use intelligent pattern detection for all methods
                                 if shouldPreserveElegantPattern(seedContent, className, codeElementName, methodCode, options):
@@ -3021,7 +3090,6 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                                         newSeedContent, changed = updateSeedCodeElement(
                                             seedContent, className, codeElementName, methodCode
                                         )
-
                                     if changed:
                                         seedContent = newSeedContent
                                         changes.append(
@@ -3120,7 +3188,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
 
                 # Add global functions to globalCode
                 for func in globalFunctions:
-                    funcCode = extractMethodCode(pythonContent, func)
+                    isPropertry, funcCode = extractMethodCode('global',  pythonContent, func)
                     globalCode.extend(funcCode)
                     globalCode.append("")  # Add blank line between functions
 
@@ -3160,7 +3228,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
 
     except Exception as e:
         printIt(
-            f"Error syncing {pythonFile} to {piSeedFile}: {e}", lable.ERROR)
+            f"Error syncing {pythonFile} to {piSeedFile}: {e} line: {e.__traceback__.tb_lineno}", lable.ERROR)
 
     return changes
 
@@ -3179,162 +3247,6 @@ def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path, dest_dir: str | None
         return rebuild_changes
     else:
         return []
-
-    try:
-        # Read the Python file
-        with open(pythonFile, 'r', encoding='utf-8') as f:
-            pythonContent = f.read()
-
-        # Read the piSeed file
-        with open(piSeedFile, 'r', encoding='utf-8') as f:
-            seedContent = f.read()
-
-        # Parse Python file to extract elements
-        try:
-            tree = ast.parse(pythonContent)
-        except SyntaxError as e:
-            printIt(
-                f"WARN: Syntax error in {pythonFile.name}: {e}. Skipping sync.", lable.WARN)
-            return []  # Return empty changes list
-        except Exception as e:
-            printIt(
-                f"WARN: Parse error in {pythonFile.name}: {e}. Skipping sync.", lable.WARN)
-            return []  # Return empty changes list
-
-        try:
-
-            defName = pythonFile.stem
-
-            # Extract different elements from the Python file
-            importStatements = []
-            mlConstants = {}
-            functionDefs = {}
-            constants = []
-            globalCode = []
-            fileComments = []
-            headers = []
-
-            # Process top-level nodes
-            for node in tree.body:
-                if isinstance(node, (ast.Import, ast.ImportFrom)):
-                    importStatements.append(node)
-                elif isinstance(node, ast.FunctionDef):
-                    # Extract function definition
-                    funcCode = extractMethodCode(pythonContent, node)
-                    functionDefs[node.name] = funcCode
-                elif isinstance(node, ast.Assign):
-                    # Constants (module-level assignments)
-                    constantCode = extractAssignmentCode(pythonContent, node)
-                    if constantCode:
-                        constants.append(constantCode.replace('"', '\\"'))
-                elif isinstance(node, ast.If) and hasattr(node.test, 'left'):
-                    # Handle if __name__ == '__main__': blocks
-                    if isinstance(node.test, ast.Compare):
-                        if isinstance(node.test.left, ast.Name):
-                            if (node.test.left.id == '__name__' and
-                                hasattr(node.test.comparators[0], 's') and
-                                    node.test.comparators[0].__getattribute__('s') == '__main__'):
-                                globalCode.extend(
-                                    extractIfMainCode(pythonContent, node))
-
-            # Extract file comments and headers from the beginning of the file
-            lines = pythonContent.split('\n')
-            for line in lines:
-                stripped = line.strip()
-                if stripped.startswith('#') and not stripped.startswith('# Module'):
-                    if 'Generated from' in stripped:
-                        headers.append(stripped)
-                    else:
-                        headers.append(stripped)
-                elif stripped.startswith('"""') or stripped.startswith("'''"):
-                    # Extract docstring as file comment
-                    docstring = extractModuleDocstring(pythonContent)
-                    if docstring:
-                        fileComments.extend(docstring)
-                    break
-                elif stripped and not stripped.startswith('#'):
-                    break
-
-            # Update piSeed file with extracted elements
-
-            # Update headers
-            if headers:
-                newSeedContent, changed = updateDefSeedHeaders(
-                    seedContent, defName, headers)
-                if changed:
-                    seedContent = newSeedContent
-                    print('changes.append("headers")')
-                    changes.append("headers")
-
-            # Update file comments
-            if fileComments:
-                newSeedContent, changed = updateDefSeedFileComments(
-                    seedContent, defName, fileComments)
-                if changed:
-                    seedContent = newSeedContent
-                    changes.append("fileComment")
-
-            # Update imports
-            if importStatements:
-                fromImports, regularImports = extractImportStatements(
-                    importStatements)
-
-                if regularImports:
-                    newSeedContent, changed = updateDefSeedImports(
-                        seedContent, defName, regularImports)
-                    if changed:
-                        seedContent = newSeedContent
-                        # print('changes.append("imports")')
-                        changes.append("imports")
-
-                if fromImports:
-                    newSeedContent, changed = updateDefSeedFromImports(
-                        seedContent, defName, fromImports)
-                    if changed:
-                        seedContent = newSeedContent
-                        # print('changes.append("fromImports")')
-                        changes.append("fromImports")
-
-            # Update constants
-            if constants:
-                newSeedContent, changed = updateDefSeedConstants(seedContent, defName, constants)
-                #print('newSeedContent, changed', newSeedContent, changed  )
-                if changed:
-                    seedContent = newSeedContent
-                    changes.append("constants")
-
-            # Update function definitions
-            if functionDefs:
-                newSeedContent, changed = updateDefSeedFunctionDefs(
-                    seedContent, defName, functionDefs)
-                if changed:
-                    seedContent = newSeedContent
-                    # print('changes.append("functionDefs")')
-                    changes.append("functionDefs")
-
-            # Update global code
-            if globalCode:
-                newSeedContent, changed = updateDefSeedGlobalCode(
-                    seedContent, defName, globalCode)
-                if changed:
-                    seedContent = newSeedContent
-                    # print('changes.append("globalCode")')
-                    changes.append("globalCode")
-
-            # Write updated piSeed file if changes were made
-            if changes:
-                with open(piSeedFile, 'w', encoding='utf-8') as f:
-                    f.write(seedContent)
-
-        except SyntaxError as e:
-            printIt(
-                f"Syntax error in Python file {pythonFile}: {e}", lable.ERROR)
-
-    except Exception as e:
-        printIt(
-            f"Error syncing {pythonFile} to {piSeedFile}: {e}", lable.ERROR)
-
-    return changes
 
 
 def mapMethodToCodeElement(methodName: str) -> Optional[str]:
@@ -3374,12 +3286,20 @@ def removeTrailingBlankLines(lines: List[str]) -> List[str]:
     return cleaned_lines
 
 
-def extractMethodCode(pythonContent: str, methodNode: ast.FunctionDef) -> List[str]:
+def extractMethodCode(method_name: str, pythonContent: str, methodNode: ast.FunctionDef) -> Tuple[bool, List[str]]:
     """Extract the code lines for a method from the Python content"""
     printIt('extractMethodCode', showDefNames03)
     try:
         lines = pythonContent.split('\n')
-        startLine = methodNode.lineno - 1  # ast uses 1-based line numbers
+        isPropertry = False
+        if '@property' in lines[methodNode.lineno-2]:
+            isPropertry = True
+            startLine = methodNode.lineno - 2  # ast uses 1-based line numbers
+        elif f'@{method_name}' in lines[methodNode.lineno-2]:
+            isPropertry = True
+            startLine = methodNode.lineno - 2  # ast uses 1-based line numbers
+        else:
+            startLine = methodNode.lineno - 1  # ast uses 1-based line numbers
 
         # Find the end of the method
         endLine = len(lines)
@@ -3389,14 +3309,18 @@ def extractMethodCode(pythonContent: str, methodNode: ast.FunctionDef) -> List[s
         methodIndent = len(defLine) - len(defLine.lstrip())
 
         # Find where this method ends
+        skipFirstSameIndent = isPropertry
         for i in range(startLine + 1, len(lines)):
             line = lines[i]
             if line.strip():  # Non-empty line
                 lineIndent = len(line) - len(line.lstrip())
                 # If we find a line with same or less indentation than method def, method is done
                 if lineIndent <= methodIndent:
-                    endLine = i
-                    break
+                    if skipFirstSameIndent:
+                        skipFirstSameIndent = False
+                    else:
+                        endLine = i
+                        break
 
         # Extract method lines, preserving relative indentation
         methodLines = []
@@ -3404,8 +3328,7 @@ def extractMethodCode(pythonContent: str, methodNode: ast.FunctionDef) -> List[s
             line = lines[i]
             if i == startLine:
                 # First line (method definition) - remove class indentation
-                methodLines.append(line[methodIndent:] if len(
-                    line) > methodIndent else line.strip())
+                methodLines.append(line[methodIndent:] if len(line) > methodIndent else line.strip())
             else:
                 # Subsequent lines - preserve relative indentation
                 if line.strip():  # Non-empty line
@@ -3419,11 +3342,11 @@ def extractMethodCode(pythonContent: str, methodNode: ast.FunctionDef) -> List[s
                     methodLines.append("")
 
         # Remove trailing blank lines to prevent accumulation
-        return removeTrailingBlankLines(methodLines)
+        return isPropertry, removeTrailingBlankLines(methodLines)
 
     except Exception as e:
         printIt(f"Error extracting method code: {e}", lable.ERROR)
-        return []
+        return isPropertry, []
 
 
 def updateSeedClassDefCode(seedContent: str, className: str, methodName: str, methodCode: List[str]) -> Tuple[str, bool]:
@@ -3436,11 +3359,8 @@ def updateSeedClassDefCode(seedContent: str, className: str, methodName: str, me
     piValueA className.piBody:piClassGC:classDefCode:methodName "code line 2"
     Returns (updated_content, was_changed)
     """
-    printIt('updateSeedClassDefCode', showDefNames)
+    printIt('updateSeedClassDefCode', showDefNames03)
     try:
-        # print('---------seedContent--------')
-        # print(seedContent)
-        # print('-----------------')
         lines = seedContent.split('\n')
         newLines = []
         changed = False
@@ -3560,7 +3480,7 @@ def updateSeedCodeElement(seedContent: str, className: str, codeElementName: str
     Update a code element in the piSeed file content with proper ordering.
     Returns (updated_content, was_changed)
     """
-    printIt('extractMethodCode', showDefNames03)
+    printIt('updateSeedCodeElement', showDefNames03)
     try:
         lines = seedContent.split('\n')
         newLines = []
@@ -3639,7 +3559,6 @@ def updateSeedCodeElement(seedContent: str, className: str, codeElementName: str
         if not foundElement:
             insertIndex = findCorrectInsertionPosition(
                 newLines, className, codeElementName)
-
             # Insert new code element at the correct position
             for idx, codeLine in enumerate(methodCode):
                 escapedCode = escapeQuotesForPiSeed(codeLine)
@@ -3673,12 +3592,12 @@ def findCorrectInsertionPosition(lines: List[str], className: str, codeElementNa
     12. classDefCode
     """
     printIt('findCorrectInsertionPosition', showDefNames)
-
+    #print(codeElementName)
     # Define the correct ordering of piSeed elements
     elementOrder = [
         'headers',
-        'imports',
         'fromImports',
+        'imports',
         'piClassName',
         'inheritance',
         'initArguments',
@@ -4158,6 +4077,8 @@ def extractInitCodeWithComparison(pythonContent: str, initNode: ast.FunctionDef,
             return extractInitCode_original(pythonContent, initNode, className)
 
         # Compare components and extract only genuine differences
+        #print('expectedComponents', dumps(expectedComponents,indent=2))
+        #print('actualComponents', dumps(actualComponents,indent=2))
         result = compareInitComponents(
             expectedComponents, actualComponents, seedContent, className)
 
@@ -4303,6 +4224,7 @@ def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, classNa
         superCallIndex = -1
         for i, line in enumerate(bodyLines):
             if 'super(' in line and '__init__' in line:
+                openParentheses = line.count('(') - line.count(')')
                 superCallIndex = i
                 break
 
@@ -4315,7 +4237,13 @@ def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, classNa
             postSuperLines = bodyLines[superCallIndex + 1:]
             standard_assignments, remaining_lines = extractStandardAssignments(
                 postSuperLines, expectedAssignments)
-            initAppendCode = [line for line in remaining_lines if line.strip()]
+            if remaining_lines:
+                while openParentheses:
+                    remaining_line = remaining_lines.pop(0).strip()
+                    openParentheses = openParentheses + remaining_line.count('(') - remaining_line.count(')')
+                    if not remaining_lines:
+                        break
+            postSuperInitCode = [line for line in remaining_lines if line.strip()]
         else:
             # No inheritance - process all body lines
             standard_assignments, remaining_lines = extractStandardAssignments(
@@ -4349,14 +4277,14 @@ def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, classNa
                 # No standard assignments, everything is custom
                 initAppendCode: list[str] = [
                     line for line in bodyLines if line.strip()]
-
-        return {
+        items = {
             'signature': signature,
             'preSuperInitCode': preSuperInitCode,
             'standard_assignments': standard_assignments,
             'postSuperInitCode': postSuperInitCode,
             'initAppendCode': initAppendCode
         }
+        return items
 
     except Exception as e:
         printIt(f"Error parsing actual init method: {e}", lable.ERROR)
@@ -5051,16 +4979,16 @@ def updateSeedFromImports(seedContent: str, className: str, fromImports: Dict[st
 
         # If fromImports structure wasn't found, add it
         if not foundFromImports and fromImports:
-            # Find a good place to insert (after imports)
+            # Find a good place to insert (after headers)
             insertIndex = len(newLines)
-            importsPattern = rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:imports\s+'
+            headersPattern = rf'^piValueA\s+{re.escape(className)}\.piBody:piClassGC:headers\s+'
 
-            # Look for existing imports section
+            # Look for existing headers section
             for idx in range(len(newLines)):
-                if re.match(importsPattern, newLines[idx]):
-                    # Find end of imports section
+                if re.match(headersPattern, newLines[idx]):
+                    # Find end of headers section
                     insertIndex = idx
-                    while insertIndex < len(newLines) and re.match(importsPattern, newLines[insertIndex]):
+                    while insertIndex < len(newLines) and re.match(headersPattern, newLines[insertIndex]):
                         insertIndex += 1
                     break
 
@@ -5209,14 +5137,23 @@ def updateSeedImports(seedContent: str, className: str, regularImports: List[str
                     f"piValueA {className}.piBody:piClassGC:imports {imp}")
                 changed = True
 
-        # Insert imports after headers
-        for i, line in enumerate(lines):
-            newLines.append(line)
-            if f'{className}.piBody:piClassGC:headers' in line:
-                # Add new imports after headers
-                newLines.extend(imports_to_add)
 
         if changed:
+            # Insert imports after fromImports or headers
+            chk4FromImports = False
+            for i, line in enumerate(lines):
+                if chk4FromImports:
+                    if 'fromImports' in line:
+                        newLines.append(line)
+                    else:
+                        newLines.extend(imports_to_add)
+                        newLines.append(line)
+                        chk4FromImports = False
+                else:
+                    newLines.append(line)
+                    if f'{className}.piBody:piClassGC:headers' in line:
+                        chk4FromImports = True
+
             return '\n'.join(newLines), True
         else:
             return seedContent, False
@@ -5226,12 +5163,230 @@ def updateSeedImports(seedContent: str, className: str, regularImports: List[str
         return seedContent, False
 
 
+def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path, dest_dir: str | None = None) -> List[str]:
+    """
+    Rebuild the entire piDefGC piSeed file from Python content.
+    This is more reliable than trying to update individual sections.
+    """
+    printIt('rebuildDefSeedFromPython', showDefNames)
+    changes = []
+
+    try:
+        # Read the Python file
+        with open(pythonFile, 'r', encoding='utf-8') as f:
+            pythonContent = f.read()
+
+        # Read the existing piSeed file to preserve basic info
+        with open(piSeedFile, 'r', encoding='utf-8') as f:
+            seedContent = f.read()
+
+        # Extract basic info from existing piSeed
+        defName = pythonFile.stem
+
+        # Determine file directory
+        if dest_dir is not None:
+            fileDirectory = dest_dir
+        else:
+            try:
+                relativeDir = pythonFile.parent.relative_to(Path.cwd())
+                fileDirectory = str(relativeDir)
+            except ValueError:
+                fileDirectory = str(pythonFile.parent)
+
+        # Parse Python file to extract all elements
+        try:
+            tree = ast.parse(pythonContent)
+        except SyntaxError as e:
+            printIt(
+                f"WARN: Syntax error in {pythonFile.name}: {e}. Cannot create piSeed file.", lable.WARN)
+            return changes
+        except Exception as e:
+            printIt(
+                f"WARN: Parse error in {pythonFile.name}: {e}. Cannot create piSeed file.", lable.WARN)
+            return changes
+
+        # Extract elements
+        regularImports = []
+        fromImports = {}
+        constants = []
+        mlConstants = {}
+        functionDefs = {}
+        globalCode = []
+        headers = []
+
+        # Process top-level nodes
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    import_name = alias.name
+                    if alias.asname:
+                        import_name = f"{alias.name} as {alias.asname}"
+                    regularImports.append(import_name)
+
+            elif isinstance(node, ast.ImportFrom):
+                module_name, imports = extract_ImportFrom(node)
+
+                # Clean module name for piSeed structure
+                clean_module = module_name.replace('.', '_').replace('-', '_')
+                escaped_module = module_name  # module_name.replace(".","//.")
+                fromImports[clean_module] = {
+                    'from': escaped_module,
+                    'import': ', '.join(imports)
+                }
+            elif isinstance(node, ast.FunctionDef):
+                # Extract complete function definition
+                isPropertry, funcCode = extractMethodCode('functions', pythonContent, node)
+                functionDefs[node.name] = funcCode
+
+            elif isinstance(node, ast.Assign):
+                # Extract constants (module-level assignments)
+                constantCode = extractAssignmentCode(pythonContent, node)
+                if constantCode:
+                    # Check if this is a multi-line constant
+                    # Multi-line if: contains newlines OR contains triple quotes (multi-line strings)
+                    if '\n' in constantCode or '"""' in constantCode or "'''" in constantCode:
+                        # Multi-line constant - extract variable name and store in mlConstants
+                        lines = constantCode.split('\n')
+                        first_line = lines[0].strip()
+                        if '=' in first_line:
+                            var_name = first_line.split('=')[0].strip()
+                            mlConstants[var_name] = constantCode.split('\n')
+                    else:
+                        # Single-line constant
+                        constants.append(constantCode)
+
+            elif isinstance(node, ast.If):
+                # Handle if __name__ == '__main__': blocks
+                if isinstance(node.test, ast.Compare):
+                    if isinstance(node.test.left, ast.Name):
+                        if (node.test.left.id == '__name__' and
+                            hasattr(node.test.comparators[0], 's') and
+                                node.test.comparators[0].__getattribute__('s') == '__main__'):
+                            globalCode.extend(
+                                extractIfMainCode(pythonContent, node))
+        # Extract file headers from the beginning of the file
+        lines = pythonContent.split('\n')
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('#'):
+                headers.append(stripped)
+            elif stripped and not stripped.startswith('#'):
+                break
+        # Determine file directory
+        if dest_dir is not None:
+            fileDirectory = dest_dir
+        else:
+            try:
+                # Get relative path from current directory
+                relativeDir = pythonFile.parent.relative_to(Path.cwd())
+                fileDirectory = str(relativeDir)
+            except ValueError:
+                # If not relative to cwd, use absolute path
+                fileDirectory = str(pythonFile.parent)
+        #print('rebuildDefSeedFromPython-fileDirectory', fileDirectory)
+        # Build new piSeed content
+        newSeedContent = f"""piDefGC {defName} 'Generated piDefGC for {defName} function definitions'
+piValue {defName}.piProlog pi.piProlog
+piValue {defName}.piBase:piType piDefGC
+piValue {defName}.piBase:piTitle {defName}
+piValue {defName}.piBase:piSD 'Python function definitions {defName} generated from existing code'
+piValue {defName}.piBody:piDefGC:fileDirectory '{fileDirectory}'
+piValue {defName}.piBody:piDefGC:fileName {defName}
+"""
+
+        # Add headers
+        if headers:
+            for header in headers:
+                escaped_header = header.replace("'", "\\'")
+                newSeedContent += f"piValueA {defName}.piBody:piDefGC:headers '{escaped_header}'\n"
+        else:
+            newSeedContent += f"piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from existing code'\n"
+
+        # Add regular imports
+        if regularImports:
+            for imp in regularImports:
+                newSeedContent += f"piValueA {defName}.piBody:piDefGC:imports {imp}\n"
+
+        # Add from imports
+        if fromImports:
+            newSeedContent += f"piStructA00 {defName}.piBody:piDefGC:fromImports\n"
+            # First add all the structure definitions
+            for clean_module in fromImports.keys():
+                newSeedContent += f"piStructC01 fromImports {clean_module}.\n"
+            # Then add the actual import data
+            for clean_module, import_info in fromImports.items():
+                newSeedContent += f"piValue {defName}.piBody:piDefGC:fromImports:{clean_module}:from \"{import_info['from']}\"\n"
+                newSeedContent += f"piValue {defName}.piBody:piDefGC:fromImports:{clean_module}:import \"{import_info['import']}\"\n"
+
+        # Add constants
+        if constants:
+            for constant in constants:
+                escaped_constant = constant.replace('"', '\\"')
+                newSeedContent += f"piValueA {defName}.piBody:piDefGC:constants \"{escaped_constant}\"\n"
+
+        # Add multi-line constants
+        if mlConstants:
+            newSeedContent += f"piStructA00 {defName}.piBody:piDefGC:mlConstants\n"
+            # First add all the structure definitions
+            for var_name in mlConstants.keys():
+                newSeedContent += f"piStructL01 {var_name} 'Multi-line constant {var_name}'\n"
+            # Then add the actual constant lines
+            for var_name, constant_lines in mlConstants.items():
+                for line in constant_lines:
+                    escaped_line = line.replace('"', '\\"')
+                    newSeedContent += f"piValueA {defName}.piBody:piDefGC:mlConstants:{var_name} \"{escaped_line}\"\n"
+        # Add function definitions
+        if functionDefs:
+            newSeedContent += f"piStructA00 {defName}.piBody:piDefGC:functionDefs\n"
+            # First add all the structure definitions
+            for func_name in functionDefs.keys():
+                newSeedContent += f"piStructL01 {func_name} 'Function definition for {func_name}'\n"
+            # Then add the actual function code
+            for func_name, func_code in functionDefs.items():
+                for line in func_code:
+                    escaped_line = escapeQuotesForPiSeed(line)
+                    newSeedContent += f"piValueA {defName}.piBody:piDefGC:functionDefs:{func_name} \"{escaped_line}\"\n"
+
+        # Add global code
+        if globalCode:
+            for line in globalCode:
+                escaped_line = escapeQuotesForPiSeed(line)
+                newSeedContent += f"piValueA {defName}.piBody:piDefGC:globalCode \"{escaped_line}\"\n"
+
+        # Compare with existing content
+        if newSeedContent.strip() != seedContent.strip():
+            # Write the new content
+            with open(piSeedFile, 'w', encoding='utf-8') as f:
+                f.write(newSeedContent)
+
+            # Determine what changed
+            if regularImports:
+                changes.append("imports")
+            if fromImports:
+                changes.append("fromImports")
+            if constants:
+                changes.append("constants")
+            if mlConstants:
+                changes.append("mlConstants")
+            if functionDefs:
+                changes.append("functionDefs")
+            if globalCode:
+                changes.append("globalCode")
+            if headers:
+                changes.append("headers")
+        return changes
+
+    except Exception as e:
+        printIt(f"Error rebuilding def seed from Python: {e}", lable.ERROR)
+        return []
+
+
 def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
     """
     Rebuild piSeed file content in the correct order according to piStruct_piClassGC.json.
     This ensures all elements appear in the proper sequence.
     """
-    printIt('rebuildPiSeedInCorrectOrder', showDefNames03)
+    printIt('rebuildPiSeedInCorrectOrder', showDefNames)
     try:
         lines = seedContent.split('\n')
         # Parse existing content into sections
@@ -5240,8 +5395,8 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
             'fileDirectory': '',
             'fileName': '',
             'headers': [],
-            'imports': [],
             'fromImports': {},
+            'imports': [],
             'fromPiClasses': [],
             'rawFromImports': [],
             'globals': {},
@@ -5287,6 +5442,30 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
             elif f'{className}.piBody:piClassGC:headers' in line:
                 sections['headers'].append(line)
 
+            # fromImports
+            elif f'{className}.piBody:piClassGC:fromImports' in line:
+                while i < len(line):
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piStructA' in piType and piTitle == f'{className}.piBody:piClassGC:fromImports':
+                            sections['fromImports']['piStructA'] = line
+                        elif 'piStructC' in piType:
+                            currDef = piSD
+                            if currDef[-1] == '.':  # strip . copy over key
+                                currDef = currDef[:-1]
+                            #print('currDef01',currDef)
+                            sections['fromImports'][currDef] = []
+                            sections['fromImports'][currDef].append(line)
+                        elif 'fromImports' in piTitle:
+                            currDef = piTitle.split(':')[-2]
+                            #print('currDef02',currDef)
+                            sections['fromImports'][currDef].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
+
             # imports
             elif f'{className}.piBody:piClassGC:imports' in line and 'fromImports' not in line:
                 sections['imports'].append(line)
@@ -5302,30 +5481,6 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
             # inheritance
             elif f'{className}.piBody:piClassGC:inheritance' in line:
                 sections['inheritance'].append(line)
-
-            # fromImports
-            elif f'{className}.piBody:piClassGC:fromImports' in line:
-                while True:
-                    line = lines[i].strip()
-                    if line:
-                        piType, piTitle, piSD = extractPiSeed(line)
-                        if 'piStructA' in piType and piTitle == f'{className}.piBody:piClassGC:fromImports':
-                            sections['fromImports']['piStructA'] = line
-                        elif 'piStructC' in piType:
-                            currDef = piSD
-                            if currDef[-1] == '.':  # strip . copy over key
-                                currDef = currDef[:-1]
-                            # print('currDef01',currDef)
-                            sections['fromImports'][currDef] = []
-                            sections['fromImports'][currDef].append(line)
-                        elif 'fromImports' in piTitle:
-                            currDef = piTitle.split(':')[-2]
-                            # print('currDef02',currDef)
-                            sections['fromImports'][currDef].append(line)
-                        else:
-                            i -= 1
-                            break
-                    i += 1
 
             # globals
             elif f'{className}.piBody:piClassGC:globals' in line:
@@ -5366,12 +5521,12 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
                             currDef = piSD
                             if currDef[-1] == '.':  # strip . copy over key
                                 currDef = currDef[:-1]
-                            # print('currDef01',currDef)
+                            #print('currDef01',currDef)
                             sections['initArguments'][currDef] = []
                             sections['initArguments'][currDef].append(line)
                         elif 'initArguments' in piTitle:
                             currDef = piTitle.split(':')[-2]
-                            # print('currDef02',currDef)
+                            #print('currDef02',currDef)
                             sections['initArguments'][currDef].append(line)
                         else:
                             i -= 1
@@ -5412,7 +5567,7 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
                     i += 1
                     if i >= len(lines):
                         break
-                # print(dumps(sections['classDefCode'],indent=2))
+                #print(dumps(sections['classDefCode'],indent=2))
                 # exit()
 
             # globalCode
@@ -5457,14 +5612,14 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
         if fromImports:
             capturedLines = []
             for currDef, lines in fromImports.items():
-                # print('** currDef', currDef)
+                #print('** currDef', currDef)
                 if currDef == 'piStructA':
                     # here lines is a string for fist line declaring fromImports append
                     result.extend([lines])
                 else:
                     # here lines is a list for all piValueA classDefCode code
-                    # print('** currDef', currDef)
-                    # print('** lines',lines)
+                    #print('** currDef', currDef)
+                    #print('** lines',lines)
                     assert len(lines) == 3
                     result.extend(lines[:1])
                     capturedLines.extend(lines[1:])
@@ -5534,7 +5689,7 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
             result.extend(capturedLines)
 
         # 21. globalCode
-        # print("sections['globalCode']", sections['globalCode'])
+        #print("sections['globalCode']", sections['globalCode'])
         result.extend(sections['globalCode'])
         return '\n'.join(result)
 
@@ -5838,7 +5993,7 @@ def updateDefSeedFileComments(seedContent: str, defName: str, fileComments: List
 
 def updateDefSeedImports(seedContent: str, defName: str, imports: List[str]) -> Tuple[str, bool]:
     """Update regular imports in piDefGC seed file"""
-    printIt('updateDefSeedImports', showDefNames02)
+    printIt('updateDefSeedImports', showDefNames03)
     try:
         lines = seedContent.split('\n')
         newLines = []
@@ -6026,7 +6181,7 @@ def updateDefSeedFromImports(seedContent: str, defName: str, fromImports: Dict[s
 
 def updateDefSeedConstants(seedContent: str, defName: str, constants: List[str]) -> Tuple[str, bool]:
     """Update constants in piDefGC seed file"""
-    printIt('updateDefSeedConstants', showDefNames02)
+    printIt('updateDefSeedConstants', showDefNames03)
     try:
         lines = seedContent.split('\n')
         newLines = []
@@ -6295,224 +6450,6 @@ def updateDefSeedGlobalCode(seedContent: str, defName: str, globalCode: List[str
     except Exception as e:
         printIt(f"Error updating def seed global code: {e}", lable.ERROR)
         return seedContent, False
-
-
-def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path, dest_dir: str | None = None) -> List[str]:
-    """
-    Rebuild the entire piDefGC piSeed file from Python content.
-    This is more reliable than trying to update individual sections.
-    """
-    printIt('rebuildDefSeedFromPython', showDefNames)
-    changes = []
-
-    try:
-        # Read the Python file
-        with open(pythonFile, 'r', encoding='utf-8') as f:
-            pythonContent = f.read()
-
-        # Read the existing piSeed file to preserve basic info
-        with open(piSeedFile, 'r', encoding='utf-8') as f:
-            seedContent = f.read()
-
-        # Extract basic info from existing piSeed
-        defName = pythonFile.stem
-
-        # Determine file directory
-        if dest_dir is not None:
-            fileDirectory = dest_dir
-        else:
-            try:
-                relativeDir = pythonFile.parent.relative_to(Path.cwd())
-                fileDirectory = str(relativeDir)
-            except ValueError:
-                fileDirectory = str(pythonFile.parent)
-
-        # Parse Python file to extract all elements
-        try:
-            tree = ast.parse(pythonContent)
-        except SyntaxError as e:
-            printIt(
-                f"WARN: Syntax error in {pythonFile.name}: {e}. Cannot create piSeed file.", lable.WARN)
-            return changes
-        except Exception as e:
-            printIt(
-                f"WARN: Parse error in {pythonFile.name}: {e}. Cannot create piSeed file.", lable.WARN)
-            return changes
-
-        # Extract elements
-        regularImports = []
-        fromImports = {}
-        constants = []
-        mlConstants = {}
-        functionDefs = {}
-        globalCode = []
-        headers = []
-
-        # Process top-level nodes
-        for node in tree.body:
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    import_name = alias.name
-                    if alias.asname:
-                        import_name = f"{alias.name} as {alias.asname}"
-                    regularImports.append(import_name)
-
-            elif isinstance(node, ast.ImportFrom):
-                module_name, imports = extract_ImportFrom(node)
-
-                # Clean module name for piSeed structure
-                clean_module = module_name.replace('.', '_').replace('-', '_')
-                escaped_module = module_name  # module_name.replace(".","//.")
-                fromImports[clean_module] = {
-                    'from': escaped_module,
-                    'import': ', '.join(imports)
-                }
-            elif isinstance(node, ast.FunctionDef):
-                # Extract complete function definition
-                funcCode = extractMethodCode(pythonContent, node)
-                functionDefs[node.name] = funcCode
-
-            elif isinstance(node, ast.Assign):
-                # Extract constants (module-level assignments)
-                constantCode = extractAssignmentCode(pythonContent, node)
-                if constantCode:
-                    # Check if this is a multi-line constant
-                    # Multi-line if: contains newlines OR contains triple quotes (multi-line strings)
-                    if '\n' in constantCode or '"""' in constantCode or "'''" in constantCode:
-                        # Multi-line constant - extract variable name and store in mlConstants
-                        lines = constantCode.split('\n')
-                        first_line = lines[0].strip()
-                        if '=' in first_line:
-                            var_name = first_line.split('=')[0].strip()
-                            mlConstants[var_name] = constantCode.split('\n')
-                    else:
-                        # Single-line constant
-                        constants.append(constantCode)
-
-            elif isinstance(node, ast.If):
-                # Handle if __name__ == '__main__': blocks
-                if isinstance(node.test, ast.Compare):
-                    if isinstance(node.test.left, ast.Name):
-                        if (node.test.left.id == '__name__' and
-                            hasattr(node.test.comparators[0], 's') and
-                                node.test.comparators[0].__getattribute__('s') == '__main__'):
-                            globalCode.extend(
-                                extractIfMainCode(pythonContent, node))
-        # Extract file headers from the beginning of the file
-        lines = pythonContent.split('\n')
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith('#'):
-                headers.append(stripped)
-            elif stripped and not stripped.startswith('#'):
-                break
-        # Determine file directory
-        if dest_dir is not None:
-            fileDirectory = dest_dir
-        else:
-            try:
-                # Get relative path from current directory
-                relativeDir = pythonFile.parent.relative_to(Path.cwd())
-                fileDirectory = str(relativeDir)
-            except ValueError:
-                # If not relative to cwd, use absolute path
-                fileDirectory = str(pythonFile.parent)
-        # print('rebuildDefSeedFromPython-fileDirectory', fileDirectory)
-        # Build new piSeed content
-        newSeedContent = f"""piDefGC {defName} 'Generated piDefGC for {defName} function definitions'
-piValue {defName}.piProlog pi.piProlog
-piValue {defName}.piBase:piType piDefGC
-piValue {defName}.piBase:piTitle {defName}
-piValue {defName}.piBase:piSD 'Python function definitions {defName} generated from existing code'
-piValue {defName}.piBody:piDefGC:fileDirectory '{fileDirectory}'
-piValue {defName}.piBody:piDefGC:fileName {defName}
-"""
-
-        # Add headers
-        if headers:
-            for header in headers:
-                escaped_header = header.replace("'", "\\'")
-                newSeedContent += f"piValueA {defName}.piBody:piDefGC:headers '{escaped_header}'\n"
-        else:
-            newSeedContent += f"piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from existing code'\n"
-
-        # Add regular imports
-        if regularImports:
-            for imp in regularImports:
-                newSeedContent += f"piValueA {defName}.piBody:piDefGC:imports {imp}\n"
-
-        # Add from imports
-        if fromImports:
-            newSeedContent += f"piStructA00 {defName}.piBody:piDefGC:fromImports\n"
-            # First add all the structure definitions
-            for clean_module in fromImports.keys():
-                newSeedContent += f"piStructC01 fromImports {clean_module}.\n"
-            # Then add the actual import data
-            for clean_module, import_info in fromImports.items():
-                newSeedContent += f"piValue {defName}.piBody:piDefGC:fromImports:{clean_module}:from \"{import_info['from']}\"\n"
-                newSeedContent += f"piValue {defName}.piBody:piDefGC:fromImports:{clean_module}:import \"{import_info['import']}\"\n"
-
-        # Add constants
-        if constants:
-            for constant in constants:
-                escaped_constant = constant.replace('"', '\\"')
-                newSeedContent += f"piValueA {defName}.piBody:piDefGC:constants \"{escaped_constant}\"\n"
-
-        # Add multi-line constants
-        if mlConstants:
-            newSeedContent += f"piStructA00 {defName}.piBody:piDefGC:mlConstants\n"
-            # First add all the structure definitions
-            for var_name in mlConstants.keys():
-                newSeedContent += f"piStructL01 {var_name} 'Multi-line constant {var_name}'\n"
-            # Then add the actual constant lines
-            for var_name, constant_lines in mlConstants.items():
-                for line in constant_lines:
-                    escaped_line = line.replace('"', '\\"')
-                    newSeedContent += f"piValueA {defName}.piBody:piDefGC:mlConstants:{var_name} \"{escaped_line}\"\n"
-        # Add function definitions
-        if functionDefs:
-            newSeedContent += f"piStructA00 {defName}.piBody:piDefGC:functionDefs\n"
-            # First add all the structure definitions
-            for func_name in functionDefs.keys():
-                newSeedContent += f"piStructL01 {func_name} 'Function definition for {func_name}'\n"
-            # Then add the actual function code
-            for func_name, func_code in functionDefs.items():
-                for line in func_code:
-                    escaped_line = escapeQuotesForPiSeed(line)
-                    newSeedContent += f"piValueA {defName}.piBody:piDefGC:functionDefs:{func_name} \"{escaped_line}\"\n"
-
-        # Add global code
-        if globalCode:
-            for line in globalCode:
-                escaped_line = escapeQuotesForPiSeed(line)
-                newSeedContent += f"piValueA {defName}.piBody:piDefGC:globalCode \"{escaped_line}\"\n"
-
-        # Compare with existing content
-        if newSeedContent.strip() != seedContent.strip():
-            # Write the new content
-            with open(piSeedFile, 'w', encoding='utf-8') as f:
-                f.write(newSeedContent)
-
-            # Determine what changed
-            if regularImports:
-                changes.append("imports")
-            if fromImports:
-                changes.append("fromImports")
-            if constants:
-                changes.append("constants")
-            if mlConstants:
-                changes.append("mlConstants")
-            if functionDefs:
-                changes.append("functionDefs")
-            if globalCode:
-                changes.append("globalCode")
-            if headers:
-                changes.append("headers")
-        return changes
-
-    except Exception as e:
-        printIt(f"Error rebuilding def seed from Python: {e}", lable.ERROR)
-        return []
 
 
 def enhancedFileDiscovery(fileName: str) -> Optional[Path]:
