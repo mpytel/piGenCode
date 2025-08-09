@@ -19,7 +19,7 @@ devExept = True
 global showDefNames
 # showDefNames = lable.ABORTPRT
 # showDefNames = lable.IMPORT
-showDefNames = lable.IMPORT
+showDefNames = lable.ABORTPRT
 showDefNames01 = lable.ABORTPRT
 showDefNames02 = lable.ABORTPRT
 showDefNames03 = lable.ABORTPRT
@@ -219,6 +219,9 @@ def isCustomCodeUsingArchitecture(elementType: str, actualCode: List[str], class
         return actualCodeStr != defaultCodeStr
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def isCustomCodeUsingArchitecture', lable.ERROR)
         printIt(
             f"Error in architecture-based comparison for {elementType}: {e}", lable.DEBUG)
         # Fall back to exact detection for strCode
@@ -729,7 +732,7 @@ def findExistingPiSeedFile(filePath: Path, dest_dir: str) -> tuple[Path | None, 
 
 def syncSingleFile(fileName: str, options: dict):
     """Enhanced single file sync with piGenClass support and additional options"""
-    printIt('syncSingleFile', showDefNames)
+    printIt(f'syncSingleFile: {fileName}', showDefNames)
     try:
         # Use enhanced file discovery
         filePath = enhancedFileDiscovery(fileName)
@@ -943,8 +946,11 @@ def syncSingleFile(fileName: str, options: dict):
             printIt(f"No changes needed for {filePath}", lable.INFO)
 
     except Exception as e:
-        tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(f'syncSingleFile error:\n{tb_str}', lable.ERROR)
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def syncSingleFile', lable.ERROR)
+        printIt(
+            f"Error syncing {fileName}: {e}", lable.ERROR)
 
 
 def isPythonFileDefType(filePath: Path) -> bool:
@@ -1192,8 +1198,11 @@ def syncAllFiles(options: dict):
                 "Tip: Use --create-piSeeds to auto-create piSeed files for orphaned Python files", lable.INFO)
 
     except Exception as e:
-        tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(f'syncAllFiles error:\n{tb_str}', lable.ERROR)
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def syncAllFiles', lable.ERROR)
+        printIt(
+            f"Error syncing all files: {e}", lable.ERROR)
 
 
 def getDestDirForFile(py_file: Path, options) -> str:
@@ -1280,8 +1289,8 @@ def getDestDirForFile(py_file: Path, options) -> str:
 
 def syncDirectory(directory: Path, options: dict):
     """directory sync with piGenClass support and filtering"""
-    printIt('syncDirectory', showDefNames)
     try:
+        printIt(f'syncDirectory: {str(directory)}', showDefNames)
         if not directory.exists() or not directory.is_dir():
             printIt(
                 f"Directory not found or not a directory: {directory}", lable.ERROR)
@@ -1423,13 +1432,14 @@ def syncDirectory(directory: Path, options: dict):
                 else:  # piClassGC
                     className = py_file.stem
                     piSeedFile = findPiClassGCSeedFile(py_file)
+                    if piSeedFile:
+                        changes = syncPythonClassToSeed(
+                            py_file, piSeedFile, options)
                     if not piSeedFile and options.get('create_piSeeds', False):
                         piSeedFile = createNewPiClassGCSeedFile(
                             className, py_file, None, dest_dir)
                         if piSeedFile:
                             createdSeeds += 1
-                    if piSeedFile:
-                        changes = syncPythonClassToSeed(py_file, piSeedFile, options)
 
                 # Validate results if requested
                 if options.get('validate', False) and piSeedFile:
@@ -1467,8 +1477,11 @@ def syncDirectory(directory: Path, options: dict):
         #     printIt("Tip: Use --create-piSeeds to auto-create piSeed files for orphaned Python files", lable.INFO)
 
     except Exception as e:
-        tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(f'syncDirectory error:\n{tb_str}', lable.ERROR)
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def syncDirectory', lable.ERROR)
+        printIt(
+            f"Error syncing directory {directory}: {e}", lable.ERROR)
         errors += 1
 
     if errors > 0:
@@ -1495,8 +1508,10 @@ def determineOptimalPiSeedType(pythonFile: Path) -> str:
                 f"WARN: Syntax error in {pythonFile.name}: {e}. Skipping file type analysis.", lable.WARN)
             return "piClassGC"  # Default fallback for malformed files
         except Exception as e:
-            printIt(
-                f"WARN: Parse error in {pythonFile.name}: {e}. Skipping file type analysis.", lable.WARN)
+            if devExept:
+                tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+                printIt(f'{tb_str}\n\n --- def determineOptimalPiSeedType', lable.ERROR)
+            printIt(f"WARN: Parse error in {pythonFile.name}: {e}. Skipping file type analysis.", lable.WARN)
             return "piClassGC"  # Default fallback
 
         classes = []
@@ -1529,6 +1544,9 @@ def determineOptimalPiSeedType(pythonFile: Path) -> str:
             return "piGenClass"  # Has inheritance, use piGenClass
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def determineOptimalPiSeedType', lable.ERROR)
         printIt(
             f"WARN: Error analyzing file type for {pythonFile.name}: {e}. Using default piClassGC.", lable.WARN)
         return "piClassGC"  # Safe fallback
@@ -1536,7 +1554,7 @@ def determineOptimalPiSeedType(pythonFile: Path) -> str:
 
 def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path | None = None, dest_dir: str | None = None) -> Optional[Path]:
     """Create a new piClassGC piSeed file for the given class"""
-    printIt('createNewPiClassGCSeedFile', showDefNames)
+    printIt(f'createNewPiClassGCSeedFile: {className}', showDefNames)
     try:
         seedPath = getSeedPath()
         if seed_file:
@@ -1591,7 +1609,6 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
         if class_info.get('imports'):
             for imp in class_info['imports']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:imports {imp}\n"
-                print(imp)
         # 3. Add fromPiClasses (empty for now)
 
         # 4. Add rawFromImports (empty for now)
@@ -1599,9 +1616,14 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
         # 5. Add globals (will be added by sync function)
 
         # 6. Add piClassName
-        seedContent += f"piValue {className}.piBody:piClassGC:piClassName {className}\n"
+        seedContent += f"piValue {className}.piBody:piClassGC:piClassName {class_info['classes'][0]}\n"
 
         # 7. Add inheritance (empty for now)
+        # piValueA piTopic.piBody:piClassGC:inheritance PiPi
+        if class_info['classes'][1]:
+            for inheritance in class_info['classes'][1]:
+                seedContent += f"piValueA {className}.piBody:piClassGC:inheritance {inheritance}\n"
+
 
         # 8. Add constructor arguments if found
         if class_info.get('init_args'):
@@ -1641,18 +1663,19 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
             for method_name in class_info['class_methods'].keys():
                 methodNameSeeds[method_name] = f"piStructL01 {method_name} 'Method {method_name} extracted from existing code'\n"
             # Then add the actual code lines for each method
-            chk4ADocString = True
             line: str
             method_code: list
             methodContent = ''
             for method_name, method_code in class_info['class_methods'].items():
                 # Look thugh method_code and extract the docString if any
                 inLine = 0
+                chk4ADocString = True
                 while inLine < len(method_code):
                     line = method_code[inLine]
                     if chk4ADocString:
                         if '"""' in line or "'''" in line:
-                            methodNameSeeds[method_name], inLine = getDocString(inLine, method_name, methodNameSeeds, method_code)
+                            docStr, inLine = getDocString(inLine, method_name, methodNameSeeds, method_code)
+                            methodNameSeeds[method_name] = docStr
                             chk4ADocString = False
                     if '"""' in line or "'''" in line:
                         pass
@@ -1670,11 +1693,15 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
         return seedFilePath
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def createNewPiClassGCSeedFile', lable.ERROR)
         printIt(
             f"Error creating new piClassGC piSeed file for {className}: {e}", lable.ERROR)
         return None
 
 def getDocString(inLine: int, method_name: str, memethodNameSeeds: dict, method_code: list) -> Tuple[str, int]:
+
     mlLines = ''
     origStr = memethodNameSeeds[method_name]
     line: str
@@ -1683,21 +1710,30 @@ def getDocString(inLine: int, method_name: str, memethodNameSeeds: dict, method_
         line = method_code[inLine2]
         if mlLines:
             if line.strip().endswith(('"""', "'''")):
-                methodNameSeed = origStr.replace(f"'Method {method_name} extracted from existing code'",mlLines[:-1])
-                return methodNameSeed, inLine2 + 1
+                newStr = line.strip().replace('"""','')
+                newStr = newStr.replace("'''",'')
+                mlLines += newStr.strip()
+                if mlLines[-2:] == '\\n':
+                    mlLines = mlLines[:-2]
+                methodNameSeed = origStr.replace(
+                    f"'Method {method_name} extracted from existing code'", f"'{mlLines}'",)
+                return methodNameSeed, inLine2 - 1
             else:
-                mlLines += line.strip() + '\n'
+                mlLines += line.strip() + '\\n'
         else:
             if line.strip().startswith(('"""',"'''")):
                 if line.strip().endswith(('"""',"'''")):
                     newStr = line.strip().replace('"""','')
                     newStr = newStr.replace("'''",'')
                     methodNameSeed = origStr.replace(f"'Method {method_name} extracted from existing code'",f"'{newStr}'")
-                    return methodNameSeed, inLine2 + 1
+                    return methodNameSeed, inLine2 - 1
                 else:
-                    mlLines = line + '\n'
+                    newStr = line.strip().replace('"""', '')
+                    newStr = newStr.replace("'''", '')
+                    mlLines = newStr + '\\n'
         inLine2 += 1
-    return origStr, inLine
+    inLine2 -= 1
+    return origStr, inLine2
 
 def updatePiSeedFileDirectory(piSeedFile: Path, className: str, piSeedType: str, dest_dir: str) -> bool:
     """
@@ -1739,7 +1775,7 @@ def updatePiSeedFileDirectory(piSeedFile: Path, className: str, piSeedType: str,
 
 def createNewPiDefGCSeedFile(defName: str, pythonFile: Path, seed_file: Path | None = None, dest_dir: str | None = None) -> Optional[Path]:
     """Create a new piDefGC piSeed file for the given function definition file"""
-    printIt('createNewPiDefGCSeedFile', showDefNames)
+    printIt(f'createNewPiDefGCSeedFile: {defName}', showDefNames)
     try:
         seedPath = getSeedPath()
 
@@ -1825,6 +1861,9 @@ piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from e
         return seedFilePath
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def createNewPiDefGCSeedFile', lable.ERROR)
         printIt(
             f"Error creating new piDefGC piSeed file for {defName}: {e}", lable.ERROR)
         return None
@@ -1894,7 +1933,6 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                     if alias.asname:
                         import_name = f"{alias.name} as {alias.asname}"
                     info['imports'].append(import_name)
-                    print(import_name)
 
             elif isinstance(node, ast.ImportFrom):
                 module_name, imports = extract_ImportFrom(node)
@@ -1915,7 +1953,19 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
             elif isinstance(node, ast.ClassDef):
                 class_name = node.name
                 info['classes'].append(class_name)
+                # Create description based on inheritance
+                if node.bases:
+                    base_names = []
+                    for base in node.bases:
+                        if isinstance(base, ast.Name):
+                            base_names.append(base.id)
+                        elif isinstance(base, ast.Attribute):
+                            if isinstance(base.value, ast.Name):
+                                base_names.append(
+                                    f"{base.value.id}.{base.attr}")
 
+                info['classes'].append(base_names
+                )
                 # Extract all methods from the class
                 class_methods = {}
                 init_args = {}
@@ -2069,10 +2119,10 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                 info['init_postSuper'] = init_postSuper
                 info['init_body'] = init_body
                 info['class_methods'] = class_methods
-                print(class_methods, dumps(info['class_methods'],indent=2))
+                # print(class_methods, dumps(info['class_methods'],indent=2))
 
                 break  # Assuming single class per file for piClassGC
-        printPythonFileInfo(pythonFile, info)
+        # printPythonFileInfo(pythonFile, info)
         return info
 
     except Exception as e:
@@ -2154,7 +2204,7 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
     Analyze a Python file to extract multiple class information for creating piGenClass files.
     Returns dict with imports, from_imports, classes, constants, etc. (piGenClass)
     """
-    printIt('analyzeMultiClassFile', showDefNames)
+    printIt(f'analyzeMultiClassFile: {str(pythonFile)}', showDefNames)
     try:
         with open(pythonFile, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -2193,6 +2243,7 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
                 if node.bases:
                     base_names = []
                     for base in node.bases:
+
                         if isinstance(base, ast.Name):
                             base_names.append(base.id)
                         elif isinstance(base, ast.Attribute):
@@ -2225,7 +2276,7 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
                     else:
                         # Single-line constant
                         info['constants'].append(constantCode)
-        printPythonFileInfo(pythonFile, info)
+        # printPythonFileInfo(pythonFile, info)
         return info
 
     except Exception as e:
@@ -2377,7 +2428,7 @@ def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Pat
     """
     Create a new piGenClass piSeed file for handling multiple classes in a single file.
     """
-    printIt('createNewPiGenClassSeedFile', showDefNames)
+    printIt(f'createNewPiGenClassSeedFile: {className}', showDefNames)
     try:
         seedPath = getSeedPath()
         if seed_file:
@@ -2497,10 +2548,10 @@ def syncPythonGenClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
     Sync changes from Python multi-class file back to piGenClass piSeed file.
     Returns list of changes made.
     """
-    printIt('syncPythonGenClassToSeed', showDefNames)
-    changes = []
 
     try:
+        printIt(f'syncPythonGenClassToSeed: {pythonFile.name}', showDefNames)
+        changes = []
 
         # Read the Python file
         with open(pythonFile, 'r', encoding='utf-8') as f:
@@ -2537,7 +2588,8 @@ def syncPythonGenClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
                         constants.append(constantCode)
                 elif isinstance(node, ast.FunctionDef):
                     # Global functions
-                    isPropertry, funcCode = extractMethodCode('global', pythonContent, item)
+                    isPropertry, funcCode = extractMethodCode(
+                        'global', pythonContent, node)
                     globalCode.extend(funcCode)
                     globalCode.append("")  # Add blank line between functions
 
@@ -2949,7 +3001,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
     Sync changes from Python class file back to piClassGC piSeed file.
     Returns list of changes made.
     """
-    printIt('syncPythonClassToSeed', showDefNames)
+    printIt(f'syncPythonClassToSeed: {pythonFile.name}', showDefNames)
     changes = []
     if options is None:
         options = {}
@@ -3227,6 +3279,9 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                 f"Syntax error in Python file {pythonFile}: {e}", lable.ERROR)
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def syncPythonClassToSeed', lable.ERROR)
         printIt(
             f"Error syncing {pythonFile} to {piSeedFile}: {e} line: {e.__traceback__.tb_lineno}", lable.ERROR)
 
@@ -3238,7 +3293,7 @@ def syncPythonDefToSeed(pythonFile: Path, piSeedFile: Path, dest_dir: str | None
     Sync changes from Python function definition file back to piDefGC piSeed file.
     Returns list of changes made.
     """
-    printIt('syncPythonDefToSeed', showDefNames)
+    printIt(f'syncPythonDefToSeed: {pythonFile.name}', showDefNames)
     changes = []
 
     # Use the comprehensive rebuilding approach for better reliability
@@ -3591,7 +3646,7 @@ def findCorrectInsertionPosition(lines: List[str], className: str, codeElementNa
     11. jsonCode
     12. classDefCode
     """
-    printIt('findCorrectInsertionPosition', showDefNames)
+    printIt(f'findCorrectInsertionPosition: {className}', showDefNames)
     #print(codeElementName)
     # Define the correct ordering of piSeed elements
     elementOrder = [
@@ -5168,7 +5223,7 @@ def rebuildDefSeedFromPython(pythonFile: Path, piSeedFile: Path, dest_dir: str |
     Rebuild the entire piDefGC piSeed file from Python content.
     This is more reliable than trying to update individual sections.
     """
-    printIt('rebuildDefSeedFromPython', showDefNames)
+    printIt(f'rebuildDefSeedFromPython: {pythonFile.name}', showDefNames)
     changes = []
 
     try:
@@ -5377,6 +5432,9 @@ piValue {defName}.piBody:piDefGC:fileName {defName}
         return changes
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def rebuildDefSeedFromPython', lable.ERROR)
         printIt(f"Error rebuilding def seed from Python: {e}", lable.ERROR)
         return []
 
@@ -5386,7 +5444,7 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
     Rebuild piSeed file content in the correct order according to piStruct_piClassGC.json.
     This ensures all elements appear in the proper sequence.
     """
-    printIt('rebuildPiSeedInCorrectOrder', showDefNames)
+    printIt(f'rebuildPiSeedInCorrectOrder: {className}', showDefNames)
     try:
         lines = seedContent.split('\n')
         # Parse existing content into sections
@@ -5694,8 +5752,10 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
         return '\n'.join(result)
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def rebuildPiSeedInCorrectOrder', lable.ERROR)
         printIt(f"Error rebuilding piSeed order: {e}", lable.ERROR)
-        printIt(f"Traceback: {traceback.format_exc()}", lable.ERROR)
         return seedContent
 
 
@@ -5728,6 +5788,9 @@ def extractCallCode(pythonContent: str, exprNode: ast.Expr) -> Optional[str]:
         return lines[start_line].strip()
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def extractCallCode', lable.ERROR)
         printIt(f"Error extracting call code: {e}", lable.ERROR)
         return None
 
@@ -5795,6 +5858,9 @@ def extractAssignmentCode(pythonContent: str, assignNode: ast.Assign) -> Optiona
         return first_line
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def extractAssignmentCode', lable.ERROR)
         printIt(f"Error extracting assignment code: {e}", lable.ERROR)
         return None
 
@@ -5839,6 +5905,9 @@ def extractIfMainCode(pythonContent: str, ifNode: ast.If) -> List[str]:
         return removeTrailingBlankLines(ifCode)
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def extractIfMainCode', lable.ERROR)
         printIt(f"Error extracting if main code: {e}", lable.ERROR)
         return []
 
@@ -5857,6 +5926,9 @@ def extractModuleDocstring(pythonContent: str) -> List[str]:
         return []
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def extractModuleDocstring', lable.ERROR)
         printIt(f"Error extracting module docstring: {e}", lable.ERROR)
         return []
 
@@ -5921,6 +5993,9 @@ def updateDefSeedHeaders(seedContent: str, defName: str, headers: List[str]) -> 
         return '\n'.join(newLines), changed
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def updateDefSeedHeaders', lable.ERROR)
         printIt(f"Error updating def seed headers: {e}", lable.ERROR)
         return seedContent, False
 
@@ -5987,6 +6062,9 @@ def updateDefSeedFileComments(seedContent: str, defName: str, fileComments: List
         return '\n'.join(newLines), changed
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def updateDefSeedFileComments', lable.ERROR)
         printIt(f"Error updating def seed file comments: {e}", lable.ERROR)
         return seedContent, False
 
@@ -6064,6 +6142,9 @@ def updateDefSeedImports(seedContent: str, defName: str, imports: List[str]) -> 
         return '\n'.join(newLines), changed
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def updateDefSeedImports', lable.ERROR)
         printIt(f"Error updating def seed imports: {e}", lable.ERROR)
         return seedContent, False
 
@@ -6175,6 +6256,9 @@ def updateDefSeedFromImports(seedContent: str, defName: str, fromImports: Dict[s
         return '\n'.join(newLines), changed
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def updateDefSeedFromImports', lable.ERROR)
         printIt(f"Error updating def seed from imports: {e}", lable.ERROR)
         return seedContent, False
 
@@ -6238,6 +6322,9 @@ def updateDefSeedConstants(seedContent: str, defName: str, constants: List[str])
         return '\n'.join(newLines), changed
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def updateDefSeedConstants', lable.ERROR)
         printIt(f"Error updating def seed constants: {e}", lable.ERROR)
         return seedContent, False
 
@@ -6357,8 +6444,10 @@ def updateDefSeedFunctionDefs(seedContent: str, defName: str, functionDefs: Dict
         return '\n'.join(newLines), changed
 
     except Exception as e:
-        printIt(
-            f"Error updating def seed function definitions: {e}", lable.ERROR)
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def updateDefSeedFunctionDefs', lable.ERROR)
+        printIt(f"Error updating def seed function definitions: {e}", lable.ERROR)
         return seedContent, False
 
 
@@ -6448,6 +6537,9 @@ def updateDefSeedGlobalCode(seedContent: str, defName: str, globalCode: List[str
         return '\n'.join(newLines), changed
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def updateDefSeedGlobalCode', lable.ERROR)
         printIt(f"Error updating def seed global code: {e}", lable.ERROR)
         return seedContent, False
 
@@ -6525,8 +6617,10 @@ def enhancedFileDiscovery(fileName: str) -> Optional[Path]:
         return None
 
     except Exception as e:
-        printIt(
-            f"Error in enhanced file discovery for {fileName}: {e}", lable.ERROR)
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def enhancedFileDiscovery', lable.ERROR)
+        printIt(f"Error in enhanced file discovery for {fileName}: {e}", lable.ERROR)
         return None
 
 
@@ -6558,7 +6652,7 @@ def findPythonFilesRecursively(directory: Path, file_type: str) -> List[Tuple[Pa
 
 def validateSyncResults(pythonFile: Path, piSeedFile: Path, changes: List[str]):
     """Validate sync results and show warnings if needed"""
-    printIt('validateSyncResults', showDefNames)
+    printIt(f'validateSyncResults: {pythonFile.name}', showDefNames)
     try:
         warnings = []
 
@@ -6614,6 +6708,9 @@ def validateSyncResults(pythonFile: Path, piSeedFile: Path, changes: List[str]):
             printIt(f"Validation passed for {pythonFile.name}", lable.DEBUG)
 
     except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def findPythonFilesRecursively', lable.ERROR)
         printIt(f"Error validating sync results: {e}", lable.ERROR)
 
 

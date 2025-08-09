@@ -1,5 +1,4 @@
-
-import os, json
+import os, json, ast
 import inspect
 from pathlib import Path
 from ..defs.fileIO import getKeyItem, piGCDirs, readJson, piLoadPiClassGCJson
@@ -98,21 +97,27 @@ class PiGenCode():
         elif "dict" in self.inheritance:
             rtnLines += indent*(iniLevel) + f'super().__init__()\n'
         else:
-            rtnLines += indent*(iniLevel) + f'super({self.piClassName}, self).__init__(\n'
-            supperParameters = []
+            supperParameters = {}
             for InheritKey in self.inheritance:
+                rtnLines += indent*(iniLevel) + f'super({self.piClassName}, self).__init__(\n'
                 try:
-                    aPiFilePI = piLoadPiClassGCJson(InheritKey, self.piClassDir)
-                    if aPiFilePI:
-                        parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
-                        supperParameters += [p for p in parameters if not p in supperParameters]
-                    else: raise Exception
+                    supperParameters = self.__getInheritClassArgs(InheritKey, self.piClassDir)
+                    #aPiFilePI = self.__getInheritClassArgs(InheritKey, self.piClassDir)
+                    # if aPiFilePI:
+                    #     parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
+                    #     supperParameters += [p for p in parameters if not p in supperParameters]
+                    # else: raise Exception
                 except:
                     printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(self.piClassDir))),lable.ERROR)
                     printIt('Check title case for PiClass')
                     exit()
             for param in self.initArguments:
-                if param in supperParameters:
+                if param in supperParameters.keys():
+                    # supperParameters value is dict
+                    # {
+                    #     'type': 'str',  # Default type
+                    #     'value': '""'   # Default value
+                    # }
                     rtnLines += f'{indent*(iniLevel+3)} {param} = {param},\n'
                 else:
                     paramType = self.initArguments[param]["type"]
@@ -775,6 +780,40 @@ class PiGenCode():
         if hasattr(self, methodName):
             return getattr(self, methodName)(iniLevel)
         return ""
+
+    def __getInheritClassArgs(self, PiClassName, piClassGCDir) -> dict[str, dict]:
+        lowerPiClassName = PiClassName[:2].lower() + PiClassName[2:]
+        # look in class file for listm of parametersm being inharited as children of paramType
+        pythonFile = Path(piClassGCDir).joinpath(lowerPiClassName + '.py')
+        #printIt(f'piLoadPiClassGCJson fileName: {str(pythonFile)}', lable.DEBUG)
+        init_args = {}
+        if pythonFile.is_file():
+            with open(pythonFile, 'r', encoding='utf-8') as f:
+                content = f.read()
+            tree = ast.parse(content)
+
+            for node in tree.body:
+                if isinstance(node, ast.ClassDef):
+                    for item in node.body:
+                        if isinstance(item, ast.FunctionDef):
+                            method_name = item.name
+                            if method_name == '__init__':
+                                # Special handling for __init__ method
+                                for arg in item.args.args:
+                                    if arg.arg != 'self':
+                                        arg_info = {
+                                            'type': 'str',  # Default type
+                                            'value': '""'   # Default value
+                                        }
+                                        # Try to infer type from annotation
+                                        if arg.annotation:
+                                            if isinstance(arg.annotation, ast.Name):
+                                                arg_info['type'] = arg.annotation.id
+                                            elif isinstance(arg.annotation, ast.Constant):
+                                                arg_info['type'] = str(
+                                                    arg.annotation.value)
+                                        init_args[arg.arg] = arg_info
+        return init_args
 
 #[ genPiPiClass, genPiPisFromSeedPiPiGCFile ]
 def genPiPiClass(genFileName='', verbose = False) -> dict:

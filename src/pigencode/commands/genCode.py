@@ -13,7 +13,6 @@ def genCode(argParse: ArgParse):
     # Use the already parsed arguments from ArgParse.__init__
     args = argParse.args
     theArgs = args.arguments
-
     if not theArgs:
         # No arguments - process all files
         savedCodeFiles = genCodeFile("")
@@ -256,10 +255,11 @@ def genCodeFile(fileName="", verbose=False) -> dict:
             else:
                 printIt(fileName, lable.FileNotFound)
         else:
-            # Process all files - piClassGC, piDefGC, and piGenClass
-            classFiles = genPiPiClass("", verbose)
+            # Process all files - in specifec order becase inhareted class need to be present
+            #  1) piDefGC, 2)piGenClass, and 3) piClassGC
             defFiles = genPiDefCode("", verbose)
             genClassFiles = processAllPiGenClassFiles(verbose)
+            classFiles = genPiPiClass("", verbose)
             savedCodeFiles.update(classFiles)
             savedCodeFiles.update(defFiles)
             savedCodeFiles.update(genClassFiles)
