@@ -1,4 +1,7 @@
 {
+    "editor.formatOnSave": false,
     "prettier.printWidth": 400,
-    "python.formatting.autopep8Args": ["--max-line-length=400"]
+    "python.formatting.provider": "autopep8",
+    "autopep8.args": ["--ignore=E302", "--max-line-length=400"],
+    "files.insertFinalNewline": false
 }

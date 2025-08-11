@@ -600,6 +600,82 @@ def updateGenClassSeedClassDefs(seedContent: str, className: str, classDefs: Dic
 def updateGenClassSeedGlobalCode(seedContent: str, className: str, globalCode: List[str]) -> Tuple[str, bool]:
     """Update global code in piGenClass seed file"""
     printIt('updateGenClassSeedGlobalCode', showDefNames03)
-    # Similar to piDefGC version but with piGenClass paths
-    return seedContent, False  # Placeholder for now
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+
+        # Pattern to match global code
+        globalPattern = rf'^piValueA\s+{re.escape(className)}\.piBody:piGenClass:globalCode\s+'
+
+        # First, extract existing global code for comparison
+        existingGlobalCode = []
+        for line in lines:
+            if re.match(globalPattern, line):
+                # Extract the quoted content using the same pattern as other functions
+                match = re.search(r'["\'](.*)["\']\s*$', line)
+                if match:
+                    existingGlobalCode.append(match.group(1))
+
+        # Normalize both lists by removing trailing empty strings and unescaping quotes
+        def normalize_content(content_list):
+            if not content_list:
+                return []
+            # Make a copy and remove trailing empty strings
+            normalized = content_list[:]
+            while normalized and not normalized[-1].strip():
+                normalized.pop()
+            # Unescape quotes for consistent comparison
+            normalized = [line.replace('\\"', '"') for line in normalized]
+            return normalized
+
+        existing_normalized = normalize_content(existingGlobalCode[:])
+        new_normalized = normalize_content(globalCode[:])
+
+        # Only proceed if content is actually different
+        if existing_normalized != new_normalized:
+            changed = True
+        else:
+            changed = False
+
+        i = 0
+        foundGlobalCode = False
+        while i < len(lines):
+            line = lines[i]
+            if re.match(globalPattern, line):
+                if not foundGlobalCode:
+                    foundGlobalCode = True
+                    # Skip all existing global code lines
+                    while i < len(lines) and re.match(globalPattern, lines[i]):
+                        i += 1
+                    # Add new global code lines
+                    if changed:
+                        for codeLine in globalCode:
+                            # Escape quotes in the code
+                            escapedCode = codeLine.replace('"', '\\"')
+                            newLines.append(
+                                f'piValueA {className}.piBody:piGenClass:globalCode "{escapedCode}"')
+                    continue
+            else:
+                newLines.append(line)
+            i += 1
+
+        # If no existing global code was found but we have new code, add it at the end
+        if not foundGlobalCode and globalCode and changed:
+            for codeLine in globalCode:
+                escapedCode = codeLine.replace('"', '\\"')
+                newLines.append(
+                    f'piValueA {className}.piBody:piGenClass:globalCode "{escapedCode}"')
+
+        if changed:
+            return '\n'.join(newLines), True
+        else:
+            return seedContent, False
+
+    except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def updateGenClassSeedGlobalCode', lable.ERROR)
+        printIt(f"Error updating GenClass seed global code: {e}", lable.ERROR)
+        return seedContent, False
 

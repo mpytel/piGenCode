@@ -63,9 +63,12 @@ def syncSingleFile(fileName: str, options: dict):
         dest_dir = options.get('dest_dir')
         if dest_dir:
             dest_dir = getDestDirForFile(filePath, options)
+        else:
+            dest_dir = ''
+
         # First, check for existing piSeed files of any type
-            existingPiSeedFile, existingType = findExistingPiSeedFile(
-                filePath, dest_dir)
+        existingPiSeedFile, existingType = findExistingPiSeedFile(
+            filePath, dest_dir)
 
         if existingPiSeedFile:
             # Use existing piSeed file type

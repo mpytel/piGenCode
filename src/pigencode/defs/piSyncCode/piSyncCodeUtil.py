@@ -486,12 +486,10 @@ def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[
                     if match:
                         # print('content:', content)
                         rawFileDirectory = match.group(2)
-                        match2 = re.search(
-                            piSeedValuePattern, rawFileDirectory)
-                        if match2:
-                            fileDirectory = match2.group(1)
-                            if fileDirectory == py_file_dir:
-                                return seedFile
+                        # rawFileDirectory is already clean (no quotes), so use it directly
+                        fileDirectory = rawFileDirectory
+                        if fileDirectory == py_file_dir:
+                            return seedFile
             except Exception:
                 continue
         return None
@@ -529,12 +527,10 @@ def findPiGenClassSeedFile(py_file: Path, dest_dir: str | None = None) -> Option
                                       content, re.MULTILINE)
                     if match:
                         rawFileDirectory = match.group(2)
-                        match2 = re.search(
-                            piSeedValuePattern, rawFileDirectory)
-                        if match2:
-                            fileDirectory = match2.group(1)
-                            if fileDirectory == py_file_dir:
-                                return seedFile
+                        # rawFileDirectory is already clean (no quotes), so use it directly
+                        fileDirectory = rawFileDirectory
+                        if fileDirectory == py_file_dir:
+                            return seedFile
             except Exception:
                 continue
         return None
