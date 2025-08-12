@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from ...defs.logIt import printIt, lable
 from ...defs.getSeedPath import getSeedPath
+from ...classes.piSeeds import extractPiSeed
 from .piSyncCodeUtil import getNextPiSeedNumber, \
                         getDocString, \
                         extract_ImportFrom, \
@@ -25,7 +26,6 @@ from .piSyncCodeUtil import getNextPiSeedNumber, \
                         extractAssignmentCode, \
                         updateSeedGlobals, \
                         removeTrailingBlankLines, \
-                        rebuildPiSeedInCorrectOrder, \
                         escapeQuotesForPiSeed
 
 piSeedValuePattern = r'["\'](.*)["\'].*$'
@@ -35,10 +35,10 @@ devExept = True
 global showDefNames
 # showDefNames = lable.ABORTPRT
 # showDefNames = lable.IMPORT
-showDefNames = lable.ABORTPRT
-showDefNames01 = lable.ABORTPRT
-showDefNames02 = lable.ABORTPRT
-showDefNames03 = lable.ABORTPRT
+showDefNames = lable.DEBUG
+showDefNames01 = lable.DEBUG
+showDefNames02 = lable.DEBUG
+showDefNames03 = lable.DEBUG
 # Intelligent pattern detection functions
 
 
@@ -135,6 +135,7 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
             for init_line in class_info['init_preSuper']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:preSuperInitCode \"{init_line}\"\n"
         if class_info.get('init_postSuper'):
+            print("class_info['init_postSuper']", class_info['init_postSuper'])
             for init_line in class_info['init_postSuper']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:postSuperInitCode \"{init_line}\"\n"
         if class_info.get('init_body'):
@@ -834,3 +835,332 @@ def updateSeedClassDefCode(seedContent: str, className: str, methodName: str, me
     except Exception as e:
         printIt(f"Error updating seed classDefCode: {e}", lable.ERROR)
         return seedContent, False
+
+def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
+    """
+    Rebuild piSeed file content in the correct order according to piStruct_piClassGC.json.
+    This ensures all elements appear in the proper sequence.
+    """
+    printIt(f'rebuildPiSeedInCorrectOrder: {className}', showDefNames)
+    try:
+        lines = seedContent.split('\n')
+        # Parse existing content into sections
+        sections = {
+            'header': [],
+            'fileDirectory': '',
+            'fileName': '',
+            'headers': [],
+            'fromImports': {},
+            'imports': [],
+            'fromPiClasses': [],
+            'rawFromImports': [],
+            'globals': {},
+            'piClassName': '',
+            'inheritance': [],
+            'initArguments': {},
+            'classComment': [],
+            'preSuperInitCode': [],
+            'postSuperInitCode': [],
+            'initAppendCode': [],
+            'genProps': '',
+            'strCode': [],
+            'jsonCode': [],
+            'classDefCode': {},
+            'globalCode': []
+        }
+
+        # Parse the existing content
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+
+            # Skip empty lines
+            if not line:
+                i += 1
+                continue
+
+            # Header lines (piClassGC, piProlog, piBase)
+            if (line.startswith(f'piClassGC {className}') or
+                line.startswith(f'piValue {className}.piProlog') or
+                    line.startswith(f'piValue {className}.piBase')):
+                sections['header'].append(line)
+
+            # fileDirectory
+            elif f'{className}.piBody:piClassGC:fileDirectory' in line:
+                sections['fileDirectory'] = line
+
+            # fileName
+            elif f'{className}.piBody:piClassGC:fileName' in line:
+                sections['fileName'] = line
+
+            # headers
+            elif f'{className}.piBody:piClassGC:headers' in line:
+                sections['headers'].append(line)
+
+            # fromImports
+            elif f'{className}.piBody:piClassGC:fromImports' in line:
+                while i < len(line):
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piStructA' in piType and piTitle == f'{className}.piBody:piClassGC:fromImports':
+                            sections['fromImports']['piStructA'] = line
+                        elif 'piStructC' in piType:
+                            currDef = piSD
+                            if currDef[-1] == '.':  # strip . copy over key
+                                currDef = currDef[:-1]
+                            # print('currDef01',currDef)
+                            sections['fromImports'][currDef] = []
+                            sections['fromImports'][currDef].append(line)
+                        elif 'fromImports' in piTitle:
+                            currDef = piTitle.split(':')[-2]
+                            # print('currDef02',currDef)
+                            sections['fromImports'][currDef].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
+
+            # imports
+            elif f'{className}.piBody:piClassGC:imports' in line and 'fromImports' not in line:
+                sections['imports'].append(line)
+
+            # fromPiClasses  piValueA piPi.piBody:piClassGC:fromPiClasses "PiRealmBody"
+            elif f'{className}.piBody:piClassGC:fromPiClasses' in line:
+                sections['fromPiClasses'].append(line)
+
+            # rawFromImports
+            elif f'{className}.piBody:piClassGC:rawFromImports' in line:
+                sections['rawFromImports'].append(line)
+
+            # inheritance
+            elif f'{className}.piBody:piClassGC:inheritance' in line:
+                sections['inheritance'].append(line)
+
+            # globals
+            elif f'{className}.piBody:piClassGC:globals' in line:
+                while True:
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piStructA' in piType and piTitle == f'{className}.piBody:piClassGC:globals':
+                            sections['globals']['lines'] = []
+                            sections['globals']['lines'].append(line)
+                        elif 'piValue' == piType:
+                            sections['globals']['lines'].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
+            # piClassName
+            elif f'{className}.piBody:piClassGC:piClassName' in line:
+                sections['piClassName'] = line
+            # classComment
+            elif f'{className}.piBody:piClassGC:classComment' in line:
+                sections['classComment'] = line
+            # preSuperInitCode
+            elif f'{className}.piBody:piClassGC:preSuperInitCode' in line:
+                while True:
+                    line = lines[i]
+                    if f'{className}.piBody:piClassGC:preSuperInitCode' in line:
+                        sections['preSuperInitCode'].append(line)
+                    else:
+                        i -= 1
+                        break
+                    i += 1
+            # postSuperInitCode
+            elif f'{className}.piBody:piClassGC:postSuperInitCode' in line:
+                while True:
+                    line = lines[i]
+                    if f'{className}.piBody:piClassGC:postSuperInitCode' in line:
+                        sections['postSuperInitCode'].append(line)
+                    else:
+                        i -= 1
+                        break
+                    i += 1
+            # initArguments
+            elif f'{className}.piBody:piClassGC:initArguments' in line:
+                while True:
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piStructA' in piType and piTitle == f'{className}.piBody:piClassGC:initArguments':
+                            sections['initArguments']['piStructA'] = line
+                        elif 'piStructC' in piType:
+                            currDef = piSD
+                            if currDef[-1] == '.':  # strip . copy over key
+                                currDef = currDef[:-1]
+                            # print('currDef01',currDef)
+                            sections['initArguments'][currDef] = []
+                            sections['initArguments'][currDef].append(line)
+                        elif 'initArguments' in piTitle:
+                            currDef = piTitle.split(':')[-2]
+                            # print('currDef02',currDef)
+                            sections['initArguments'][currDef].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
+
+            # initAppendCode
+            elif f'{className}.piBody:piClassGC:initAppendCode' in line:
+                sections['initAppendCode'].append(line)
+            # genProps
+            elif f'{className}.piBody:piClassGC:genProps' in line:
+                sections['genProps'].append(line)
+            # strCode
+            elif f'{className}.piBody:piClassGC:strCode' in line:
+                sections['strCode'].append(line)
+            # jsonCode
+            elif f'{className}.piBody:piClassGC:jsonCode' in line:
+                sections['jsonCode'].append(line)
+
+            # classDefCode
+            elif f'{className}.piBody:piClassGC:classDefCode' in line:
+                while True:
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piStructA' in piType and piTitle == f'{className}.piBody:piClassGC:classDefCode':
+                            sections['classDefCode']['piStructA'] = line
+                        elif 'piStructL' in piType:
+                            currDef = piTitle
+                            sections['classDefCode'][currDef] = []
+                            sections['classDefCode'][currDef].append(line)
+                        elif 'piValueA' in piType and 'classDefCode' in piTitle:
+                            currDef = piTitle.split(':')[-1]
+                            sections['classDefCode'][currDef].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
+                    if i >= len(lines):
+                        break
+
+            # globalCode
+            elif f'{className}.piBody:piClassGC:globalCode' in line:
+                while True:
+                    line = lines[i].strip()
+                    if line:
+                        piType, piTitle, piSD = extractPiSeed(line)
+                        if 'piValueA' in piType:
+                            sections['globalCode'].append(line)
+                        else:
+                            i -= 1
+                            break
+                    i += 1
+                    if i >= len(lines):
+                        break
+            i += 1
+        #  ------ end with ----
+
+        # Rebuild in correct order
+        result = []
+
+        # 1. Header
+        result.extend(sections['header'])
+
+        # 2. fileDirectory
+        if sections['fileDirectory']:
+            result.append(sections['fileDirectory'])
+
+        # 3. fileName
+        if sections['fileName']:
+            result.append(sections['fileName'])
+
+        # 4. headers
+        result.extend(sections['headers'])
+
+        # 5. imports
+        result.extend(sections['imports'])
+
+        # 6. fromImports
+        fromImports = sections['fromImports']
+        if fromImports:
+            capturedLines = []
+            for currDef, lines in fromImports.items():
+                # print('** currDef', currDef)
+                if currDef == 'piStructA':
+                    # here lines is a string for fist line declaring fromImports append
+                    result.extend([lines])
+                else:
+                    # here lines is a list for all piValueA classDefCode code
+                    # print('** currDef', currDef)
+                    # print('** lines',lines)
+                    assert len(lines) == 3
+                    result.extend(lines[:1])
+                    capturedLines.extend(lines[1:])
+            result.extend(capturedLines)
+
+        # 7. fromPiClasses
+        result.extend(sections['fromPiClasses'])
+
+        # 8. rawFromImports
+        result.extend(sections['rawFromImports'])
+
+        # 9. globals
+        if sections['globals']:
+            result.extend(sections['globals']['lines'])
+
+        # 10. piClassName
+        if sections['piClassName']:
+            result.append(sections['piClassName'])
+
+        # 11. inheritance
+        if sections['inheritance']:
+            result.extend(sections['inheritance'])
+
+        # 12. initArguments
+        capturedLines = []
+        initArguments = sections['initArguments']
+        if initArguments:
+            for currDef, lines in initArguments.items():
+                if currDef == 'piStructA':
+                    # here lines is a string for fist line declaring classDefCode append
+                    result.extend([lines])
+                else:
+                    result.extend(lines[:1])
+                    capturedLines.extend(lines[1:])
+            result.extend(capturedLines)
+
+        # 13. classComment
+        result.extend(sections['classComment'])
+        # 14. preSuperInitCode
+        result.extend(sections['preSuperInitCode'])
+        # 15. postSuperInitCode
+        result.extend(sections['postSuperInitCode'])
+        # 16. initAppendCode
+        result.extend(sections['initAppendCode'])
+        # 17. genProps
+        result.extend(sections['genProps'])
+        # 18. strCode
+        result.extend(sections['strCode'])
+        # 19. jsonCode
+        result.extend(sections['jsonCode'])
+        # 20. classDefCode
+        capturedLines = []
+        classDefCode = sections['classDefCode']
+        if classDefCode:
+            for currDef, lines in classDefCode.items():
+                if currDef == 'piStructA':
+                    # here lines is a string for fist line declaring classDefCode append
+                    result.extend([lines])
+                else:
+                    result.extend(lines[:1])
+                    capturedLines.extend(lines[1:])
+            result.extend(capturedLines)
+        # 21. globalCode
+        #print("sections['globalCode']", sections['globalCode'])
+        result.extend(sections['globalCode'])
+        # i = 1
+        # for i1 in result:
+        #     print(i,i1)
+        #     i += 1
+        return '\n'.join(result)
+
+    except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def rebuildPiSeedInCorrectOrder', lable.ERROR)
+        printIt(f"Error rebuilding piSeed order: {e}", lable.ERROR)
+        return seedContent
