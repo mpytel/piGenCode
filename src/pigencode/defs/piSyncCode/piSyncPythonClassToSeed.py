@@ -103,7 +103,39 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
 
         # 4. Add rawFromImports (empty for now)
 
-        # 5. Add globals (will be added by sync function)
+        # 5. Add globals - extract module-level variables
+        with open(pythonFile, 'r', encoding='utf-8') as f:
+            pythonContent = f.read()
+        tree = ast.parse(pythonContent)
+        
+        # Extract module-level assignments (global variables)
+        moduleGlobals = {}
+        globalFunctions = []
+        
+        for node in tree.body:
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                # Module-level variable assignments
+                assignmentCode = extractAssignmentCode(pythonContent, node)
+                if assignmentCode:
+                    # Parse the assignment to extract variable name and value
+                    if ' = ' in assignmentCode:
+                        varPart, varValue = assignmentCode.split(' = ', 1)
+                        # Extract just the variable name (remove type annotation if present)
+                        if ':' in varPart:
+                            varName = varPart.split(':')[0].strip()
+                        else:
+                            varName = varPart.strip()
+                        # Store with just the variable name as key
+                        moduleGlobals[varName] = varValue
+            elif isinstance(node, ast.FunctionDef):
+                # Module-level functions
+                globalFunctions.append(node)
+        
+        # Add globals section if we have module assignments
+        if moduleGlobals:
+            seedContent += f"piStructA00 {className}.piBody:piClassGC:globals\n"
+            for varName, varValue in moduleGlobals.items():
+                seedContent += f"piValue {className}.piBody:piClassGC:globals:{varName} {varValue}\n"
 
         # 6. Add piClassName
         seedContent += f"piValue {className}.piBody:piClassGC:piClassName {class_info['classes'][0]}\n"
@@ -175,7 +207,14 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
                     inLine += 1
                 seedContent += methodNameSeeds[method_name]
             seedContent += methodContent
-        # 17. Add globalCode (will be added by sync function)
+        
+        # 17. Add globalCode - extract module-level functions
+        if globalFunctions:
+            for func in globalFunctions:
+                isProperty, funcCode = extractMethodCode('global', pythonContent, func)
+                for line in funcCode:
+                    seedContent += f"piValueA {className}.piBody:piClassGC:globalCode \"{line}\"\n"
+        
         # Write the new piSeed file
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
