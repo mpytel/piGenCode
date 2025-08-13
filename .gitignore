@@ -10,7 +10,6 @@ devDocs/
 
 # for testing
 holdCode/
-testCode/pi
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
