@@ -89,19 +89,23 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
                 isPropertry, funcCode = extractMethodCode('functions', content, node)
                 info['functions'].extend(funcCode)
 
-            elif isinstance(node, ast.Assign):
+            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
                 # Extract constants (module-level assignments)
                 constantCode = extractAssignmentCode(content, node)
                 if constantCode:
                     # Check if this is a multi-line constant
                     # Multi-line if: contains newlines OR contains triple quotes (multi-line strings)
                     if '\n' in constantCode or '"""' in constantCode or "'''" in constantCode:
-                        # Multi-line constant - extract variable name and store in mlConstants
+                        # Multi-line constant - extract variable name and store in mlConstants ONLY
                         lines = constantCode.split('\n')
                         first_line = lines[0].strip()
                         if '=' in first_line:
                             var_name = first_line.split('=')[0].strip()
+                            # Remove type annotation if present (e.g., "baseTypes: list" -> "baseTypes")
+                            if ':' in var_name:
+                                var_name = var_name.split(':')[0].strip()
                             info['mlConstants'][var_name] = constantCode.split('\n')
+                        # Do NOT add to constants array - multi-line constants should only be in mlConstants
                     else:
                         # Single-line constant
                         info['constants'].append(constantCode)
@@ -261,6 +265,7 @@ def syncPythonGenClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
             importStatements = []
             classDefs = {}
             constants = []
+            mlConstants = {}
             globalCode = []
             headers = []
 
@@ -272,11 +277,26 @@ def syncPythonGenClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
                     # Extract complete class definition
                     classCode = extractCompleteClassCode(pythonContent, node)
                     classDefs[node.name] = classCode
-                elif isinstance(node, ast.Assign):
+                elif isinstance(node, (ast.Assign, ast.AnnAssign)):
                     # Constants (module-level assignments)
                     constantCode = extractAssignmentCode(pythonContent, node)
                     if constantCode:
-                        constants.append(constantCode)
+                        # Check if this is a multi-line constant
+                        # Multi-line if: contains newlines OR contains triple quotes (multi-line strings)
+                        if '\n' in constantCode or '"""' in constantCode or "'''" in constantCode:
+                            # Multi-line constant - extract variable name and store in mlConstants ONLY
+                            lines = constantCode.split('\n')
+                            first_line = lines[0].strip()
+                            if '=' in first_line:
+                                var_name = first_line.split('=')[0].strip()
+                                # Remove type annotation if present (e.g., "baseTypes: list" -> "baseTypes")
+                                if ':' in var_name:
+                                    var_name = var_name.split(':')[0].strip()
+                                mlConstants[var_name] = constantCode.split('\n')
+                            # Do NOT add to constants array - multi-line constants should only be in mlConstants
+                        else:
+                            # Single-line constant
+                            constants.append(constantCode)
                 elif isinstance(node, ast.FunctionDef):
                     # Global functions
                     isPropertry, funcCode = extractMethodCode(
@@ -329,6 +349,14 @@ def syncPythonGenClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
                 if changed:
                     seedContent = newSeedContent
                     changes.append("constants")
+
+            # Update multi-line constants
+            if mlConstants:
+                newSeedContent, changed = updateGenClassSeedMlConstants(
+                    seedContent, className, mlConstants)
+                if changed:
+                    seedContent = newSeedContent
+                    changes.append("mlConstants")
 
             # Update class definitions
             if classDefs:
@@ -486,6 +514,141 @@ def updateGenClassSeedImports(seedContent: str, className: str, imports: List[st
         return seedContent, False
 
 
+def updateGenClassSeedMlConstants(seedContent: str, className: str, mlConstants: Dict[str, List[str]]) -> Tuple[str, bool]:
+    """Update multi-line constants in piGenClass seed file"""
+    printIt('updateGenClassSeedMlConstants', showDefNames03)
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+
+        # Patterns for multi-line constants
+        structPattern = rf'^piStructA00\s+{re.escape(className)}\.piBody:piGenClass:mlConstants\s*$'
+        mlConstStructPattern = rf'^piStructL01\s+(\w+)\s+'
+        mlConstDefPattern = rf'^piValueA\s+{re.escape(className)}\.piBody:piGenClass:mlConstants:(\w+)\s+'
+
+        # Extract existing multi-line constants for comparison
+        existingMlConstants = {}
+        for line in lines:
+            match = re.match(mlConstDefPattern, line)
+            if match:
+                constName = match.group(1)
+                if constName not in existingMlConstants:
+                    existingMlConstants[constName] = []
+
+                # Extract the quoted content
+                contentMatch = re.search(piSeedValuePattern, line)
+                if contentMatch:
+                    existingMlConstants[constName].append(contentMatch.group(1))
+
+        # Compare existing with new multi-line constants
+        for constName, newConstLines in mlConstants.items():
+            existingConstLines = existingMlConstants.get(constName, [])
+
+            # Normalize content for comparison
+            existing_normalized = [line.replace('\\"', '"') for line in existingConstLines]
+            new_normalized = newConstLines[:]
+
+            if existing_normalized != new_normalized:
+                changed = True
+                break
+
+        # Check if any constants were removed
+        if not changed:
+            for constName in existingMlConstants:
+                if constName not in mlConstants:
+                    changed = True
+                    break
+
+        # Only update if there are actual changes
+        if not changed:
+            return seedContent, False
+
+        i = 0
+        foundMlConstants = False
+
+        while i < len(lines):
+            line = lines[i]
+
+            if re.match(structPattern, line):
+                foundMlConstants = True
+                newLines.append(line)
+                i += 1
+
+                # Skip existing multi-line constant definitions
+                while i < len(lines):
+                    line = lines[i]
+                    if (re.match(mlConstStructPattern, line) or
+                            re.match(mlConstDefPattern, line)):
+                        i += 1
+                        continue
+                    else:
+                        break
+
+                # Add new multi-line constant definitions
+                for constName in mlConstants.keys():
+                    newLines.append(f'piStructL01 {constName} \'Multi-line constant {constName}\'')
+
+                for constName, constLines in mlConstants.items():
+                    for constLine in constLines:
+                        escapedLine = constLine.replace('"', '\\"')
+                        newLines.append(f'piValueA {className}.piBody:piGenClass:mlConstants:{constName} "{escapedLine}"')
+
+                continue
+            else:
+                newLines.append(line)
+                i += 1
+
+        # If no existing mlConstants section was found but we have new constants, add them
+        if not foundMlConstants and mlConstants and changed:
+            # Find insertion point (after constants, before classDefs)
+            insertionPoint = -1
+            for i, line in enumerate(newLines):
+                if 'piStructA00' in line and 'classDefs' in line:
+                    insertionPoint = i
+                    break
+            
+            if insertionPoint >= 0:
+                # Insert mlConstants section before classDefs
+                mlConstLines = [f'piStructA00 {className}.piBody:piGenClass:mlConstants']
+                
+                # Add structure definitions
+                for constName in mlConstants.keys():
+                    mlConstLines.append(f'piStructL01 {constName} \'Multi-line constant {constName}\'')
+                
+                # Add constant lines
+                for constName, constLines in mlConstants.items():
+                    for constLine in constLines:
+                        escapedLine = constLine.replace('"', '\\"')
+                        mlConstLines.append(f'piValueA {className}.piBody:piGenClass:mlConstants:{constName} "{escapedLine}"')
+                
+                # Insert at the insertion point
+                for j, mlConstLine in enumerate(mlConstLines):
+                    newLines.insert(insertionPoint + j, mlConstLine)
+            else:
+                # Append at the end if no insertion point found
+                newLines.append(f'piStructA00 {className}.piBody:piGenClass:mlConstants')
+                
+                # Add structure definitions
+                for constName in mlConstants.keys():
+                    newLines.append(f'piStructL01 {constName} \'Multi-line constant {constName}\'')
+                
+                # Add constant lines
+                for constName, constLines in mlConstants.items():
+                    for constLine in constLines:
+                        escapedLine = constLine.replace('"', '\\"')
+                        newLines.append(f'piValueA {className}.piBody:piGenClass:mlConstants:{constName} "{escapedLine}"')
+
+        return '\n'.join(newLines), changed
+
+    except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def updateGenClassSeedMlConstants', lable.ERROR)
+        printIt(f"Error updating piGenClass seed multi-line constants: {e}", lable.ERROR)
+        return seedContent, False
+
+
 def updateGenClassSeedFromImports(seedContent: str, className: str, fromImports: Dict[str, Dict[str, str]]) -> Tuple[str, bool]:
     """Update from imports in piGenClass seed file"""
     printIt('updateGenClassSeedFromImports', showDefNames03)
@@ -497,8 +660,85 @@ def updateGenClassSeedFromImports(seedContent: str, className: str, fromImports:
 def updateGenClassSeedConstants(seedContent: str, className: str, constants: List[str]) -> Tuple[str, bool]:
     """Update constants in piGenClass seed file"""
     printIt('updateGenClassSeedConstants', showDefNames03)
-    # Similar to piDefGC version but with piGenClass paths
-    return seedContent, False  # Placeholder for now
+    try:
+        lines = seedContent.split('\n')
+        newLines = []
+        changed = False
+
+        # Pattern to match constants
+        constantPattern = rf'^piValueA\s+{re.escape(className)}\.piBody:piGenClass:constants\s+'
+
+        # First, extract existing constants for comparison
+        existingConstants = []
+        for line in lines:
+            if re.match(constantPattern, line):
+                # Extract the quoted content
+                match = re.search(piSeedValuePattern, line)
+                if match:
+                    existingConstants.append(match.group(1))
+
+        # Compare existing with new constants
+        if existingConstants != constants:
+            changed = True
+
+        i = 0
+        foundConstants = False
+        insertionPoint = -1
+
+        while i < len(lines):
+            line = lines[i]
+
+            if re.match(constantPattern, line):
+                if not foundConstants:
+                    foundConstants = True
+                    # Replace with new constants only if changed
+                    if changed:
+                        for constant in constants:
+                            escapedConstant = constant.replace('"', '\\"')
+                            newLines.append(
+                                f'piValueA {className}.piBody:piGenClass:constants "{escapedConstant}"')
+                    else:
+                        # Keep existing content
+                        temp_i = i
+                        while temp_i < len(lines) and re.match(constantPattern, lines[temp_i]):
+                            newLines.append(lines[temp_i])
+                            temp_i += 1
+
+                # Skip all existing constant lines
+                while i < len(lines) and re.match(constantPattern, lines[i]):
+                    i += 1
+                continue
+            else:
+                # Look for insertion point (after fromImports, before classDefs)
+                if not foundConstants and 'piStructA00' in line and 'classDefs' in line:
+                    insertionPoint = len(newLines)
+                
+                newLines.append(line)
+                i += 1
+
+        # If no existing constants were found but we have new constants, insert them
+        if not foundConstants and constants and changed:
+            if insertionPoint >= 0:
+                # Insert constants before classDefs
+                for j, constant in enumerate(constants):
+                    escapedConstant = constant.replace('"', '\\"')
+                    newLines.insert(insertionPoint + j, 
+                        f'piValueA {className}.piBody:piGenClass:constants "{escapedConstant}"')
+            else:
+                # Append at the end if no insertion point found
+                for constant in constants:
+                    escapedConstant = constant.replace('"', '\\"')
+                    newLines.append(
+                        f'piValueA {className}.piBody:piGenClass:constants "{escapedConstant}"')
+
+        return '\n'.join(newLines), changed
+
+    except Exception as e:
+        if devExept:
+            tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+            printIt(f'{tb_str}\n\n --- def updateGenClassSeedConstants', lable.ERROR)
+        printIt(f"Error updating piGenClass seed constants: {e}", lable.ERROR)
+        return seedContent, False
 
 def updateGenClassSeedClassDefs(seedContent: str, className: str, classDefs: Dict[str, List[str]]) -> Tuple[str, bool]:
     """Update class definitions in piGenClass seed file"""

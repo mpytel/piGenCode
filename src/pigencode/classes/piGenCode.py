@@ -118,7 +118,12 @@ class PiGenCode():
                     #     'type': 'str',  # Default type
                     #     'value': '""'   # Default value
                     # }
-                    rtnLines += f'{indent*(iniLevel+3)} {param} = {param},\n'
+                    paramType = self.initArguments[param]["type"]
+                    # For Pi-types that are assigned in preSuperInitCode, use self.parameter
+                    if paramType.startswith("Pi") and any(f"self.{param} = " in line for line in self.preSuperInitCode):
+                        rtnLines += f'{indent*(iniLevel+3)} {param} = self.{param},\n'
+                    else:
+                        rtnLines += f'{indent*(iniLevel+3)} {param} = {param},\n'
                 else:
                     paramType = self.initArguments[param]["type"]
                     if paramType[:2] == "Pi":
@@ -508,12 +513,19 @@ class PiGenCode():
                 #print(self.initArguments[key]["value"])
                 rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = {self.initArguments[param]["value"]}'
             elif paramType[:2] == "Pi":
-                if paramType not in self.fromPiClasses: self.fromPiClasses.append(paramType)
+                # Extract base type from union types (e.g., "PiIndexer | None" -> "PiIndexer")
+                baseType = paramType.split(' | ')[0].strip()
+                if baseType not in self.fromPiClasses: 
+                    self.fromPiClasses.append(baseType)
                 # Check if the value is None (either None object or string "None")
                 paramValue = self.initArguments[param]["value"]
                 if paramValue is None or str(paramValue).lower() == "none":
                     # Parameter value is None - use union type syntax
-                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} | None = None'
+                    # Check if paramType already contains | None to avoid duplication
+                    if "| None" in paramType:
+                        rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = None'
+                    else:
+                        rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} | None = None'
                 elif paramValue:
                     # Parameter has a non-None value
                     rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + f'{paramValue}'

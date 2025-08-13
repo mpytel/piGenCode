@@ -35,10 +35,10 @@ devExept = True
 global showDefNames
 # showDefNames = lable.ABORTPRT
 # showDefNames = lable.IMPORT
-showDefNames = lable.DEBUG
-showDefNames01 = lable.DEBUG
-showDefNames02 = lable.DEBUG
-showDefNames03 = lable.DEBUG
+showDefNames = lable.ABORTPRT
+showDefNames01 = lable.ABORTPRT
+showDefNames02 = lable.ABORTPRT
+showDefNames03 = lable.ABORTPRT
 # Intelligent pattern detection functions
 
 
@@ -135,7 +135,7 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
             for init_line in class_info['init_preSuper']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:preSuperInitCode \"{init_line}\"\n"
         if class_info.get('init_postSuper'):
-            print("class_info['init_postSuper']", class_info['init_postSuper'])
+            printIt(f"class_info['init_postSuper']: {class_info['init_postSuper']}", lable.DEBUG)
             for init_line in class_info['init_postSuper']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:postSuperInitCode \"{init_line}\"\n"
         if class_info.get('init_body'):
@@ -226,14 +226,7 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
 
             elif isinstance(node, ast.ImportFrom):
                 module_name, imports = extract_ImportFrom(node)
-                if node.module:
-                    module_name = node.module
-                    imports = []
-                    for alias in node.names:
-                        import_name = alias.name
-                        if alias.asname:
-                            import_name = f"{alias.name} as {alias.asname}"
-                        imports.append(import_name)
+                # Don't override module_name - extract_ImportFrom already handles relative imports correctly
 
                 info['from_imports'][module_name] = {
                     'from': module_name,
@@ -281,8 +274,25 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                                         if isinstance(arg.annotation, ast.Name):
                                             arg_info['type'] = arg.annotation.id
                                         elif isinstance(arg.annotation, ast.Constant):
-                                            arg_info['type'] = str(
-                                                arg.annotation.value)
+                                            arg_info['type'] = str(arg.annotation.value)
+                                        elif isinstance(arg.annotation, ast.BinOp) and isinstance(arg.annotation.op, ast.BitOr):
+                                            # Handle union types like PiIndexer | None
+                                            left_type = ""
+                                            right_type = ""
+                                            if isinstance(arg.annotation.left, ast.Name):
+                                                left_type = arg.annotation.left.id
+                                            if isinstance(arg.annotation.right, ast.Constant) and arg.annotation.right.value is None:
+                                                right_type = "None"
+                                            elif isinstance(arg.annotation.right, ast.Name):
+                                                right_type = arg.annotation.right.id
+
+                                            if left_type and right_type:
+                                                arg_info['type'] = f"{left_type} | {right_type}"
+                                        elif hasattr(arg.annotation, 'slice'):
+                                            # Handle generic types like Optional[PiIndexer]
+                                            if isinstance(arg.annotation.value, ast.Name) and arg.annotation.value.id == 'Optional':
+                                                if isinstance(arg.annotation.slice, ast.Name):
+                                                    arg_info['type'] = f"{arg.annotation.slice.id} | None"
 
                                     init_args[arg.arg] = arg_info
 
@@ -335,11 +345,21 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                                         if "super(" in call_line:
                                             init_preSuper.extend(init_body)
                                             init_body = []
+
+                                            # Capture the complete super() call
+                                            super_call_lines = [call_line]
                                             openParentheses = call_line.count('(') - call_line.count(')')
-                                            while openParentheses:
+                                            while openParentheses > 0:
                                                 line_num += 1
-                                                call_line = contentList[line_num].strip()
-                                                openParentheses = openParentheses + call_line.count('(') - call_line.count(')')
+                                                if line_num < lenContent:
+                                                    call_line = contentList[line_num].strip()
+                                                    super_call_lines.append(call_line)
+                                                    openParentheses = openParentheses + call_line.count('(') - call_line.count(')')
+                                                else:
+                                                    break
+
+                                            # Store the super() call - it will be auto-generated by the code generator
+                                            # We don't need to store it explicitly as it's handled by inheritance logic
                                         else:
                                             if init_preSuper:
                                                 init_postSuper.append(call_line)
@@ -472,8 +492,9 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                 elif isinstance(node, (ast.Import, ast.ImportFrom)):
                     # Import statements
                     importStatements.append(node)
-                elif isinstance(node, ast.Assign):
+                elif isinstance(node, (ast.Assign, ast.AnnAssign)):
                     # Module-level variable assignments (like rcFileDir, rcFileName)
+                    # Include both regular assignments and annotated assignments (baseRealms: dict = {...})
                     moduleAssignments.append(node)
 
             if classNode:
@@ -657,11 +678,16 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                         pythonContent, assignment)
                     if assignmentCode:
                         # Parse the assignment to extract variable name and value
-                        # Format: "varName = value"
+                        # Handle both "varName = value" and "varName: type = value" formats
                         if ' = ' in assignmentCode:
-                            varName, varValue = assignmentCode.split(' = ', 1)
-                            # Only strip whitespace from varName, preserve quotes in varValue
-                            moduleGlobals[varName.strip()] = varValue
+                            varPart, varValue = assignmentCode.split(' = ', 1)
+                            # Extract just the variable name (remove type annotation if present)
+                            if ':' in varPart:
+                                varName = varPart.split(':')[0].strip()
+                            else:
+                                varName = varPart.strip()
+                            # Store with just the variable name as key
+                            moduleGlobals[varName] = varValue
 
                 # Add global functions to globalCode
                 for func in globalFunctions:

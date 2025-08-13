@@ -3,7 +3,7 @@ import ast
 import traceback
 from json import dump
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Set, Any
+from typing import Dict, List, Tuple, Optional, Set, Any, Union
 from ..logIt import printIt, lable
 from ..fileIO import getKeyItem, piGCDirs
 from ..getSeedPath import getSeedPath
@@ -544,7 +544,7 @@ def findPiGenClassSeedFile(py_file: Path, dest_dir: str | None = None) -> Option
 
 def findPiClassGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given class name (piClassGC)"""
-    printIt('findPiClassGCSeedFile', showDefNames03)
+    printIt(f'findPiClassGCSeedFile: {str(py_file)}', lable.DEBUG)  # showDefNames03)
     try:
         className = py_file.stem
         seedPath = getSeedPath()
@@ -2764,7 +2764,7 @@ def extractCallCode(pythonContent: str, exprNode: ast.Expr) -> Optional[str]:
         return None
 
 
-def extractAssignmentCode(pythonContent: str, assignNode: ast.Assign) -> Optional[str]:
+def extractAssignmentCode(pythonContent: str, assignNode: Union[ast.Assign, ast.AnnAssign]) -> Optional[str]:
     """Extract assignment code (constants) from AST node, handling multi-line strings and parentheses"""
     printIt('extractAssignmentCode', showDefNames03)
     try:

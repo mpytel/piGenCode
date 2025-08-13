@@ -52,14 +52,34 @@ class PiGenClassCode():
                 code_lines.append(header)
             code_lines.append("")  # Blank line after headers
 
-        # Add imports
+        # Handle __future__ imports first (they must come before any other imports)
+        future_imports = []
+        regular_from_imports = {}
+        
+        if self.fromImports:
+            for module_key, import_info in self.fromImports.items():
+                from_module = import_info.get("from", "")
+                if from_module == "__future__":
+                    future_imports.append(import_info)
+                else:
+                    regular_from_imports[module_key] = import_info
+        
+        # Add __future__ imports first
+        if future_imports:
+            for import_info in future_imports:
+                from_module = import_info.get("from", "")
+                import_items = import_info.get("import", "")
+                if from_module and import_items:
+                    code_lines.append(f"from {from_module} import {import_items}")
+
+        # Add regular imports
         if self.imports:
             for imp in self.imports:
                 code_lines.append(f"import {imp}")
 
-        # Add from imports
-        if self.fromImports:
-            for module_key, import_info in self.fromImports.items():
+        # Add remaining from imports
+        if regular_from_imports:
+            for module_key, import_info in regular_from_imports.items():
                 from_module = import_info.get("from", "")
                 import_items = import_info.get("import", "")
                 if from_module and import_items:
