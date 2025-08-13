@@ -117,16 +117,18 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
                 # Module-level variable assignments
                 assignmentCode = extractAssignmentCode(pythonContent, node)
                 if assignmentCode:
-                    # Parse the assignment to extract variable name and value
+                    # Parse the assignment to extract variable name and value, preserving type annotations
                     if ' = ' in assignmentCode:
                         varPart, varValue = assignmentCode.split(' = ', 1)
-                        # Extract just the variable name (remove type annotation if present)
+                        # Extract variable name but preserve the full assignment including type annotation
                         if ':' in varPart:
                             varName = varPart.split(':')[0].strip()
+                            # Store the full assignment including type annotation
+                            moduleGlobals[varName] = assignmentCode
                         else:
                             varName = varPart.strip()
-                        # Store with just the variable name as key
-                        moduleGlobals[varName] = varValue
+                            # Store with just the variable name as key and value
+                            moduleGlobals[varName] = varValue
             elif isinstance(node, ast.FunctionDef):
                 # Module-level functions
                 globalFunctions.append(node)
@@ -229,6 +231,37 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
         printIt(
             f"Error creating new piClassGC piSeed file for {className}: {e}", lable.ERROR)
         return None
+
+def _extract_compound_statement(stmt, contentList, lenContent, init_preSuper, init_postSuper, init_body):
+    """
+    Extract compound statements (if, for, while, etc.) with their complete bodies
+    by extracting the source code lines from start to end of the statement.
+    Normalizes indentation by removing the base indentation level.
+    """
+    start_line = stmt.lineno - 1
+    end_line = stmt.end_lineno - 1 if hasattr(stmt, 'end_lineno') and stmt.end_lineno else start_line
+    
+    if start_line < lenContent and end_line < lenContent:
+        # Determine the base indentation level from the first line
+        first_line = contentList[start_line]
+        base_indent = len(first_line) - len(first_line.lstrip())
+        
+        # Extract all lines from the compound statement
+        for line_num in range(start_line, end_line + 1):
+            source_line = contentList[line_num].rstrip()
+            if source_line.strip():  # Skip empty lines
+                # Normalize indentation by removing base indentation
+                if len(source_line) >= base_indent and source_line[:base_indent].isspace():
+                    normalized_line = source_line[base_indent:]
+                else:
+                    # Handle lines with less indentation than base (shouldn't happen in well-formed code)
+                    normalized_line = source_line.lstrip()
+                
+                if init_preSuper:
+                    init_postSuper.append(normalized_line)
+                else:
+                    init_body.append(normalized_line)
+
 
 def analyzePythonClassFile(pythonFile: Path) -> Dict:
     """
@@ -351,8 +384,52 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                                                 if isinstance(default.value, str):
                                                     init_args[arg_name]['value'] = f'"{default.value}"'
                                                 else:
-                                                    init_args[arg_name]['value'] = str(
-                                                        default.value)
+                                                    init_args[arg_name]['value'] = str(default.value)
+                                            elif isinstance(default, ast.Call):
+                                                # Handle function calls like PiBase("user", "piDev_piUser65", "root user")
+                                                # Extract the source code for this default value
+                                                default_line = default.lineno - 1
+                                                if default_line < lenContent:
+                                                    # Find the default value in the source line
+                                                    source_line = contentList[default_line]
+                                                    # Extract the part after the '=' sign for this parameter
+                                                    if '=' in source_line:
+                                                        # Find the parameter name and extract its default value
+                                                        # Look for the parameter pattern and then extract the balanced parentheses
+                                                        param_start_pattern = rf'\b{re.escape(arg_name)}\s*:\s*[^=]*=\s*'
+                                                        match = re.search(param_start_pattern, source_line)
+                                                        if match:
+                                                            start_pos = match.end()
+                                                            # Extract the function call with balanced parentheses
+                                                            paren_count = 0
+                                                            end_pos = start_pos
+                                                            in_string = False
+                                                            string_char = None
+                                                            
+                                                            for i, char in enumerate(source_line[start_pos:], start_pos):
+                                                                if char in ['"', "'"] and not in_string:
+                                                                    in_string = True
+                                                                    string_char = char
+                                                                elif char == string_char and in_string:
+                                                                    in_string = False
+                                                                    string_char = None
+                                                                elif not in_string:
+                                                                    if char == '(':
+                                                                        paren_count += 1
+                                                                    elif char == ')':
+                                                                        paren_count -= 1
+                                                                        if paren_count == 0:
+                                                                            end_pos = i + 1
+                                                                            break
+                                                                    elif char == ',' and paren_count == 0:
+                                                                        # We've reached the next parameter
+                                                                        break
+                                                            
+                                                            if paren_count == 0:
+                                                                default_value = source_line[start_pos:end_pos].strip()
+                                                                # Escape double quotes for piSeed format
+                                                                default_value = default_value.replace('"', '\\"')
+                                                                init_args[arg_name]['value'] = default_value
 
                             # Extract the __init__ method body for initAppendCode
                             for stmt in item.body:
@@ -375,6 +452,20 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                                                 init_postSuper.append(assign_line)
                                             else:
                                                 init_body.append(assign_line)
+
+                                elif isinstance(stmt, ast.AnnAssign):
+                                    # Extract annotated assignment statements like userFilePath: Path = self.setPiFileName()
+                                    line_num = stmt.lineno - 1
+                                    if line_num < lenContent:
+                                        assign_line = contentList[line_num].strip()
+                                        if init_preSuper:
+                                            init_postSuper.append(assign_line)
+                                        else:
+                                            init_body.append(assign_line)
+
+                                elif isinstance(stmt, ast.For):
+                                    # Extract for loops like for piTitle, piSD in baseRealms.items():
+                                    _extract_compound_statement(stmt, contentList, lenContent, init_preSuper, init_postSuper, init_body)
 
                                 elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
                                     # Extract method calls like self.optSwitches = readOptSwitches()
@@ -406,51 +497,7 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                                                 init_body.append(call_line)
                                 elif isinstance(stmt, ast.If):
                                     # Extract if statements like if self.packageOK: self.packageOK = self._chkBaseDirs()
-                                    line_num = stmt.lineno - 1
-                                    if line_num < lenContent:
-                                        removeLSpaceCount = len(contentList[line_num])
-                                        if_line = contentList[line_num].lstrip()
-                                        removeLSpaceCount -= len(if_line)
-                                        if_line = if_line.strip()
-                                        if init_preSuper:
-                                            init_postSuper.append(if_line)
-                                        else:
-                                            init_body.append(if_line)
-
-                                        # Also extract the body of the if statement
-                                        for if_stmt in stmt.body:
-                                            if isinstance(if_stmt, ast.Assign):
-                                                if_body_line_num = if_stmt.lineno - 1
-                                                if if_body_line_num < lenContent:
-                                                    if_body_line = contentList[if_body_line_num][removeLSpaceCount:]
-                                                    if_body_line = if_body_line.rstrip()
-                                                    if init_preSuper:
-                                                        init_postSuper.append(if_body_line)
-                                                    else:
-                                                        init_body.append(if_body_line)
-
-                                        # Handle else clause if present
-                                        if stmt.orelse:
-                                            for else_stmt in stmt.orelse:
-                                                if isinstance(else_stmt, ast.Assign):
-                                                    else_line_num = else_stmt.lineno - 1
-                                                    if else_line_num < lenContent:
-                                                        else_line = contentList[else_line_num][removeLSpaceCount:]
-                                                        else_line = else_line.rstrip()
-                                                        if init_preSuper:
-                                                            init_postSuper.append(else_line)
-                                                        else:
-                                                            init_body.append(else_line)
-                                                elif isinstance(else_stmt, ast.If):
-                                                    # Handle elif
-                                                    elif_line_num = else_stmt.lineno - 1
-                                                    if elif_line_num < lenContent:
-                                                        elif_line = contentList[elif_line_num][removeLSpaceCount:]
-                                                        elif_line = elif_line.rstrip()
-                                                        if init_preSuper:
-                                                            init_postSuper.append(elif_line)
-                                                        else:
-                                                            init_body.append(elif_line)
+                                    _extract_compound_statement(stmt, contentList, lenContent, init_preSuper, init_postSuper, init_body)
                         else:
                             # Extract other class methods for classDefCode
                             isProperty, method_code = extractMethodCode(method_name, content, item)

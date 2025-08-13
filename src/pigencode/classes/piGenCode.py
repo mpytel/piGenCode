@@ -82,7 +82,21 @@ class PiGenCode():
             for inheritClassName in self.inheritance:
                 if inheritClassName != "object":
                     rtnLines += f'{inheritClassName}, '
-                    if inheritClassName[:2] == 'Pi' and inheritClassName not in self.fromPiClasses: self.fromPiClasses.append(inheritClassName)
+                    
+                    # Check if this class is already imported via fromImports before adding to fromPiClasses
+                    if inheritClassName[:2] == 'Pi':
+                        alreadyImported = False
+                        for fromImport in self.fromImports:
+                            importList = self.fromImports[fromImport]["import"]
+                            # Check if the inheritClassName is in the import list (handle comma-separated imports)
+                            if inheritClassName in [imp.strip() for imp in importList.split(',')]:
+                                alreadyImported = True
+                                break
+                        
+                        # Only add to fromPiClasses if not already imported
+                        if not alreadyImported and inheritClassName not in self.fromPiClasses:
+                            self.fromPiClasses.append(inheritClassName)
+                    
                     removeComma = True
             if removeComma:
                 rtnLines = rtnLines[:-2] + '):\n\n'
@@ -480,9 +494,13 @@ class PiGenCode():
         return rtnLines
     def __addDefCodeLines(self, iniLevel=0):
         rtnLines = ""
+        method_count = 0
         for DefCode in self.classDefCode:
+            if method_count > 0:
+                rtnLines += '\n'  # Add blank line between methods
             for DefCodeLine in self.classDefCode[DefCode]:
                 rtnLines += self.__appednCodeLine(DefCodeLine, iniLevel)
+            method_count += 1
         return rtnLines
     def __genInitLines(self, iniLevel=0):
         indent = self.indent
@@ -515,7 +533,18 @@ class PiGenCode():
             elif paramType[:2] == "Pi":
                 # Extract base type from union types (e.g., "PiIndexer | None" -> "PiIndexer")
                 baseType = paramType.split(' | ')[0].strip()
-                if baseType not in self.fromPiClasses: 
+                
+                # Check if this class is already imported via fromImports
+                alreadyImported = False
+                for fromImport in self.fromImports:
+                    importList = self.fromImports[fromImport]["import"]
+                    # Check if the baseType is in the import list (handle comma-separated imports)
+                    if baseType in [imp.strip() for imp in importList.split(',')]:
+                        alreadyImported = True
+                        break
+                
+                # Only add to fromPiClasses if not already imported
+                if not alreadyImported and baseType not in self.fromPiClasses: 
                     self.fromPiClasses.append(baseType)
                 # Check if the value is None (either None object or string "None")
                 paramValue = self.initArguments[param]["value"]
@@ -572,14 +601,27 @@ class PiGenCode():
         iniLevel += 1
 
         # Use unified element-based generation for all elements
-        rtnLines += self.__generateElementCode('classComment', iniLevel)
-        rtnLines += self.__genInitLines(iniLevel)  # Init is complex, keep existing logic for now
-        rtnLines += self.__generateElementCode('strCode', iniLevel)
-        rtnLines += self.__generateElementCode('jsonCode', iniLevel)
+        classComment = self.__generateElementCode('classComment', iniLevel)
+        if classComment:
+            rtnLines += classComment
+        
+        initLines = self.__genInitLines(iniLevel)  # Init is complex, keep existing logic for now
+        if initLines:
+            rtnLines += initLines
+        
+        strCode = self.__generateElementCode('strCode', iniLevel)
+        if strCode:
+            rtnLines += '\n' + strCode  # Add blank line before __str__ method
+        
+        jsonCode = self.__generateElementCode('jsonCode', iniLevel)
+        if jsonCode:
+            rtnLines += '\n' + jsonCode  # Add blank line before json method
 
         # Handle classDefCode (custom methods) - keep existing logic for now
         if len(self.classDefCode) > 0:
-            rtnLines += self.__addDefCodeLines(iniLevel)
+            classDefLines = self.__addDefCodeLines(iniLevel)
+            if classDefLines:
+                rtnLines += '\n' + classDefLines  # Add blank line before custom methods
 
         return rtnLines
     def __genAboveClassLines(self) -> str:
@@ -624,7 +666,14 @@ class PiGenCode():
                 globalType = type(self.globals[aGlobal])
                 #printIt(str(globalType),lable.DEBUG)
                 if globalType == str:
-                    rtnLines += f'{aGlobal} = {self.globals[aGlobal]}\n'
+                    # Check if this is a full assignment (contains variable name and type annotation)
+                    globalValue = self.globals[aGlobal]
+                    if ' = ' in globalValue and globalValue.startswith(aGlobal):
+                        # This is a full assignment like "baseRealms: dict = {...}"
+                        rtnLines += f'{globalValue}\n'
+                    else:
+                        # This is just a value, use the old format
+                        rtnLines += f'{aGlobal} = {globalValue}\n'
                 elif globalType == int:
                     rtnLines += f'{aGlobal} = {self.globals[aGlobal]}\n'
                 elif globalType == dict or str(globalType) == "<class 'piPis.piUtilties.piDict2PiDot.PiDot'>":
@@ -660,9 +709,18 @@ class PiGenCode():
         indent = self.indent
         rtnLines = ''
         if len(self.globalCode) > 0:
-            for globalCode in self.globalCode:
+            prev_line_was_function_end = False
+            for i, globalCode in enumerate(self.globalCode):
                 # Unescape quotes that were escaped during syncCode process
                 unescaped_line = globalCode.replace('\\"', '"')
+                
+                # Check if this line starts a new function definition
+                is_function_start = unescaped_line.strip().startswith('def ')
+                
+                # Add blank line before function definitions (except the first one)
+                if is_function_start and i > 0:
+                    rtnLines += '\n'
+                
                 rtnLines += f'{unescaped_line}\n'
         return rtnLines
 
