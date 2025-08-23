@@ -1,4 +1,6 @@
-import json, traceback
+# piTouch functions - synced from existing code
+import json
+import traceback
 from datetime import datetime
 from pathlib import Path
 from .logIt import printIt, logIt, lable
@@ -41,7 +43,6 @@ def piPathLn(theLink:str, PiPiLnDir: str|Path) -> Path | None:
     except:
         fileName = None
     return fileName
-
 
 def piFromLn(theLink: str, PiPiLnDir: str | Path) -> tuple[dict | None, Path | None]:
     fileName = piPathLn(theLink, PiPiLnDir)
@@ -89,3 +90,4 @@ def getPiLinkPaths(PiPiLnDir) -> tuple:
                 latestPiLinkTime = item.stat(follow_symlinks=False).st_ctime
     latestPiLinkTime = datetime.fromtimestamp(latestPiLinkTime)
     return piLinkPaths, latestPiLinkTime
+
