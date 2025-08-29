@@ -169,7 +169,7 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
             for init_line in class_info['init_preSuper']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:preSuperInitCode \"{init_line}\"\n"
         if class_info.get('init_postSuper'):
-            printIt(f"class_info['init_postSuper']: {class_info['init_postSuper']}", lable.DEBUG)
+            # printIt(f"class_info['init_postSuper']: {class_info['init_postSuper']}", lable.DEBUG)
             for init_line in class_info['init_postSuper']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:postSuperInitCode \"{init_line}\"\n"
         if class_info.get('init_body'):

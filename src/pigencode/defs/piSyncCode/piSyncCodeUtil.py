@@ -544,7 +544,7 @@ def findPiGenClassSeedFile(py_file: Path, dest_dir: str | None = None) -> Option
 
 def findPiClassGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given class name (piClassGC)"""
-    printIt(f'findPiClassGCSeedFile: {str(py_file)}', lable.DEBUG)  # showDefNames03)
+    printIt(f'findPiClassGCSeedFile: {str(py_file)}', showDefNames03)
     try:
         className = py_file.stem
         seedPath = getSeedPath()
