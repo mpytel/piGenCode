@@ -72,7 +72,7 @@ class PiGenCode():
                 if not paramType in uniqeParametersPiTypes:
                     uniqeParametersPiTypes.append(paramType)
         return uniqeParametersPiTypes
-    def __genClassLine(self, iniLevel=0) -> str:
+    def _genClassLine(self, iniLevel=0) -> str:
         indent = self.indent
         rtnLines = indent*iniLevel + f'class {self.piClassName}('
         if not self.inheritance:
@@ -103,7 +103,7 @@ class PiGenCode():
             else:
                 rtnLines += '):\n\n'
         return rtnLines
-    def __genInitSuperLine(self, iniLevel=0) -> str:
+    def _genInitSuperLine(self, iniLevel=0) -> str:
         indent = self.indent
         rtnLines = ""
         if "object" in self.inheritance:
@@ -147,7 +147,7 @@ class PiGenCode():
             elif rtnLines[-2:] == "(\n":
                 rtnLines = rtnLines[:-1] + ")\n"
         return rtnLines
-    def __genInitCodeLines(self, iniLevel=0):
+    def _genInitCodeLines(self, iniLevel=0):
         indent = self.indent
         rtnLines = ""
         for param in self.initArguments:
@@ -169,7 +169,7 @@ class PiGenCode():
                     rtnLines += indent*iniLevel + f'self.{param} = {param}\n'
         if rtnLines != "": rtnLines += '\n'
         return rtnLines
-    def __genClassProperties(self, iniLevel=0):
+    def _genClassProperties(self, iniLevel=0):
         indent = self.indent
         rtnLines = ""
         for param in self.initArguments:
@@ -195,7 +195,7 @@ class PiGenCode():
             rtnLines += self.__appednCodeLine(InitCodeLine, iniLevel)
         rtnLines += '\n'
         return rtnLines
-    def __genStrCodeLines(self, iniLevel=0):
+    def _genStrCodeLines(self, iniLevel=0):
         if len(self.strCode) > 0:
             rtnLines = self.__addStrCodeLines(iniLevel)
         else:
@@ -211,15 +211,16 @@ class PiGenCode():
                     if InheritKey != "object" and self.uniqeParametersPiTypes:
                         if InheritKey not in self.uniqeParametersPiTypes:
                             # review why we read from an existing python file.
-                            try:
-                                aPiFilePI = piLoadPiClassGCJson(InheritKey, self.piClassDir)
-                                if not aPiFilePI: raise Exception
-                            except:
-                                printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(
-                                    self.piClassDir))), lable.ERROR)
-                                printIt('Check title case for PiClass')
-                                exit()
-                            parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
+                            # try:
+                            #     print('InheritKey',InheritKey)
+                            #     aPiFilePI = piLoadPiClassGCJson(InheritKey, self.piClassDir)
+                            #     if not aPiFilePI: raise Exception
+                            # except:
+                            #     printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(
+                            #         self.piClassDir))), lable.ERROR)
+                            #     printIt('Check title case for PiClass')
+                            #     exit()
+                            parameters = self.__getInheritClassArgs(InheritKey, self.piClassDir)
                             # printIniLevel = 1
                             lowerInheritKey = InheritKey[:2].lower(
                             ) + InheritKey[2:]
@@ -238,15 +239,16 @@ class PiGenCode():
                 # next add lines for paramaters. Taking account to ignore inhareted parameters
                 if paramType[:2] == "Pi":
                     lowerParamType = paramType[:2].lower() + paramType[2:]
-                    try:
-                        aPiFilePI = piLoadPiClassGCJson(paramType, self.piClassDir)
-                        if not aPiFilePI: raise Exception
-                    except:
-                        printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(
-                            self.piClassDir))), lable.ERROR)
-                        printIt('Check title case for PiClass')
-                        exit()
-                    parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
+                    # try:
+                    #     aPiFilePI = piLoadPiClassGCJson(paramType, self.piClassDir)
+                    #     if not aPiFilePI: raise Exception
+                    # except:
+                    #     printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(
+                    #         self.piClassDir))), lable.ERROR)
+                    #     printIt('Check title case for PiClass')
+                    #     exit()
+                    parameters = self.__getInheritClassArgs(paramType, self.piClassDir)
+                    # parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
                     if paramType not in self.inheritance:
                         rtnLines += f'{indent*(iniLevel)}rtnStr += \'{indent*(printIniLevel)}"{param}": ' + \
                             '{' + '\\n\'\n'
@@ -286,7 +288,7 @@ class PiGenCode():
             rtnLines += indent*iniLevel + 'return rtnStr\n'
         rtnLines += '\n'
         return rtnLines
-    def __genJsonCodeLines(self, iniLevel=0):
+    def _genJsonCodeLines(self, iniLevel=0):
         rtnLines = ""
         if len(self.jsonCode) > 0:
             rtnLines = self.__addJsonCodeLines(iniLevel)
@@ -303,9 +305,10 @@ class PiGenCode():
                         if InheritKey != "object" and self.uniqeParametersPiTypes:
                             if InheritKey not in self.uniqeParametersPiTypes:
                                 # Get list of arguments from inherited classes
-                                aPiFilePI = piLoadPiClassGCJson(InheritKey, self.piClassDir)
-                                if not aPiFilePI:raise Exception
-                                parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
+                                # aPiFilePI = piLoadPiClassGCJson(InheritKey, self.piClassDir)
+                                # if not aPiFilePI:raise Exception
+                                # parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
+                                parameters = self.__getInheritClassArgs(InheritKey, self.piClassDir)
                                 iniLevel += 1
                                 for parameter, values in parameters.items():
                                     # only parameter begining with pi are included in json
@@ -324,10 +327,11 @@ class PiGenCode():
                         paramType = self.initArguments[param]["type"]
                         # next add lines for paramaters. Taking account to ignore inhareted parameters
                         if paramType[:2] == "Pi":
-                            aPiFilePI = piLoadPiClassGCJson(paramType, self.piClassDir)
-                            if not aPiFilePI:
-                                raise Exception
-                            parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
+                            # aPiFilePI = piLoadPiClassGCJson(paramType, self.piClassDir)
+                            # if not aPiFilePI:
+                            #     raise Exception
+                            # parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
+                            parameters = self.__getInheritClassArgs(paramType, self.piClassDir)
                             parmLen = 0
                             if paramType != 'PiPi':
                                 rtnLines += f'{indent*iniLevel}"{param}":' + '{\n'
@@ -371,7 +375,7 @@ class PiGenCode():
                 exit()
 
         return rtnLines
-    def __genFromPiClassesLines(self, iniLevel=0) -> str:
+    def _genFromPiClassesLines(self, iniLevel=0) -> str:
         """Generate DEFAULT fromPiClasses imports when none exist"""
         if not self.initArguments:
             return ""
@@ -394,7 +398,7 @@ class PiGenCode():
             rtnLines += fromPiClass + '\n'
         return rtnLines
 
-    def __genGlobalsLines(self, iniLevel=0) -> str:
+    def _genGlobalsLines(self, iniLevel=0) -> str:
         """Generate DEFAULT globals when none exist"""
         # Most classes don't need default globals
         return ""
@@ -406,7 +410,7 @@ class PiGenCode():
             rtnLines += globalLine + '\n'
         return rtnLines
 
-    def __genClassCommentLines(self, iniLevel=0) -> str:
+    def _genClassCommentLines(self, iniLevel=0) -> str:
         """Generate DEFAULT class comment when none exists"""
         # Generate a simple default docstring
         indent = self.indent
@@ -419,7 +423,7 @@ class PiGenCode():
             rtnLines += self.__appednCodeLine(commentLine, iniLevel)
         return rtnLines
 
-    def __genPreSuperInitCodeLines(self, iniLevel=0) -> str:
+    def _genPreSuperInitCodeLines(self, iniLevel=0) -> str:
         """Generate DEFAULT preSuperInitCode when none exists"""
         # Most classes don't need default pre-super init code
         return ""
@@ -431,7 +435,7 @@ class PiGenCode():
             rtnLines += self.__appednCodeLine(preSuperInitCodeLine, iniLevel)
         return rtnLines
 
-    def __genPostSuperInitCodeLines(self, iniLevel=0) -> str:
+    def _genPostSuperInitCodeLines(self, iniLevel=0) -> str:
         """Generate DEFAULT postSuperInitCode when none exists"""
         # Most classes don't need default post-super init code
         return ""
@@ -443,7 +447,7 @@ class PiGenCode():
             rtnLines += self.__appednCodeLine(postSuperInitCodeLine, iniLevel)
         return rtnLines
 
-    def __genInitAppendCodeLines(self, iniLevel=0) -> str:
+    def _genInitAppendCodeLines(self, iniLevel=0) -> str:
         """Generate DEFAULT initAppendCode when none exists"""
         # Most classes don't need default init append code
         return ""
@@ -455,7 +459,7 @@ class PiGenCode():
             rtnLines += self.__appednCodeLine(initAppendCodeLine, iniLevel)
         return rtnLines
 
-    def __genGenPropsLines(self, iniLevel=0) -> str:
+    def _genGenPropsLines(self, iniLevel=0) -> str:
         """Generate DEFAULT genProps when none exists"""
         # Most classes don't need default generated properties
         return ""
@@ -466,7 +470,7 @@ class PiGenCode():
             return self.genProps + '\n'
         return ""
 
-    def __genGlobalCodeLines(self, iniLevel=0) -> str:
+    def _genGlobalCodeLines(self, iniLevel=0) -> str:
         """Generate DEFAULT globalCode when none exists"""
         # Most classes don't need default global code
         return ""
@@ -502,7 +506,7 @@ class PiGenCode():
                 rtnLines += self.__appednCodeLine(DefCodeLine, iniLevel)
             method_count += 1
         return rtnLines
-    def __genInitLines(self, iniLevel=0):
+    def _genInitLines(self, iniLevel=0):
         indent = self.indent
         startDefLine = 'def __init__(self'
         rtnLines = indent*iniLevel + startDefLine
@@ -583,37 +587,37 @@ class PiGenCode():
             initLines += self.__addPreSuperInitCodeLines(iniLevel)
             addAutoGenInitLines = False
         if initLines: rtnLines += initLines; initLines = ""
-        if self.inheritance: rtnLines += self.__genInitSuperLine(iniLevel)
+        if self.inheritance: rtnLines += self._genInitSuperLine(iniLevel)
         if self.postSuperInitCode:
             initLines += self.__addPostSuperInitCodeLines(iniLevel)
             addAutoGenInitLines = False
-        if addAutoGenInitLines: initLines += self.__genInitCodeLines(iniLevel)
+        if addAutoGenInitLines: initLines += self._genInitCodeLines(iniLevel)
         if initLines: rtnLines += initLines; initLines = ""
         if self.initAppendCode: initLines += self.__appendInitCodeLines(iniLevel)
         if initLines: rtnLines += initLines; initLines = ""
-        if self.genProps: initLines += self.__genClassProperties(iniLevel)
+        if self.genProps: initLines += self._genClassProperties(iniLevel)
         if initLines: rtnLines += initLines; initLines = ""
         # else: rtnLines += indent*iniLevel + "pass\n"
         return rtnLines
-    def __genClassLines(self, indent=4, iniLevel=0):
+    def _genClassLines(self, indent=4, iniLevel=0):
         """Main class generation using unified element-based architecture"""
-        rtnLines = self.__genClassLine(iniLevel)
+        rtnLines = self._genClassLine(iniLevel)
         iniLevel += 1
 
         # Use unified element-based generation for all elements
-        classComment = self.__generateElementCode('classComment', iniLevel)
+        classComment = self._generateElementCode('classComment', iniLevel)
         if classComment:
             rtnLines += classComment
         
-        initLines = self.__genInitLines(iniLevel)  # Init is complex, keep existing logic for now
+        initLines = self._genInitLines(iniLevel)  # Init is complex, keep existing logic for now
         if initLines:
             rtnLines += initLines
         
-        strCode = self.__generateElementCode('strCode', iniLevel)
+        strCode = self._generateElementCode('strCode', iniLevel)
         if strCode:
             rtnLines += '\n' + strCode  # Add blank line before __str__ method
         
-        jsonCode = self.__generateElementCode('jsonCode', iniLevel)
+        jsonCode = self._generateElementCode('jsonCode', iniLevel)
         if jsonCode:
             rtnLines += '\n' + jsonCode  # Add blank line before json method
 
@@ -624,7 +628,7 @@ class PiGenCode():
                 rtnLines += '\n' + classDefLines  # Add blank line before custom methods
 
         return rtnLines
-    def __genAboveClassLines(self) -> str:
+    def _genAboveClassLines(self) -> str:
         indent = self.indent
         rtnLines = ''
         haveImports = False
@@ -705,7 +709,7 @@ class PiGenCode():
                     printIt(f'Incorrct type {str(globalType)} for {self.globals[aGlobal]}.',lable.ERROR)
                 rtnLines += '\n'
         return rtnLines
-    def __genBellowClassLines(self) -> str:
+    def _genBellowClassLines(self) -> str:
         indent = self.indent
         rtnLines = ''
         if len(self.globalCode) > 0:
@@ -793,20 +797,20 @@ class PiGenCode():
         # Use the base filename for the saved files dictionary
         self.savedCodeFiles[fileName] = fileName
 
-    def __genPiClass(self, piJsonFileName, verbose = False) -> None:
+    def _genPiClass(self, piJsonFileName, verbose = False) -> None:
         self.pi_piClassGC = readJson(piJsonFileName)
         self.PiFileName = piJsonFileName
         # printIt(f'piJsonFileName: {piJsonFileName}',lable.WARN)
         self.__setPiPiGCAtters()
         self.__setPiClassDir()
-        piClassLines = self.__genClassLines()
-        piClassLines = self.__genAboveClassLines() + piClassLines + self.__genBellowClassLines()
+        piClassLines = self._genClassLines()
+        piClassLines = self._genAboveClassLines() + piClassLines + self._genBellowClassLines()
         # piClassLines += f'\n{self.piClassName}_PI = ' + json.dumps(self.pi_piClassGC,indent=4)
         self.__savePiClass(piClassLines, verbose)
         logIt("GenPiClass: " + piJsonFileName)
     def genPiClasses(self, genFileName='', verbose = False):
         if genFileName:
-            self.__genPiClass(genFileName, verbose)
+            self._genPiClass(genFileName, verbose)
         else:
             piGermDir = getKeyItem(piGCDirs[1])
             piJsonGCDir = Path(piGermDir).joinpath(getKeyItem(piGCDirs[2]))
@@ -815,9 +819,9 @@ class PiGenCode():
             #loop though json files in correct order
             for piJsonGCFilename in piJsonGCFilenames:
                 piJsonFileName = os.path.join(piJsonGCDir, piJsonGCFilename)
-                self.__genPiClass(piJsonFileName)
+                self._genPiClass(piJsonFileName)
 ##### Public Functions
-    def __generateElementCode(self, elementName: str, iniLevel: int = 0) -> str:
+    def _generateElementCode(self, elementName: str, iniLevel: int = 0) -> str:
         """Unified element code generation - determines if custom or default code should be used"""
         elementData = getattr(self, elementName, None)
 
@@ -831,6 +835,7 @@ class PiGenCode():
             elif isinstance(elementData, str) and elementData.strip():
                 hasCustomCode = True
 
+        #-print('elementName',elementName, hasCustomCode)
         if hasCustomCode:
             # Custom code exists - use it
             methodName = f'__add{elementName.capitalize()}Lines'
@@ -838,15 +843,18 @@ class PiGenCode():
                 return getattr(self, methodName)(iniLevel)
 
         # No custom code - generate default
-        methodName = f'__gen{elementName.capitalize()}Lines'
+        methodName = f'_gen{elementName[0].capitalize()+elementName[1:]}Lines'
+        #-print('methodName',methodName)
+        #-print('\n'.join(dir(self)))
         if hasattr(self, methodName):
+            methodName = f'_gen{elementName[0].capitalize()+elementName[1:]}Lines'
             return getattr(self, methodName)(iniLevel)
 
         return ""
 
     def getDefaultElementCode(self, elementName: str, iniLevel: int = 0) -> str:
         """Get what the default code should be for a given element - used by syncCode for comparison"""
-        methodName = f'__gen{elementName.capitalize()}Lines'
+        methodName = f'_gen{elementName.capitalize()}Lines'
         if hasattr(self, methodName):
             return getattr(self, methodName)(iniLevel)
         return ""

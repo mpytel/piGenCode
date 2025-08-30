@@ -87,6 +87,8 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
 
             elif isinstance(node, ast.FunctionDef):
                 isPropertry, funcCode = extractMethodCode('functions', content, node)
+                if isPropertry:
+                    print('\n'.join(funcCode))
                 info['functions'].extend(funcCode)
 
             elif isinstance(node, (ast.Assign, ast.AnnAssign)):
