@@ -131,6 +131,7 @@ def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Pat
         seedPath = getSeedPath()
         if seed_file:
             seedFilePath = seed_file
+            seedFileName = seedFilePath.name
         else:
             # Get next available number
             nextNum = getNextPiSeedNumber()

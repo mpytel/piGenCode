@@ -250,6 +250,7 @@ class PiGermSeeds():
     def germinate_piValueA(self):
         try:
             #piValueA piDates.piBody:piClassGC:imports datetime
+            final_key  = ''
             while self.seeds.currIndex < self.seeds.seedCount:
                 lastSeed = False
                 if self.seeds.currPi.piSeedType == PiSeedTypes[4]:
@@ -271,76 +272,23 @@ class PiGermSeeds():
                                         if piExDefDictKey not in aDict:
                                             aDict[piExDefDictKey] = {}
                                         aDict = aDict[piExDefDictKey]
-
-                                    # Handle the final key
-                                    final_key = piExDefDictKeys[-1]
-                                    # print('piExDefDictKeys', piExDefDictKeys)
-                                    # print('final_key', final_key)
-                                    # Special handling for classDefCode structure - DISABLED
-                                    # The nested classDefCode issue is caused by incorrect special handling
-                                    # Let the normal structure handling take care of classDefCode
-                                    if False and len(piExDefDictKeys) >= 2 and piExDefDictKeys[-2] == 'classDefCode':
-                                        # This is a method within classDefCode, ensure classDefCode is a dict
-                                        parent_dict = aDict
-                                        parent_key = piExDefDictKeys[-2]
-
-                                        # Ensure classDefCode exists as a dictionary
-                                        if parent_key not in parent_dict:
-                                            parent_dict[parent_key] = {}
-                                        elif not isinstance(parent_dict[parent_key], dict):
-                                            # Convert to dict if it's not already
-                                            parent_dict[parent_key] = {}
-
-                                        # Ensure the method key exists as a list
-                                        if final_key not in parent_dict[parent_key]:
-                                            parent_dict[parent_key][final_key] = []
-
-                                        # Add to the method's list
-                                        method_list = parent_dict[parent_key][final_key]
-                                        if len(method_list) == 1:
-                                            # append def description here.
-                                            if final_key in self.classDefCodeDescrtion.keys():
-                                                if self.seeds.prevPi.piSD != "@property":
-                                                    appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[final_key]+ "'"*3
-                                                    method_list.append(appendStr)
-                                        method_list.append(baseValue)
-                                    else:
-                                        # Regular handling for other structures
-                                        if final_key not in aDict:
-                                            aDict[final_key] = []
-
-                                        # Only proceed if the target is a list (not a dict)
-                                        if isinstance(aDict[final_key], list):
-                                            if len(aDict[final_key])==1:
-                                                # append def description here.
-                                                if final_key in self.classDefCodeDescrtion.keys():
-                                                    if self.seeds.prevPi.piSD != "@property":
-                                                        appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[final_key]+ "'"*3
-                                                        aDict[final_key].append(appendStr)
-                                            #print('baseValue', baseValue)
-                                            aDict[final_key].append(baseValue)
-                                        else:
-                                            # Handle case where target is a dictionary
-                                            if isinstance(aDict[final_key], dict):
-                                                # This might be a structure that should be a list, check if it's empty
-                                                if not aDict[final_key]:
-                                                    # Empty dict, convert to list
-                                                    aDict[final_key] = [baseValue]
-                                                else:
-                                                    # Non-empty dict, this might be an error but let's be more permissive
-                                                    # Skip silently as this is expected behavior for classDefCode
-                                                    pass
-                                            else:
-                                                # Some other type, try to convert to list
-                                                aDict[final_key] = [baseValue]
-                                    #print('baseValue', baseValue)
+                                        
+                                    if len(aDict[piExDefDictKeys[-1]])==1:
+                                        # append def description here.
+                                        if piExDefDictKeys[-1] in self.classDefCodeDescrtion.keys():
+                                            if self.seeds.prevPi.piSD != "@property":
+                                                appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[piExDefDictKeys[-1]]+ "'"*3
+                                                aDict[piExDefDictKeys[-1]].append(appendStr)
+                                    aDict[piExDefDictKeys[-1]].append(baseValue)
 
                             else: raise Exception
                         else: raise Exception
                     else: raise Exception
                     self.seeds.next()
                     if self.seeds.currPi == None: break
-                    if self.seeds.currPi.piSeedType != PiSeedTypes[4]: break
+                    if self.seeds.currPi.piSeedType != PiSeedTypes[4]: 
+                        if final_key: print('t',final_key)
+                        break
                 if lastSeed: break # last seed run.
                 if self.seeds.nextPi == None:
                     lastSeed = True # Run the last piSeed

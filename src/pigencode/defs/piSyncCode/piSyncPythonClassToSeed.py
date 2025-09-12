@@ -1,13 +1,15 @@
 import re
 import ast
 import traceback
+from json import dumps
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from ...defs.logIt import printIt, lable
 from ...defs.getSeedPath import getSeedPath
 from ...classes.piSeeds import extractPiSeed
-from .piSyncCodeUtil import getNextPiSeedNumber, \
-                        getDocString, \
+from .piSyncCodeUtil import extractCode, \
+                        getNextPiSeedNumber, \
+                        getDefDocString, \
                         extract_ImportFrom, \
                         extractInitCodeWithComparison, \
                         shouldPreserveElegantPattern, \
@@ -70,7 +72,7 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
                 fileDirectory = str(pythonFile.parent)
 
         # Analyze the Python file to extract more information
-        class_info = analyzePythonClassFile(pythonFile)
+        class_info = analyzePythonClassFile(className, pythonFile)
         # print(dumps(class_info, indent=2))
         # Create  piClassGC piSeed content following the exact order from piStruct_piClassGC.json
         seedContent = f"""piClassGC {className} 'Generated piClassGC for {className} class'
@@ -80,12 +82,15 @@ piValue {className}.piBase:piTitle {className}
 piValue {className}.piBase:piSD 'Python class {className} generated from existing code'
 piValue {className}.piBody:piClassGC:fileDirectory '{fileDirectory}'
 piValue {className}.piBody:piClassGC:fileName {className}
-piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from existing code'
 """
 
-
+        # 1. Add from Header comment or docStrings if found (temporarily disabled to fix ordering issue)
+        if class_info.get('headers'):
+            for line in class_info['headers']:
+                seedContent += f'piValueA {className}.piBody:piClassGC:headers "{line}"\n'
         # 2. Add from imports if found (temporarily disabled to fix ordering issue)
         if class_info.get('from_imports'):
+            # print(dumps(class_info['from_imports'],indent=2))
             seedContent += f"piStructA00 {className}.piBody:piClassGC:fromImports\n"
             for module_name, import_info in class_info['from_imports'].items():
                 clean_module = module_name.replace('.', '_').replace('-', '_')
@@ -179,36 +184,46 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
 
         # 14. Add strCode (will be added by sync function)
         # 15. Add jsonCode (will be added by sync function)
-
         # 16. Add classDefCode (class methods)
         if class_info.get('class_methods'):
-            # First, create the structure entries for each method
-            seedContent += f"piStructA00 {className}.piBody:piClassGC:classDefCode\n"
-            methodNameSeeds = {}
-            for method_name in class_info['class_methods'].keys():
-                methodNameSeeds[method_name] = f"piStructL01 {method_name} 'Method {method_name} extracted from existing code'\n"
-            # Then add the actual code lines for each method
-            line: str
-            method_code: list
+            classDefCode = f"piStructA00 {className}.piBody:piClassGC:classDefCode\n"
             methodContent = ''
-            for method_name, method_code in class_info['class_methods'].items():
-                # Look thugh method_code and extract the docString if any
-                inLine = 0
-                chk4ADocString = True
-                while inLine < len(method_code):
-                    line = method_code[inLine]
-                    if chk4ADocString:
-                        if '"""' in line or "'''" in line:
-                            docStr, inLine = getDocString(inLine, method_name, methodNameSeeds, method_code)
-                            methodNameSeeds[method_name] = docStr
-                            chk4ADocString = False
-                    if '"""' in line or "'''" in line:
-                        pass
-                    else:
-                        methodContent += f"piValueA {className}.piBody:piClassGC:classDefCode:{method_name} \"{line}\"\n"
-                    inLine += 1
-                seedContent += methodNameSeeds[method_name]
-            seedContent += methodContent
+            methodNameSeeds = {}
+            methodNameContent = []
+            for method_name in class_info['class_methods'].keys():
+                if method_name == '__str__':
+                    lines = class_info['class_methods'][method_name]
+                    for line in lines:
+                        seedContent += f'piValueA {className}.piBody:piClassGC:strCode "{line}"\n'
+                elif method_name == 'json':
+                    lines = class_info['class_methods'][method_name]
+                    for line in lines:
+                        seedContent += f'piValueA {className}.piBody:piClassGC:jsonCode "{line}"\n'
+                else:
+                    # First, create the structure entries for each method
+                    if method_name not in methodNameSeeds:
+                        methodNameSeeds[method_name] = f"piStructL01 {method_name} 'Method {method_name} extracted from existing code'"
+                        # Then add the actual code lines for each method
+                        line: str
+                        method_code: list = class_info['class_methods'][method_name]
+                        inLine = 0
+                        chk4ADocString = True
+                        while inLine < len(method_code):
+                            line = method_code[inLine]
+                            if chk4ADocString:
+                                if '"""' in line or "'''" in line:
+                                    docStr, inLine = getDefDocString(inLine, method_name, methodNameSeeds, method_code)
+                                    methodNameSeeds[method_name] = docStr
+                                    chk4ADocString = False
+                            if '"""' in line or "'''" in line:
+                                pass
+                            else:
+                                methodContent += f"piValueA {className}.piBody:piClassGC:classDefCode:{method_name} \"{line}\"\n"
+                            inLine += 1
+                        methodNameContent.append(methodNameSeeds[method_name])
+            seedContent += classDefCode
+            seedContent += '\n'.join(methodNameContent) + '\n'
+            seedContent += methodContent + '\n'
         
         # 17. Add globalCode - extract module-level functions
         if globalFunctions:
@@ -220,8 +235,7 @@ piValueA {className}.piBody:piClassGC:headers '# {className} class - synced from
         # Write the new piSeed file
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
-        printIt(
-            f"Created new piClassGC piSeed file: {seedFileName}", lable.INFO)
+        printIt(f"Created new piClassGC piSeed file: {seedFileName}", lable.INFO)
         return seedFilePath
 
     except Exception as e:
@@ -262,8 +276,7 @@ def _extract_compound_statement(stmt, contentList, lenContent, init_preSuper, in
                 else:
                     init_body.append(normalized_line)
 
-
-def analyzePythonClassFile(pythonFile: Path) -> Dict:
+def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
     """
     Analyze a Python file to extract class information for creating piSeed files.
     Returns dict with imports, from_imports, classes, init_args, etc.
@@ -274,19 +287,23 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
             content = f.read()
         contentList = content.split('\n')
         lenContent = len(contentList)
-        tree = ast.parse(content)
 
         info = {
+            'headers': [],
             'imports': [],
             'from_imports': {},
             'classes': [],
+            'classComment': [],
             'init_args': {},
             'init_body': [],
             'init_preSupe': [],
             'init_postSuper': [],
-            'class_methods': {},
-            'methods': []
+            'class_methods': {}
         }
+        # Extract headers from content
+        info['headers'].extend(extractCode(contentList))
+
+        tree = ast.parse(content)
         # Extract imports and classes
         for node in tree.body:
             if isinstance(node, ast.Import):
@@ -319,8 +336,9 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                                 base_names.append(
                                     f"{base.value.id}.{base.attr}")
 
-                info['classes'].append(base_names
-                )
+                    info['classes'].append(base_names)
+                # Extract comments or class docstr from class
+
                 # Extract all methods from the class
                 class_methods = {}
                 init_args = {}
@@ -497,17 +515,44 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                                                 init_body.append(call_line)
                                 elif isinstance(stmt, ast.If):
                                     # Extract if statements like if self.packageOK: self.packageOK = self._chkBaseDirs()
-                                    _extract_compound_statement(stmt, contentList, lenContent, init_preSuper, init_postSuper, init_body)
+                                    _extract_compound_statement(stmt, contentList, lenContent, init_preSuper, init_postSuper, init_body)            
                         else:
                             # Extract other class methods for classDefCode
                             isProperty, method_code = extractMethodCode(method_name, content, item)
+                            defaltCode: list[str] = []
                             if method_code:
                                 if isProperty:
                                     if method_name in class_methods:
                                         class_methods[method_name].extend(method_code)
                                     else:
                                         class_methods[method_name] = method_code
+                                    # print(f'class_methods[{method_name}]--------- ')
+                                    # print('\n'.join(method_code))
+                                elif method_name == '__str__':
+                                    indent = ' ' * 4
+                                    iniLevel = 0
+                                    defaltCode.append(indent*iniLevel + 'def __str__(self) -> str:')
+                                    iniLevel += 1
+                                    defaltCode.append(f"{indent*iniLevel}''' return string of {className} json'''")
+                                    defaltCode.append(f'{indent*iniLevel}rtnStr = super().__str__()')
+                                    defaltCode.append(f'{indent*iniLevel}return rtnStr')
+                                elif method_name == 'json':
+                                    indent = ' ' * 4
+                                    iniLevel = 0
+                                    defaltCode.append(indent*iniLevel + 'def json(self) -> dict:')
+                                    iniLevel += 1
+                                    defaltCode.append(f"{indent*iniLevel}''' return dict of {className} json'''")
+                                    defaltCode.append(f'{indent*iniLevel}rtnDict = super().json()')
+                                    defaltCode.append(f'{indent*iniLevel}return rtnDict')
                                 else:
+                                    class_methods[method_name] = method_code
+                            if defaltCode:
+                                # print('method_code == defaltCode',method_code == defaltCode)
+                                if method_code == defaltCode:   
+                                    class_methods[method_name] = ''
+                                else:
+                                    # print(f'method_code\n: {method_code}')
+                                    # print(f'defaltCode\n: {defaltCode}')
                                     class_methods[method_name] = method_code
 
                 info['init_args'] = init_args
@@ -515,6 +560,9 @@ def analyzePythonClassFile(pythonFile: Path) -> Dict:
                 info['init_postSuper'] = init_postSuper
                 info['init_body'] = init_body
                 info['class_methods'] = class_methods
+
+                # print(f'class_methods[user] act--------- ')
+                # print('\n'.join(class_methods['user']))
                 # print(class_methods, dumps(info['class_methods'],indent=2))
 
                 break  # Assuming single class per file for piClassGC

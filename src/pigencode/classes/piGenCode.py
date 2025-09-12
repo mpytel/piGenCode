@@ -200,15 +200,19 @@ class PiGenCode():
             rtnLines = self.__addStrCodeLines(iniLevel)
         else:
             indent = self.indent
-            rtnLines = indent*iniLevel + 'def __str__(self):\n'
+            rtnLines = indent*iniLevel + 'def __str__(self) -> str:\n'
             iniLevel += 1
-            rtnLines += indent*iniLevel + \
-                f'rtnStr = "{self.piClassName} = ' + '{\\n"\n'
             printIniLevel = 1
             removeLastComma = False
             if self.inheritance:
                 for InheritKey in self.inheritance:
-                    if InheritKey != "object" and self.uniqeParametersPiTypes:
+                    if InheritKey == 'PiPi':
+                        rtnLines += f"{indent*iniLevel}''' return string of {self.piClassName} json '''\n"
+                        rtnLines += f'{indent*iniLevel}rtnStr  = super().__str__()\n'
+                        rtnLines += f'{indent*iniLevel}return rtnStr'
+                    elif InheritKey != "object" and self.uniqeParametersPiTypes:
+                        rtnLines += indent*iniLevel
+                        rtnLines += f'rtnStr = "{self.piClassName} = ' + '{\\n"\n'
                         if InheritKey not in self.uniqeParametersPiTypes:
                             # review why we read from an existing python file.
                             # try:
@@ -224,68 +228,68 @@ class PiGenCode():
                             # printIniLevel = 1
                             lowerInheritKey = InheritKey[:2].lower(
                             ) + InheritKey[2:]
-                            rtnLines += f'{indent*iniLevel}rtnStr += \'{indent*(printIniLevel)}"{lowerInheritKey}":' + \
-                                '{\\n\'\n'
+                            rtnLines += f'{indent*iniLevel}rtnStr += \'{indent*(printIniLevel)}"{lowerInheritKey}":'
+                            rtnLines += '{\\n\'\n'
                             # "title":"{self.title}",\n'
                             printIniLevel += 1
                             for parameter in parameters:
-                                rtnLines += f'{indent*iniLevel}rtnStr += f\'{indent*(printIniLevel)}"{parameter}":' + \
-                                    '"{self.' + parameter + '}",\\n\'\n'
+                                rtnLines += f'{indent*iniLevel}rtnStr += f\'{indent*(printIniLevel)}"{parameter}":'
+                                rtnLines += '"{self.' + parameter + '}",\\n\'\n'
                             printIniLevel -= 1
-                            rtnLines += f'{indent*iniLevel}rtnStr += \'{indent*(printIniLevel)}' + \
-                                '}\\n\'\n'
-            for param in self.initArguments:
-                paramType = self.initArguments[param]["type"]
-                # next add lines for paramaters. Taking account to ignore inhareted parameters
-                if paramType[:2] == "Pi":
-                    lowerParamType = paramType[:2].lower() + paramType[2:]
-                    # try:
-                    #     aPiFilePI = piLoadPiClassGCJson(paramType, self.piClassDir)
-                    #     if not aPiFilePI: raise Exception
-                    # except:
-                    #     printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(
-                    #         self.piClassDir))), lable.ERROR)
-                    #     printIt('Check title case for PiClass')
-                    #     exit()
-                    parameters = self.__getInheritClassArgs(paramType, self.piClassDir)
-                    # parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
-                    if paramType not in self.inheritance:
-                        rtnLines += f'{indent*(iniLevel)}rtnStr += \'{indent*(printIniLevel)}"{param}": ' + \
-                            '{' + '\\n\'\n'
-                        printIniLevel += 1
-                        parmLen = len(parameters)
-                        parmIndex = 0
-                        for parameter in parameters:
-                            # print(f'parameter: {parameter}')
-                            if parameter[:2] == 'pi':
-                                rtnLines += f'{indent*(iniLevel)}rtnStr += f\'{indent*(printIniLevel)}"{parameter}":' + \
-                                    '"{self.' + f'{param}.{parameter}' + '}"'
-                                if parmIndex == parmLen - 1:
-                                    rtnLines += '\\n\'\n'
+                            rtnLines += f'{indent*iniLevel}rtnStr += \'{indent*(printIniLevel)}'
+                            rtnLines += '}\\n\'\n'
+                        for param in self.initArguments:
+                            paramType = self.initArguments[param]["type"]
+                            # next add lines for paramaters. Taking account to ignore inhareted parameters
+                            if paramType[:2] == "Pi":
+                                lowerParamType = paramType[:2].lower() + paramType[2:]
+                                # try:
+                                #     aPiFilePI = piLoadPiClassGCJson(paramType, self.piClassDir)
+                                #     if not aPiFilePI: raise Exception
+                                # except:
+                                #     printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(
+                                #         self.piClassDir))), lable.ERROR)
+                                #     printIt('Check title case for PiClass')
+                                #     exit()
+                                parameters = self.__getInheritClassArgs(paramType, self.piClassDir)
+                                # parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
+                                if paramType not in self.inheritance:
+                                    rtnLines += f'{indent*(iniLevel)}rtnStr += \'{indent*(printIniLevel)}"{param}": '
+                                    rtnLines += '{' + '\\n\'\n'
+                                    printIniLevel += 1
+                                    parmLen = len(parameters)
+                                    parmIndex = 0
+                                    for parameter in parameters:
+                                        # print(f'parameter: {parameter}')
+                                        if parameter[:2] == 'pi':
+                                            rtnLines += f'{indent*(iniLevel)}rtnStr += f\'{indent*(printIniLevel)}"{parameter}":'
+                                            rtnLines += '"{self.' + f'{param}.{parameter}' + '}"'
+                                            if parmIndex == parmLen - 1:
+                                                rtnLines += '\\n\'\n'
+                                            else:
+                                                rtnLines += ',\\n\'\n'
+                                        parmIndex += 1
+                                    printIniLevel -= 1
+                                    rtnLines += f'{indent*(iniLevel)}rtnStr += \'{indent*(printIniLevel)}'
+                                    rtnLines += '},' + '\\n\'\n'
                                 else:
-                                    rtnLines += ',\\n\'\n'
-                            parmIndex += 1
-                        printIniLevel -= 1
-                        rtnLines += f'{indent*(iniLevel)}rtnStr += \'{indent*(printIniLevel)}' + \
-                            '},' + '\\n\'\n'
-                    else:
-                        for parameter in parameters:
-                            rtnLines += f'{indent*iniLevel}rtnStr += f\'{indent*(printIniLevel)}"{parameter}":' + \
-                                '"{self.' + f'{param}.{parameter}' + '}",\\n\'\n'
-                elif paramType[:2] == "pi":
-                    upperParamType = paramType[:1].upper() + paramType[1:]
-                    if upperParamType not in self.inheritance:
-                        rtnLines += f'{indent*iniLevel}rtnStr += f\'{indent*(printIniLevel)}"{param}":' + \
-                            '"{self.' + param + '}",\\n\'\n'
-                else:
-                    rtnLines += f'{indent*iniLevel}rtnStr += f\'{indent*(printIniLevel)}"{param}":' + \
-                        '"{self.' + param + '}",\\n\'\n'
-                removeLastComma = True
-            if removeLastComma:
-                rtnLines = rtnLines[:-5] + '\\n\'\n'
+                                    for parameter in parameters:
+                                        rtnLines += f'{indent*iniLevel}rtnStr += f\'{indent*(printIniLevel)}"{parameter}":'
+                                        rtnLines += '"{self.' + f'{param}.{parameter}' + '}",\\n\'\n'
+                            elif paramType[:2] == "pi":
+                                upperParamType = paramType[:1].upper() + paramType[1:]
+                                if upperParamType not in self.inheritance:
+                                    rtnLines += f'{indent*iniLevel}rtnStr += f\'{indent*(printIniLevel)}"{param}":'
+                                    rtnLines += '"{self.' + param + '}",\\n\'\n'
+                            else:
+                                rtnLines += f'{indent*iniLevel}rtnStr += f\'{indent*(printIniLevel)}"{param}":'
+                                rtnLines += '"{self.' + param + '}",\\n\'\n'
+                            removeLastComma = True
+                        if removeLastComma:
+                            rtnLines = rtnLines[:-5] + '\\n\'\n'
 
-            rtnLines += indent*iniLevel + 'rtnStr += "' + '}"\n'
-            rtnLines += indent*iniLevel + 'return rtnStr\n'
+                        rtnLines += indent*iniLevel + 'rtnStr += "' + '}"\n'
+                        rtnLines += indent*iniLevel + 'return rtnStr\n'
         rtnLines += '\n'
         return rtnLines
     def _genJsonCodeLines(self, iniLevel=0):
@@ -296,13 +300,18 @@ class PiGenCode():
             indent = self.indent
             rtnLines = indent*iniLevel + 'def json(self) -> dict:\n'
             iniLevel += 1
-            rtnLines += indent*iniLevel + 'rtnDict = {\n'
-            iniLevel += 1
+            compleatCode = False
             try:
                 if self.inheritance:
                     # print('self.inheritance',self.piClassName)
                     for InheritKey in self.inheritance:
-                        if InheritKey != "object" and self.uniqeParametersPiTypes:
+                        if InheritKey == 'PiPi':
+                            rtnLines += f"{indent*iniLevel}''' return dict of {self.piClassName} json'''\n"
+                            rtnLines += f'{indent*iniLevel}rtnDict  = super().json()\n'
+                            rtnLines += f'{indent*iniLevel}return rtnDict' + '\n'
+                        elif InheritKey != "object" and self.uniqeParametersPiTypes:
+                            rtnLines += indent*iniLevel + 'rtnDict = {\n'
+                            iniLevel += 1
                             if InheritKey not in self.uniqeParametersPiTypes:
                                 # Get list of arguments from inherited classes
                                 # aPiFilePI = piLoadPiClassGCJson(InheritKey, self.piClassDir)
@@ -320,7 +329,8 @@ class PiGenCode():
                                         else:
                                             rtnLines += f'{indent*iniLevel}"{parameter}": self.{parameter}.json(),\n'
                                 iniLevel -= 1
-                    rtnLines = rtnLines[:-2] + '\n'
+                            rtnLines = rtnLines[:-2] + '\n'
+                            compleatCode = True
                 else:
                     # print('not self.inheritance',self.piClassName)
                     for param in self.initArguments:
@@ -361,14 +371,16 @@ class PiGenCode():
                         elif param != 'fileName':
                             rtnLines += f'{indent*iniLevel}"{param}": self.{param},\n'
                     rtnLines = rtnLines[:-2] + '\n'
-                iniLevel -= 1
-                if len(self.initArguments) == 1:
-                    if self.initArguments[list(self.initArguments.keys())[0]]:
-                        rtnLines = rtnLines[:-1] + '{}\n'
-                else:
-                    rtnLines += indent*iniLevel + '}\n'
-                rtnLines += indent*iniLevel + 'return rtnDict\n'
-                if rtnLines: rtnLines += '\n'
+                    compleatCode = True
+                if compleatCode:
+                    iniLevel -= 1
+                    if len(self.initArguments) == 1:
+                        if self.initArguments[list(self.initArguments.keys())[0]]:
+                            rtnLines = rtnLines[:-1] + '{}\n'
+                    else:
+                        rtnLines += indent*iniLevel + '}\n'
+                    rtnLines += indent*iniLevel + 'return rtnDict\n'
+                    if rtnLines: rtnLines += '\n'
             except:
                 printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(self.piClassDir))),lable.ERROR)
                 printIt('Check title case for PiClass')
@@ -893,7 +905,6 @@ class PiGenCode():
                                         init_args[arg.arg] = arg_info
         return init_args
 
-#[ genPiPiClass, genPiPisFromSeedPiPiGCFile ]
 def genPiPiClass(genFileName='', verbose = False) -> dict:
     '''Generate python file with genFileName piClassGC file.
        If genFileName is not specified, all piClassGC files in
