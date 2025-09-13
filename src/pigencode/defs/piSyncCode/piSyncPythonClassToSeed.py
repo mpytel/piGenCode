@@ -50,11 +50,11 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
     try:
         seedPath = getSeedPath()
         if seed_file:
+            seedFileName = seed_file.name
             seedFilePath = seed_file
         else:
             # Get next available number
             nextNum = getNextPiSeedNumber()
-
             # Create new piSeed file name
             seedFileName = f"piSeed{nextNum}_piClassGC_{className}.pi"
             seedFilePath = seedPath.joinpath(seedFileName)
@@ -75,14 +75,13 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
         class_info = analyzePythonClassFile(className, pythonFile)
         # print(dumps(class_info, indent=2))
         # Create  piClassGC piSeed content following the exact order from piStruct_piClassGC.json
-        seedContent = f"""piClassGC {className} 'Generated piClassGC for {className} class'
-piValue {className}.piProlog pi.piProlog
-piValue {className}.piBase:piType piClassGC
-piValue {className}.piBase:piTitle {className}
-piValue {className}.piBase:piSD 'Python class {className} generated from existing code'
-piValue {className}.piBody:piClassGC:fileDirectory '{fileDirectory}'
-piValue {className}.piBody:piClassGC:fileName {className}
-"""
+        seedContent = f"piClassGC {className} 'Generated piClassGC for {className} class'\n"
+        seedContent += f"piValue {className}.piProlog pi.piProlog\n"
+        seedContent += f"piValue {className}.piBase:piType piClassGC\n"
+        seedContent += f"piValue {className}.piBase:piTitle {className}\n"
+        seedContent += f"piValue {className}.piBase:piSD 'Python class {className} generated from existing code'\n"
+        seedContent += f"piValue {className}.piBody:piClassGC:fileDirectory '{fileDirectory}'\n"
+        seedContent += f"piValue {className}.piBody:piClassGC:fileName {className}\n"
 
         # 1. Add from Header comment or docStrings if found (temporarily disabled to fix ordering issue)
         if class_info.get('headers'):
@@ -165,7 +164,15 @@ piValue {className}.piBody:piClassGC:fileName {className}
                 seedContent += f"piValue {className}.piBody:piClassGC:initArguments:{arg_name}:type {arg_type}\n"
                 seedContent += f"piValue {className}.piBody:piClassGC:initArguments:{arg_name}:value {arg_value}\n"
 
-        # 9. Add classComment (empty for now)
+        # 9. Add classComment
+        if class_info.get('classComment'):
+            # print('classComment',class_info['classComment'])
+            spaceOffset = -1
+            classComment: str
+            for classComment in class_info['classComment']:
+                if spaceOffset < 0:
+                    spaceOffset = len(classComment) - len(classComment.lstrip())
+                seedContent += f'piValueA {className}.piBody:piClassGC:classComment "{classComment[spaceOffset:]}"\n'
 
         # 10. Add preSuperInitCode
         # 11. Add postSuperInitCode
@@ -338,6 +345,8 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
 
                     info['classes'].append(base_names)
                 # Extract comments or class docstr from class
+                startline = node.lineno
+                info['classComment'].extend(extractCode(contentList,startline))
 
                 # Extract all methods from the class
                 class_methods = {}

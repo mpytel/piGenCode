@@ -76,7 +76,7 @@ class PiGenCode():
         indent = self.indent
         rtnLines = indent*iniLevel + f'class {self.piClassName}('
         if not self.inheritance:
-            rtnLines += '):\n\n'
+            rtnLines += '):\n'
         else:
             removeComma = False
             for inheritClassName in self.inheritance:
@@ -99,9 +99,9 @@ class PiGenCode():
                     
                     removeComma = True
             if removeComma:
-                rtnLines = rtnLines[:-2] + '):\n\n'
+                rtnLines = rtnLines[:-2] + '):\n'
             else:
-                rtnLines += '):\n\n'
+                rtnLines += '):\n'
         return rtnLines
     def _genInitSuperLine(self, iniLevel=0) -> str:
         indent = self.indent
@@ -293,7 +293,8 @@ class PiGenCode():
         rtnLines += '\n'
         return rtnLines
     def _genJsonCodeLines(self, iniLevel=0):
-        rtnLines = ""
+        rtnLines = ''
+        InheritKey = ''
         if len(self.jsonCode) > 0:
             rtnLines = self.__addJsonCodeLines(iniLevel)
         elif self.initArguments or self.inheritance:
@@ -433,6 +434,8 @@ class PiGenCode():
         rtnLines = ""
         for commentLine in self.classComment:
             rtnLines += self.__appednCodeLine(commentLine, iniLevel)
+        print('rtnLines')
+        print(rtnLines)
         return rtnLines
 
     def _genPreSuperInitCodeLines(self, iniLevel=0) -> str:
@@ -847,21 +850,18 @@ class PiGenCode():
             elif isinstance(elementData, str) and elementData.strip():
                 hasCustomCode = True
 
-        #-print('elementName',elementName, hasCustomCode)
         if hasCustomCode:
             # Custom code exists - use it
-            methodName = f'__add{elementName.capitalize()}Lines'
+            methodName = f'_{self.__class__.__name__}__add{elementName[0].capitalize()+elementName[1:]}Lines'
             if hasattr(self, methodName):
                 return getattr(self, methodName)(iniLevel)
-
-        # No custom code - generate default
-        methodName = f'_gen{elementName[0].capitalize()+elementName[1:]}Lines'
-        #-print('methodName',methodName)
-        #-print('\n'.join(dir(self)))
-        if hasattr(self, methodName):
+        else:
+            # No custom code - generate default
             methodName = f'_gen{elementName[0].capitalize()+elementName[1:]}Lines'
-            return getattr(self, methodName)(iniLevel)
-
+            print('methodName',methodName)
+            #-print('\n'.join(dir(self)))
+            if hasattr(self, methodName):
+                return getattr(self, methodName)(iniLevel)
         return ""
 
     def getDefaultElementCode(self, elementName: str, iniLevel: int = 0) -> str:

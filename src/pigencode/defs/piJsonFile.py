@@ -33,7 +33,7 @@ def writeJson(fileName: str, aDict: dict, verbose=True) -> bool:
         printIt(tb_str,lable.ERROR)
     return rtnBool
 
-def getPiStrucFileName(baseTitle) -> str:
+def getPiStrucFileName(baseTitle: str) -> str:
     piGermDir = getKeyItem(piGCDirs[1])
     if not piGermDir:
         piGermDir = piGenCodeDirs[piGCDirs[1]]
@@ -54,7 +54,7 @@ def readPiStruc(baseTitle: str, verbose=True) -> dict:
     rtnDict = readJson(piStrucFileName, verbose)
     return rtnDict
 
-def getPiDefaultFileName(baseTitle) -> str:
+def getPiDefaultFileName(baseTitle: str) -> str:
     piGermDir = getKeyItem(piGCDirs[1])
     if not piGermDir:
         piGermDir = piGenCodeDirs[piGCDirs[1]]
@@ -129,7 +129,7 @@ def printDict(theDict, piDictTitle="no title"):
     printIt(f'{piDictTitle}:\n{ps}', lable.INFO)
 
 
-def piLoadPiClassGCJson(PiClassName, piClassGCDir) -> dict:
+def piLoadPiClassGCJson(PiClassName: str, piClassGCDir: str) -> dict:
     rtnJson: dict
     lowerPiClassName = PiClassName[:2].lower() + PiClassName[2:]
     # look in class file for listm of parametersm being inharited as children of paramType
@@ -193,7 +193,7 @@ class PiDefGCFiles():
                         oldName = self.fileDirName.joinpath(PiDefGCFile)
                         self.fileDirName.joinpath(PiDefGCFile).rename(newName)
 
-    def _chkForExistingFile(self, piTitle, fileDirectory=None):
+    def _chkForExistingFile(self, piTitle: str, fileDirectory=None):
         fileInt = 0
         PiDefGCFiles = self._getPiDefGCFiles()
         if PiDefGCFiles:
@@ -228,7 +228,7 @@ class PiDefGCFiles():
                                 break
         return fileInt
 
-    def _getFileIntZFill(self, piTitle: str, lineNumber, fileDirectory=None, pad=3) -> str:
+    def _getFileIntZFill(self, piTitle: str, lineNumber: int, fileDirectory=None, pad=3) -> str:
         fileInt = self._chkForExistingFile(piTitle, fileDirectory)
         if not fileInt:
             if not self.lastLineNumber:
@@ -245,7 +245,7 @@ class PiDefGCFiles():
             #print(">>>", piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exists')
         return str(fileInt).zfill(3)
 
-    def _getPiDefGCFileName(self, piType, piTitle, lineNumber=0, aDict=None) -> str:
+    def _getPiDefGCFileName(self, piType: str, piTitle: str, lineNumber=0, aDict=None) -> str:
         makedirs(self.fileDirName, exist_ok=True)
         fileDirectory = None
         if aDict and "piBody" in aDict and "piDefGC" in aDict["piBody"] and "fileDirectory" in aDict["piBody"]["piDefGC"]:
@@ -254,7 +254,7 @@ class PiDefGCFiles():
         fileName = self.fileDirName.joinpath(f'{piType}{fileIntStr}_{piTitle}.json')
         return str(fileName)
 
-    def writePiDefGC(self, piType, piTitle, lineNumber, aDict: dict, verbose=True) -> bool:
+    def writePiDefGC(self, piType: str, piTitle: str, lineNumber: int, aDict: dict, verbose=True) -> bool:
         piStrucFileName = self._getPiDefGCFileName(piType, piTitle, lineNumber, aDict)
         rtnBool = writeJson(piStrucFileName, aDict, verbose)
         if rtnBool:
@@ -263,7 +263,7 @@ class PiDefGCFiles():
             printIt(piStrucFileName, lable.SAVED)
         return rtnBool
 
-    def readPiDefGC(self, piType, piTitle, verbose=True) -> dict:
+    def readPiDefGC(self, piType: str, piTitle: str, verbose=True) -> dict:
         piStrucFileName = self._getPiDefGCFileName(piType, piTitle, 0, None)
         rtnDict = readJson(piStrucFileName, verbose)
         return rtnDict
@@ -311,7 +311,7 @@ class PiGenClassFiles():
                         oldName = self.fileDirName.joinpath(PiGenClassFile)
                         self.fileDirName.joinpath(PiGenClassFile).rename(newName)
 
-    def _chkForExistingFile(self, piTitle):
+    def _chkForExistingFile(self, piTitle: str):
         fileInt = 0
         PiGenClassFiles = self._getPiGenClassFiles()
         if PiGenClassFiles:
@@ -328,7 +328,7 @@ class PiGenClassFiles():
                             break
         return fileInt
 
-    def _getFileIntZFill(self, piTitle: str, lineNumber, pad=3) -> str:
+    def _getFileIntZFill(self, piTitle: str, lineNumber: int, pad=3) -> str:
         fileInt = self._chkForExistingFile(piTitle)
         if not fileInt:
             if not self.lastLineNumber:
@@ -345,13 +345,13 @@ class PiGenClassFiles():
             # print(">>>", piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exists')
         return str(fileInt).zfill(3)
 
-    def _getPiGenClassFileName(self, piType, piTitle, lineNumber=0) -> str:
+    def _getPiGenClassFileName(self, piType: str, piTitle: str, lineNumber=0) -> str:
         makedirs(self.fileDirName, exist_ok=True)
         fileIntStr = self._getFileIntZFill(piTitle, lineNumber)
         fileName = self.fileDirName.joinpath(f'{piType}{fileIntStr}_{piTitle}.json')
         return str(fileName)
 
-    def writePiGenClass(self, piType, piTitle, lineNumber, aDict: dict, verbose=True) -> bool:
+    def writePiGenClass(self, piType: str, piTitle: str, lineNumber, aDict: dict, verbose=True) -> bool:
         piStrucFileName = self._getPiGenClassFileName(piType, piTitle, lineNumber)
         rtnBool = writeJson(piStrucFileName, aDict, verbose)
         if rtnBool:
@@ -360,7 +360,7 @@ class PiGenClassFiles():
             printIt(piStrucFileName, lable.SAVED)
         return rtnBool
 
-    def readPiGenClass(self, piType, piTitle, verbose=True) -> dict:
+    def readPiGenClass(self, piType: str, piTitle: str, verbose=True) -> dict:
         piStrucFileName = self._getPiGenClassFileName(piType, piTitle)
         rtnDict = readJson(piStrucFileName, verbose)
         return rtnDict
@@ -406,7 +406,7 @@ class PiClassGCFiles():
                         self.fileDirName.joinpath(PiClassGCFile).rename(newName)
                         # print("newName",newName.stem)
 
-    def _chkForExistingFile(self, piTitle):
+    def _chkForExistingFile(self, piTitle: str):
         fileInt = 0
         PiClassGCFiles = self._getPiClassGCFiles()
         if PiClassGCFiles:
@@ -425,7 +425,7 @@ class PiClassGCFiles():
                             break
         return fileInt
 
-    def _getFileIntZFill(self, piTitle: str, lineNumber, pad = 3) -> str:
+    def _getFileIntZFill(self, piTitle: str, lineNumber: int, pad = 3) -> str:
         fileInt = self._chkForExistingFile(piTitle)
         # print("piTitle", "self.lastLineNumber", "self.baseMaxFileInt", "self.maxFileInt", fileInt)
         # print(f'piTitle: {piTitle} {"-"*8}')
@@ -447,14 +447,14 @@ class PiClassGCFiles():
             # print(">>>",piTitle, self.lastLineNumber, self.baseMaxFileInt, self.maxFileInt, f'{piTitle} file exits')
         return str(fileInt).zfill(3)
 
-    def _getPiClassGCFileName(self, piType, piTitle, lineNumber = 0) -> str:
+    def _getPiClassGCFileName(self, piType: str, piTitle: str, lineNumber = 0) -> str:
 
         makedirs(self.fileDirName, exist_ok=True)
         fileIntStr = self._getFileIntZFill(piTitle, lineNumber)
         fileName = self.fileDirName.joinpath(f'{piType}{fileIntStr}_{piTitle}.json')
         return str(fileName)
 
-    def writePiClassGC(self, piType, piTitle, lineNumber, aDict: dict, verbose=True) -> bool:
+    def writePiClassGC(self, piType: str, piTitle: str, lineNumber: int, aDict: dict, verbose=True) -> bool:
         piStrucFileName = self._getPiClassGCFileName(piType, piTitle, lineNumber)
         #print('piStrucFileName:', piStrucFileName)
         rtnBool = writeJson(piStrucFileName, aDict, verbose)
@@ -462,7 +462,7 @@ class PiClassGCFiles():
         if rtnBool and verbose: printIt(piStrucFileName,lable.SAVED)
         return rtnBool
 
-    def readPiClassGC(self, piType, piTitle, verbose=True) -> dict:
+    def readPiClassGC(self, piType: str, piTitle: str, verbose=True) -> dict:
         piStrucFileName = self._getPiClassGCFileName(piType, piTitle)
         rtnDict = readJson(piStrucFileName, verbose)
         return rtnDict
