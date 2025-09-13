@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple, Optional
 from ...defs.logIt import printIt, lable
 from ...defs.getSeedPath import getSeedPath
 from ...classes.piSeeds import extractPiSeed
-from .piSyncCodeUtil import extractCode, \
+from .piSyncCodeUtil import extractCodeDocStr, \
                         getNextPiSeedNumber, \
                         getDefDocString, \
                         extract_ImportFrom, \
@@ -166,12 +166,12 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
 
         # 9. Add classComment
         if class_info.get('classComment'):
-            # print('classComment',class_info['classComment'])
             spaceOffset = -1
             classComment: str
             for classComment in class_info['classComment']:
                 if spaceOffset < 0:
                     spaceOffset = len(classComment) - len(classComment.lstrip())
+
                 seedContent += f'piValueA {className}.piBody:piClassGC:classComment "{classComment[spaceOffset:]}"\n'
 
         # 10. Add preSuperInitCode
@@ -215,22 +215,29 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
                         method_code: list = class_info['class_methods'][method_name]
                         inLine = 0
                         chk4ADocString = True
+                        skipDocStr = True
                         while inLine < len(method_code):
                             line = method_code[inLine]
+                            if line.startswith('@'):
+                                skipDocStr = False
+                                if line.startswith('@property'):
+                                    skipDocStr = True
                             if chk4ADocString:
                                 if '"""' in line or "'''" in line:
                                     docStr, inLine = getDefDocString(inLine, method_name, methodNameSeeds, method_code)
+                                    inLine -= 1
                                     methodNameSeeds[method_name] = docStr
                                     chk4ADocString = False
-                            if '"""' in line or "'''" in line:
-                                pass
+                            if skipDocStr:
+                                if not ('"""' in line or "'''" in line):
+                                    methodContent += f"piValueA {className}.piBody:piClassGC:classDefCode:{method_name} \"{line}\"\n"
                             else:
                                 methodContent += f"piValueA {className}.piBody:piClassGC:classDefCode:{method_name} \"{line}\"\n"
                             inLine += 1
                         methodNameContent.append(methodNameSeeds[method_name])
             seedContent += classDefCode
             seedContent += '\n'.join(methodNameContent) + '\n'
-            seedContent += methodContent + '\n'
+            seedContent += methodContent
         
         # 17. Add globalCode - extract module-level functions
         if globalFunctions:
@@ -308,7 +315,8 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
             'class_methods': {}
         }
         # Extract headers from content
-        info['headers'].extend(extractCode(contentList))
+        codeLines, _ = extractCodeDocStr(contentList)
+        info['headers'].extend(codeLines)
 
         tree = ast.parse(content)
         # Extract imports and classes
@@ -346,7 +354,8 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                     info['classes'].append(base_names)
                 # Extract comments or class docstr from class
                 startline = node.lineno
-                info['classComment'].extend(extractCode(contentList,startline))
+                codeLines, _ = extractCodeDocStr(contentList,startline)
+                info['classComment'].extend(codeLines)
 
                 # Extract all methods from the class
                 class_methods = {}
@@ -389,7 +398,7 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                                 arg_info['type'] = f"{left_type} | {right_type}"
                                         elif hasattr(arg.annotation, 'slice'):
                                             # Handle generic types like Optional[PiIndexer]
-                                            if isinstance(arg.annotation.value, ast.Name) and arg.annotation.value.id == 'Optional':
+                                            if isinstance(arg.annotation, ast.Subscript) and isinstance(arg.annotation.value, ast.Name) and arg.annotation.value.id == 'Optional':
                                                 if isinstance(arg.annotation.slice, ast.Name):
                                                     arg_info['type'] = f"{arg.annotation.slice.id} | None"
 
@@ -528,6 +537,7 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                         else:
                             # Extract other class methods for classDefCode
                             isProperty, method_code = extractMethodCode(method_name, content, item)
+                            #print('method_code', '\n'.join(method_code))
                             defaltCode: list[str] = []
                             if method_code:
                                 if isProperty:

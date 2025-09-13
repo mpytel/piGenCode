@@ -116,6 +116,8 @@ class PiGenCode():
                 rtnLines += indent*(iniLevel) + f'super({self.piClassName}, self).__init__(\n'
                 try:
                     supperParameters = self.__getInheritClassArgs(InheritKey, self.piClassDir)
+                    print('why', supperParameters)
+                    
                     #aPiFilePI = self.__getInheritClassArgs(InheritKey, self.piClassDir)
                     # if aPiFilePI:
                     #     parameters = aPiFilePI["piBody"]["piClassGC"]["initArguments"]
@@ -434,8 +436,6 @@ class PiGenCode():
         rtnLines = ""
         for commentLine in self.classComment:
             rtnLines += self.__appednCodeLine(commentLine, iniLevel)
-        print('rtnLines')
-        print(rtnLines)
         return rtnLines
 
     def _genPreSuperInitCodeLines(self, iniLevel=0) -> str:
@@ -602,7 +602,9 @@ class PiGenCode():
             initLines += self.__addPreSuperInitCodeLines(iniLevel)
             addAutoGenInitLines = False
         if initLines: rtnLines += initLines; initLines = ""
-        if self.inheritance: rtnLines += self._genInitSuperLine(iniLevel)
+        if self.inheritance: 
+            print('hrerf')
+            rtnLines += self._genInitSuperLine(iniLevel)
         if self.postSuperInitCode:
             initLines += self.__addPostSuperInitCodeLines(iniLevel)
             addAutoGenInitLines = False
@@ -858,7 +860,7 @@ class PiGenCode():
         else:
             # No custom code - generate default
             methodName = f'_gen{elementName[0].capitalize()+elementName[1:]}Lines'
-            print('methodName',methodName)
+            # print('methodName',methodName)
             #-print('\n'.join(dir(self)))
             if hasattr(self, methodName):
                 return getattr(self, methodName)(iniLevel)
@@ -880,6 +882,7 @@ class PiGenCode():
         if pythonFile.is_file():
             with open(pythonFile, 'r', encoding='utf-8') as f:
                 content = f.read()
+            print('99999',content)
             tree = ast.parse(content)
 
             for node in tree.body:

@@ -272,14 +272,24 @@ class PiGermSeeds():
                                         if piExDefDictKey not in aDict:
                                             aDict[piExDefDictKey] = {}
                                         aDict = aDict[piExDefDictKey]
-                                        
+
                                     if len(aDict[piExDefDictKeys[-1]])==1:
                                         # append def description here.
                                         if piExDefDictKeys[-1] in self.classDefCodeDescrtion.keys():
                                             if self.seeds.prevPi.piSD != "@property":
                                                 appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[piExDefDictKeys[-1]]+ "'"*3
                                                 aDict[piExDefDictKeys[-1]].append(appendStr)
-                                    aDict[piExDefDictKeys[-1]].append(baseValue)
+                                                aDict[piExDefDictKeys[-1]].append(baseValue)
+                                            elif self.seeds.prevPi.piSD == "@property":
+                                                appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[piExDefDictKeys[-1]]+ "'"*3
+                                                aDict[piExDefDictKeys[-1]].append(baseValue)
+                                                aDict[piExDefDictKeys[-1]].append(appendStr)
+                                            else:
+                                                aDict[piExDefDictKeys[-1]].append(baseValue)
+                                        else:
+                                            aDict[piExDefDictKeys[-1]].append(baseValue)
+                                    else:
+                                        aDict[piExDefDictKeys[-1]].append(baseValue)
 
                             else: raise Exception
                         else: raise Exception

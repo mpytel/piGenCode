@@ -21,7 +21,7 @@ showDefNames01 = lable.ABORTPRT
 showDefNames02 = lable.ABORTPRT
 showDefNames03 = lable.ABORTPRT
 
-def extractCode(codeLines: List[str], startLine: int = 0) -> List[str]:
+def extractCodeDocStr(codeLines: List[str], startLine: int = 0) ->  Tuple[List[str], int]:
     lenContent = len(codeLines)
     line_num = startLine
     rtnList = []
@@ -69,7 +69,7 @@ def extractCode(codeLines: List[str], startLine: int = 0) -> List[str]:
         else:
             break
         line_num += 1
-    return rtnList
+    return rtnList, line_num
 
 # Intelligent pattern detection functions
 def isExactDefaultStrCode(methodCode: List[str], className: str) -> bool:
@@ -804,40 +804,28 @@ def determineOptimalPiSeedType(pythonFile: Path) -> str:
             f"WARN: Error analyzing file type for {pythonFile.name}: {e}. Using default piClassGC.", lable.WARN)
     return "piClassGC"  # Safe fallback
 
-def getDefDocString(inLine: int, method_name: str, memethodNameSeeds: dict, method_code: list) -> Tuple[str, int]:
 
-    mlLines = ''
-    origStr = memethodNameSeeds[method_name]
-    line: str
-    inLine2 = inLine
-    while inLine2 < len(method_code):
-        line = method_code[inLine2]
-        if mlLines:
-            if line.strip().endswith(('"""', "'''")):
-                newStr = line.strip().replace('"""','')
-                newStr = newStr.replace("'''",'')
-                mlLines += newStr.strip()
-                if mlLines[-2:] == '\\n':
-                    mlLines = mlLines[:-2]
-                methodNameSeed = origStr.replace(
-                    f"'Method {method_name} extracted from existing code'", f"'{mlLines}'",)
-                return methodNameSeed, inLine2 - 1
+def getDefDocString(lineNo: int, method_name: str, memethodNameSeeds: dict, method_code: list) -> Tuple[str, int]:
+
+    memethodNameSeed: str = memethodNameSeeds[method_name]
+    codeDocStr, outLineNo = extractCodeDocStr(method_code, lineNo)
+    theDocStr = ''
+    if codeDocStr:
+        line = ''
+        for line in codeDocStr:
+            line = line.replace("'''","")
+            line = line.replace('"""','')
+            line = line.strip()
+            if not line:
+                theDocStr += '\\n'
             else:
-                mlLines += line.strip() + '\\n'
-        else:
-            if line.strip().startswith(('"""',"'''")):
-                if line.strip().endswith(('"""',"'''")):
-                    newStr = line.strip().replace('"""','')
-                    newStr = newStr.replace("'''",'')
-                    methodNameSeed = origStr.replace(f"'Method {method_name} extracted from existing code'",f"'{newStr}'")
-                    return methodNameSeed, inLine2 - 1
-                else:
-                    newStr = line.strip().replace('"""', '')
-                    newStr = newStr.replace("'''", '')
-                    mlLines = newStr + '\\n'
-        inLine2 += 1
-    inLine2 -= 1
-    return origStr, inLine2
+                theDocStr += line + '\\n'
+        if theDocStr.endswith('\\n'):
+            theDocStr = theDocStr[:-2]
+
+        memethodNameSeed = memethodNameSeed.replace(f"'Method {method_name} extracted from existing code'",f"'{theDocStr}'")
+
+    return memethodNameSeed, outLineNo
 
 def updatePiSeedFileDirectory(piSeedFile: Path, className: str, piSeedType: str, dest_dir: str) -> bool:
     """
@@ -1032,9 +1020,9 @@ def removeTrailingBlankLines(lines: List[str]) -> List[str]:
 def extractMethodCode(method_name: str, pythonContent: str, methodNode: ast.FunctionDef) -> Tuple[bool, List[str]]:
     """Extract the code lines for a method from the Python content"""
     printIt('extractMethodCode', showDefNames03)
+    isPropertry = False
     try:
         lines = pythonContent.split('\n')
-        isPropertry = False
         if '@property' in lines[methodNode.lineno-2]:
             isPropertry = True
             startLine = methodNode.lineno - 2  # ast uses 1-based line numbers
