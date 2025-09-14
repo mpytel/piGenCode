@@ -161,7 +161,10 @@ class PiGenClassCode():
             printIt(f"Warning: Could not update tracking file: {e}", lable.WARN)
 
     def genPiGenClass(self, piGenClassFile: str) -> str:
-        """Generate Python class file from piGenClass JSON"""
+        """
+            Generate Python class file from piGenClass JSON
+            Returns resulting file name
+        """
         try:
             # Read the piGenClass JSON file
             self.pi_piGenClass = readJson(piGenClassFile)
@@ -188,9 +191,9 @@ class PiGenClassCode():
             self.__saveTrackingFile(target_dir, output_filename)
 
             # Record in saved files
-            self.savedCodeFiles[self.fileName] = str(output_path)
+            self.savedCodeFiles[output_path] = str(output_path)
 
-            return self.fileName
+            return str(output_path)
 
         except Exception as e:
             printIt(f"Error generating piGenClass file: {e}", lable.ERROR)

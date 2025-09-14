@@ -116,7 +116,6 @@ class PiGenCode():
                 rtnLines += indent*(iniLevel) + f'super({self.piClassName}, self).__init__(\n'
                 try:
                     supperParameters = self.__getInheritClassArgs(InheritKey, self.piClassDir)
-                    print('why', supperParameters)
                     
                     #aPiFilePI = self.__getInheritClassArgs(InheritKey, self.piClassDir)
                     # if aPiFilePI:
@@ -485,17 +484,19 @@ class PiGenCode():
             return self.genProps + '\n'
         return ""
 
-    def _genGlobalCodeLines(self, iniLevel=0) -> str:
-        """Generate DEFAULT globalCode when none exists"""
-        # Most classes don't need default global code
-        return ""
+    # def _genGlobalCodeLines(self, iniLevel=0) -> str:
+    #     """Generate DEFAULT globalCode when none exists"""
+    #     # Most classes don't need default global code
+    #     return ""
 
-    def __addGlobalCodeLines(self, iniLevel=0) -> str:
-        """Use CUSTOM globalCode"""
-        rtnLines = ""
-        for globalCodeLine in self.globalCode:
-            rtnLines += self.__appednCodeLine(globalCodeLine, iniLevel)
-        return rtnLines
+    # def __addGlobalCodeLines(self, iniLevel=0) -> str:
+    #     """Use CUSTOM globalCode"""
+    #     rtnLines = "\n"
+    #     for globalCodeLine in self.globalCode:
+    #         rtnLines += self.__appednCodeLine(globalCodeLine, iniLevel)
+    #     print('rtnLines')
+    #     print(rtnLines)
+    #     return rtnLines
 
     def __addJsonCodeLines(self, iniLevel=0):
         """Use CUSTOM jsonCode"""
@@ -603,7 +604,6 @@ class PiGenCode():
             addAutoGenInitLines = False
         if initLines: rtnLines += initLines; initLines = ""
         if self.inheritance: 
-            print('hrerf')
             rtnLines += self._genInitSuperLine(iniLevel)
         if self.postSuperInitCode:
             initLines += self.__addPostSuperInitCodeLines(iniLevel)
@@ -728,7 +728,7 @@ class PiGenCode():
         return rtnLines
     def _genBellowClassLines(self) -> str:
         indent = self.indent
-        rtnLines = ''
+        rtnLines = '\n'
         if len(self.globalCode) > 0:
             prev_line_was_function_end = False
             for i, globalCode in enumerate(self.globalCode):
@@ -882,7 +882,6 @@ class PiGenCode():
         if pythonFile.is_file():
             with open(pythonFile, 'r', encoding='utf-8') as f:
                 content = f.read()
-            print('99999',content)
             tree = ast.parse(content)
 
             for node in tree.body:

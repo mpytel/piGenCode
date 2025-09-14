@@ -1,5 +1,6 @@
 import os, traceback, re
 from pathlib import Path
+from json import dumps
 from pigencode.classes.argParse import ArgParse
 from pigencode.defs.logIt import printIt, lable
 from pigencode.defs.fileIO import getKeyItem, piGCDirs
@@ -8,8 +9,6 @@ from pigencode.classes.piGenDefCode import genPiDefCode
 from pigencode.classes.piGenClassCode import genPiGenClass
 
 def genCode(argParse: ArgParse):
-
-
     # Use the already parsed arguments from ArgParse.__init__
     args = argParse.args
     theArgs = args.arguments
@@ -299,9 +298,9 @@ def processAllPiGenClassFiles(verbose=False) -> dict:
             if verbose:
                 printIt(f"Processing piGenClass file: {json_file}", lable.DEBUG)
 
-            result = genPiGenClass(str(json_file))
-            if result:
-                savedCodeFiles[result] = str(json_file)
+            outFileName = genPiGenClass(str(json_file))
+            if outFileName:
+                savedCodeFiles[outFileName] = outFileName
 
     except Exception as e:
         printIt(f"Error processing piGenClass files: {e}", lable.ERROR)
