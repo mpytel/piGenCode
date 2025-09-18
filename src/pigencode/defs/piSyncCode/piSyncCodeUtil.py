@@ -812,11 +812,17 @@ def getDefDocString(lineNo: int, method_name: str, memethodNameSeeds: dict, meth
     theDocStr = ''
     if codeDocStr:
         line = ''
+        offsetDocStr = False
         for line in codeDocStr:
+            indent = len(line)-len(line.lstrip())
             line = line.replace("'''","")
             line = line.replace('"""','')
-            line = line.strip()
+            # if '@property' in method_code:
+            if not offsetDocStr:
+                line = line.strip()
             if not line:
+                if not offsetDocStr:
+                    offsetDocStr = True
                 theDocStr += '\\n'
             else:
                 theDocStr += line + '\\n'

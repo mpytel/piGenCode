@@ -73,7 +73,7 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
 
         # Analyze the Python file to extract more information
         class_info = analyzePythonClassFile(className, pythonFile)
-        # print(dumps(class_info, indent=2))
+        #hprint(dumps(class_info, indent=2))
         # Create  piClassGC piSeed content following the exact order from piStruct_piClassGC.json
         seedContent = f"piClassGC {className} 'Generated piClassGC for {className} class'\n"
         seedContent += f"piValue {className}.piProlog pi.piProlog\n"
@@ -89,7 +89,7 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
                 seedContent += f'piValueA {className}.piBody:piClassGC:headers "{line}"\n'
         # 2. Add from imports if found (temporarily disabled to fix ordering issue)
         if class_info.get('from_imports'):
-            # print(dumps(class_info['from_imports'],indent=2))
+            #hprint(dumps(class_info['from_imports'],indent=2))
             seedContent += f"piStructA00 {className}.piBody:piClassGC:fromImports\n"
             for module_name, import_info in class_info['from_imports'].items():
                 clean_module = module_name.replace('.', '_').replace('-', '_')
@@ -331,7 +331,6 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
             elif isinstance(node, ast.ImportFrom):
                 module_name, imports = extract_ImportFrom(node)
                 # Don't override module_name - extract_ImportFrom already handles relative imports correctly
-
                 info['from_imports'][module_name] = {
                     'from': module_name,
                     'import': ', '.join(imports)
@@ -537,7 +536,7 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                         else:
                             # Extract other class methods for classDefCode
                             isProperty, method_code = extractMethodCode(method_name, content, item)
-                            #print('method_code', '\n'.join(method_code))
+                            #hprint('method_code', '\n'.join(method_code))
                             defaltCode: list[str] = []
                             if method_code:
                                 if isProperty:
@@ -545,14 +544,14 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                         class_methods[method_name].extend(method_code)
                                     else:
                                         class_methods[method_name] = method_code
-                                    # print(f'class_methods[{method_name}]--------- ')
-                                    # print('\n'.join(method_code))
+                                    #hprint(f'class_methods[{method_name}]--------- ')
+                                    #hprint('\n'.join(method_code))
                                 elif method_name == '__str__':
                                     indent = ' ' * 4
                                     iniLevel = 0
                                     defaltCode.append(indent*iniLevel + 'def __str__(self) -> str:')
                                     iniLevel += 1
-                                    defaltCode.append(f"{indent*iniLevel}''' return string of {className} json'''")
+                                    defaltCode.append(f"{indent*iniLevel}'''return string of {className[0].lower()+class_name[1:]} json'''")
                                     defaltCode.append(f'{indent*iniLevel}rtnStr = super().__str__()')
                                     defaltCode.append(f'{indent*iniLevel}return rtnStr')
                                 elif method_name == 'json':
@@ -560,18 +559,18 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                     iniLevel = 0
                                     defaltCode.append(indent*iniLevel + 'def json(self) -> dict:')
                                     iniLevel += 1
-                                    defaltCode.append(f"{indent*iniLevel}''' return dict of {className} json'''")
+                                    defaltCode.append(f"{indent*iniLevel}'''return dict of {className[0].lower()+class_name[1:]} json'''")
                                     defaltCode.append(f'{indent*iniLevel}rtnDict = super().json()')
                                     defaltCode.append(f'{indent*iniLevel}return rtnDict')
                                 else:
                                     class_methods[method_name] = method_code
                             if defaltCode:
-                                # print('method_code == defaltCode',method_code == defaltCode)
+                                #hprint('method_code == defaltCode',method_code == defaltCode)
                                 if method_code == defaltCode:   
                                     class_methods[method_name] = ''
                                 else:
-                                    # print(f'method_code\n: {method_code}')
-                                    # print(f'defaltCode\n: {defaltCode}')
+                                    #hprint(f'method_code\n: {method_code}')
+                                    #hprint(f'defaltCode\n: {defaltCode}')
                                     class_methods[method_name] = method_code
 
                 info['init_args'] = init_args
@@ -580,9 +579,9 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                 info['init_body'] = init_body
                 info['class_methods'] = class_methods
 
-                # print(f'class_methods[user] act--------- ')
-                # print('\n'.join(class_methods['user']))
-                # print(class_methods, dumps(info['class_methods'],indent=2))
+                #hprint(f'class_methods[user] act--------- ')
+                #hprint('\n'.join(class_methods['user']))
+                #hprint(class_methods, dumps(info['class_methods'],indent=2))
 
                 break  # Assuming single class per file for piClassGC
         # printPythonFileInfo(pythonFile, info)
@@ -613,7 +612,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
         # Read the piSeed file
         with open(piSeedFile, 'r', encoding='utf-8') as f:
             seedContent = f.read()
-        #print('seedContent00', seedContent)
+        #hprint('seedContent00', seedContent)
         # Parse Python file to extract methods and code elements
 
         try:
@@ -1088,12 +1087,12 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
                             currDef = piSD
                             if currDef[-1] == '.':  # strip . copy over key
                                 currDef = currDef[:-1]
-                            # print('currDef01',currDef)
+                            #hprint('currDef01',currDef)
                             sections['fromImports'][currDef] = []
                             sections['fromImports'][currDef].append(line)
                         elif 'fromImports' in piTitle:
                             currDef = piTitle.split(':')[-2]
-                            # print('currDef02',currDef)
+                            #hprint('currDef02',currDef)
                             sections['fromImports'][currDef].append(line)
                         else:
                             i -= 1
@@ -1169,12 +1168,12 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
                             currDef = piSD
                             if currDef[-1] == '.':  # strip . copy over key
                                 currDef = currDef[:-1]
-                            # print('currDef01',currDef)
+                            #hprint('currDef01',currDef)
                             sections['initArguments'][currDef] = []
                             sections['initArguments'][currDef].append(line)
                         elif 'initArguments' in piTitle:
                             currDef = piTitle.split(':')[-2]
-                            # print('currDef02',currDef)
+                            #hprint('currDef02',currDef)
                             sections['initArguments'][currDef].append(line)
                         else:
                             i -= 1
@@ -1258,14 +1257,14 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
         if fromImports:
             capturedLines = []
             for currDef, lines in fromImports.items():
-                # print('** currDef', currDef)
+                #hprint('** currDef', currDef)
                 if currDef == 'piStructA':
                     # here lines is a string for fist line declaring fromImports append
                     result.extend([lines])
                 else:
                     # here lines is a list for all piValueA classDefCode code
-                    # print('** currDef', currDef)
-                    # print('** lines',lines)
+                    #hprint('** currDef', currDef)
+                    #hprint('** lines',lines)
                     assert len(lines) == 3
                     result.extend(lines[:1])
                     capturedLines.extend(lines[1:])
@@ -1329,7 +1328,7 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
                     capturedLines.extend(lines[1:])
             result.extend(capturedLines)
         # 21. globalCode
-        #print("sections['globalCode']", sections['globalCode'])
+        #hprint("sections['globalCode']", sections['globalCode'])
         result.extend(sections['globalCode'])
         # i = 1
         # for i1 in result:

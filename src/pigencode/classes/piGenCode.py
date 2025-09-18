@@ -208,8 +208,9 @@ class PiGenCode():
             if self.inheritance:
                 for InheritKey in self.inheritance:
                     if InheritKey == 'PiPi':
-                        rtnLines += f"{indent*iniLevel}''' return string of {self.piClassName} json '''\n"
-                        rtnLines += f'{indent*iniLevel}rtnStr  = super().__str__()\n'
+                        piClassName = self.piClassName[0].lower() + self.piClassName[1:]
+                        rtnLines += f"{indent*iniLevel}'''return string of {piClassName} json '''\n"
+                        rtnLines += f'{indent*iniLevel}rtnStr = super().__str__()\n'
                         rtnLines += f'{indent*iniLevel}return rtnStr'
                     elif InheritKey != "object" and self.uniqeParametersPiTypes:
                         rtnLines += indent*iniLevel
@@ -308,8 +309,9 @@ class PiGenCode():
                     # print('self.inheritance',self.piClassName)
                     for InheritKey in self.inheritance:
                         if InheritKey == 'PiPi':
-                            rtnLines += f"{indent*iniLevel}''' return dict of {self.piClassName} json'''\n"
-                            rtnLines += f'{indent*iniLevel}rtnDict  = super().json()\n'
+                            piClassName = self.piClassName[0].lower() + self.piClassName[1:]
+                            rtnLines += f"{indent*iniLevel}'''return dict of {piClassName} json'''\n"
+                            rtnLines += f'{indent*iniLevel}rtnDict = super().json()\n'
                             rtnLines += f'{indent*iniLevel}return rtnDict' + '\n'
                         elif InheritKey != "object" and self.uniqeParametersPiTypes:
                             rtnLines += indent*iniLevel + 'rtnDict = {\n'
@@ -518,8 +520,16 @@ class PiGenCode():
         for DefCode in self.classDefCode:
             if method_count > 0:
                 rtnLines += '\n'  # Add blank line between methods
+            DefCodeLine: str
             for DefCodeLine in self.classDefCode[DefCode]:
-                rtnLines += self.__appednCodeLine(DefCodeLine, iniLevel)
+                if '\\n' in DefCodeLine and DefCodeLine.strip()[0] != '#':
+                    if DefCodeLine.strip().startswith('"""') or DefCodeLine.strip().startswith("'''"):
+                        print(self.piClassName)
+                        splitlines = DefCodeLine.split('\\n')
+                        for splitline in splitlines:
+                            rtnLines += self.__appednCodeLine(splitline, iniLevel)
+                else:
+                    rtnLines += self.__appednCodeLine(DefCodeLine, iniLevel)
             method_count += 1
         return rtnLines
     def _genInitLines(self, iniLevel=0):
@@ -728,7 +738,7 @@ class PiGenCode():
         return rtnLines
     def _genBellowClassLines(self) -> str:
         indent = self.indent
-        rtnLines = '\n'
+        rtnLines = ''
         if len(self.globalCode) > 0:
             prev_line_was_function_end = False
             for i, globalCode in enumerate(self.globalCode):
@@ -794,6 +804,14 @@ class PiGenCode():
 
     def __savePiClass(self, piClassLines,verbose=False):
         # Use fileName field if specified, otherwise fall back to piTitle
+        # strip out any blank line at the end of piClassLines first
+        lastlineNum = len(piClassLines) - 1
+        while True:
+            if piClassLines[lastlineNum].strip(' ') == '\n':
+                piClassLines = piClassLines[:-1]
+                lastlineNum -= 1
+            else:
+                break
         if self.fileName:
             baseFileName = self.fileName
         else:
