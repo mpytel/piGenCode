@@ -51,6 +51,7 @@ class PiGenClassCode():
             for header in self.headers:
                 code_lines.append(header)
             code_lines.append("")  # Blank line after headers
+            code_lines.append("")  # Blank line after headers
 
         # Handle __future__ imports first (they must come before any other imports)
         future_imports = []
@@ -176,7 +177,7 @@ class PiGenClassCode():
             self.__setPiGenClassAttrs()
 
             # Build the Python code
-            python_code = self.__buildPiGenClassCode()
+            python_code = self.__buildPiGenClassCode() + '\n'
 
             # Determine output file path
             target_dir = self.__getFileDirectory()

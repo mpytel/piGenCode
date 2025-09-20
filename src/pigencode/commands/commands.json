@@ -45,5 +45,8 @@
     "fileDiff_description": "Show the differnces between two files.",
     "origFile": "Original file name",
     "newFile": "New file name"
+  },
+  "runClean": {
+    "runClean_description": "Command to test the cleanliness of sinking Python source code with genCode results"
   }
 }

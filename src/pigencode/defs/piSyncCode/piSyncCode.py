@@ -265,6 +265,7 @@ def syncSingleFile(fileName: str, options: dict):
 
 def syncDirectory(directory: Path, options: dict):
     """directory sync with piGenClass support and filtering"""
+    errors = 0
     try:
         printIt(f'syncDirectory: {str(directory)}', showDefNames)
         if not directory.exists() or not directory.is_dir():
@@ -362,7 +363,6 @@ def syncDirectory(directory: Path, options: dict):
         processedFiles = 0
         skippedFiles = 0
         createdSeeds = 0
-        errors = 0
 
         for py_file in python_files:
             defName = py_file.stem

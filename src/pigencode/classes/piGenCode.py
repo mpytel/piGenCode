@@ -1,4 +1,4 @@
-import os, json, ast
+import os, json, ast, traceback
 import inspect
 from pathlib import Path
 from ..defs.fileIO import getKeyItem, piGCDirs, readJson, piLoadPiClassGCJson
@@ -385,10 +385,16 @@ class PiGenCode():
                         rtnLines += indent*iniLevel + '}\n'
                     rtnLines += indent*iniLevel + 'return rtnDict\n'
                     if rtnLines: rtnLines += '\n'
-            except:
-                printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(self.piClassDir))),lable.ERROR)
-                printIt('Check title case for PiClass')
-                exit()
+            
+
+            except Exception as e:
+                printIt('piGenCode._genJsonCodeLines()',lable.ERROR)
+                tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+                print(tb_str)
+            # except as e:
+            #     printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(self.piClassDir))),lable.ERROR)
+            #     printIt('Check title case for PiClass')
+            #     exit()
 
         return rtnLines
     def _genFromPiClassesLines(self, iniLevel=0) -> str:
@@ -662,6 +668,7 @@ class PiGenCode():
         if len(self.headers) > 0:
             for headerStr in self.headers:
                 rtnLines += f'{headerStr}\n'
+            rtnLines += '\n'*2
         if len(self.imports) > 0:
             for importStr in self.imports:
                 rtnLines += f'import {importStr}\n'
@@ -807,9 +814,13 @@ class PiGenCode():
         # strip out any blank line at the end of piClassLines first
         lastlineNum = len(piClassLines) - 1
         while True:
-            if piClassLines[lastlineNum].strip(' ') == '\n':
+            # make sure only on blank line at teh end of a file
+            if piClassLines[lastlineNum].strip(' ') == '\n' and piClassLines[lastlineNum-1].strip(' ') == '\n':
                 piClassLines = piClassLines[:-1]
                 lastlineNum -= 1
+            elif piClassLines[lastlineNum].strip(' ') != '\n':
+                piClassLines += '\n'
+                break
             else:
                 break
         if self.fileName:
@@ -877,9 +888,10 @@ class PiGenCode():
                 return getattr(self, methodName)(iniLevel)
         else:
             # No custom code - generate default
+            #print('her:',f'_gen{elementName[0].capitalize()+elementName[1:]}Lines')
             methodName = f'_gen{elementName[0].capitalize()+elementName[1:]}Lines'
             # print('methodName',methodName)
-            #-print('\n'.join(dir(self)))
+            #print('\n'.join(dir(self)))
             if hasattr(self, methodName):
                 return getattr(self, methodName)(iniLevel)
         return ""
@@ -900,6 +912,7 @@ class PiGenCode():
         if pythonFile.is_file():
             with open(pythonFile, 'r', encoding='utf-8') as f:
                 content = f.read()
+            print(pythonFile)
             tree = ast.parse(content)
 
             for node in tree.body:
