@@ -296,6 +296,7 @@ def syncDirectory(directory: Path, options: dict):
             options['create_piSeeds'] = True
 
         if options.get('dry_run', False):
+
             printIt("DRY RUN MODE - No changes will be made", lable.WARN)
 
             if options.get('create_piSeeds', False):

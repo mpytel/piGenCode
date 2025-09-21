@@ -136,15 +136,16 @@ class PiGenCode():
                     paramType = self.initArguments[param]["type"]
                     # For Pi-types that are assigned in preSuperInitCode, use self.parameter
                     if paramType.startswith("Pi") and any(f"self.{param} = " in line for line in self.preSuperInitCode):
-                        rtnLines += f'{indent*(iniLevel+3)} {param} = self.{param},\n'
+                        rtnLines += f'{indent*(iniLevel+1)}{param}=self.{param},\n'
                     else:
-                        rtnLines += f'{indent*(iniLevel+3)} {param} = {param},\n'
+                        rtnLines += f'{indent*(iniLevel+1)}{param}={param},\n'
                 else:
                     paramType = self.initArguments[param]["type"]
                     if paramType[:2] == "Pi":
                         self.supperSkip.append(param)
             if rtnLines[-2:] == ",\n":
-                rtnLines = rtnLines[:-2] + ")\n"
+                rtnLines = rtnLines[:-2] + ",\n"
+                rtnLines += f'{indent*(iniLevel)})\n'
             elif rtnLines[-2:] == "(\n":
                 rtnLines = rtnLines[:-1] + ")\n"
         return rtnLines
@@ -177,7 +178,7 @@ class PiGenCode():
             paramType = self.initArguments[param]["type"]
             rtnLines += indent*iniLevel + '@property\n'
             rtnLines += indent*iniLevel + f'def {param}(self): return self._piJson["{param}"]\n'
-            rtnLines += indent*iniLevel + f'@{param}.setter\n'
+            rtnLines += indent*iniLevel + f'\n@{param}.setter\n'
             rtnLines += indent*iniLevel + f'def {param}(self, {param}: {paramType}): self._piJson["{param}"] = {param}\n'
         if rtnLines != "": rtnLines += '\n'
         return rtnLines
@@ -209,7 +210,7 @@ class PiGenCode():
                 for InheritKey in self.inheritance:
                     if InheritKey == 'PiPi':
                         piClassName = self.piClassName[0].lower() + self.piClassName[1:]
-                        rtnLines += f"{indent*iniLevel}'''return string of {piClassName} json '''\n"
+                        rtnLines += f'{indent*iniLevel}""" return string of {piClassName} json """\n'
                         rtnLines += f'{indent*iniLevel}rtnStr = super().__str__()\n'
                         rtnLines += f'{indent*iniLevel}return rtnStr'
                     elif InheritKey != "object" and self.uniqeParametersPiTypes:
@@ -310,7 +311,7 @@ class PiGenCode():
                     for InheritKey in self.inheritance:
                         if InheritKey == 'PiPi':
                             piClassName = self.piClassName[0].lower() + self.piClassName[1:]
-                            rtnLines += f"{indent*iniLevel}'''return dict of {piClassName} json'''\n"
+                            rtnLines += f'{indent*iniLevel}""" return dict of {piClassName} json """\n'
                             rtnLines += f'{indent*iniLevel}rtnDict = super().json()\n'
                             rtnLines += f'{indent*iniLevel}return rtnDict' + '\n'
                         elif InheritKey != "object" and self.uniqeParametersPiTypes:
@@ -443,7 +444,7 @@ class PiGenCode():
         rtnLines = ""
         for commentLine in self.classComment:
             rtnLines += self.__appednCodeLine(commentLine, iniLevel)
-        return rtnLines
+        return rtnLines + "\n"
 
     def _genPreSuperInitCodeLines(self, iniLevel=0) -> str:
         """Generate DEFAULT preSuperInitCode when none exists"""
@@ -492,20 +493,6 @@ class PiGenCode():
             return self.genProps + '\n'
         return ""
 
-    # def _genGlobalCodeLines(self, iniLevel=0) -> str:
-    #     """Generate DEFAULT globalCode when none exists"""
-    #     # Most classes don't need default global code
-    #     return ""
-
-    # def __addGlobalCodeLines(self, iniLevel=0) -> str:
-    #     """Use CUSTOM globalCode"""
-    #     rtnLines = "\n"
-    #     for globalCodeLine in self.globalCode:
-    #         rtnLines += self.__appednCodeLine(globalCodeLine, iniLevel)
-    #     print('rtnLines')
-    #     print(rtnLines)
-    #     return rtnLines
-
     def __addJsonCodeLines(self, iniLevel=0):
         """Use CUSTOM jsonCode"""
         indent = self.indent
@@ -530,7 +517,6 @@ class PiGenCode():
             for DefCodeLine in self.classDefCode[DefCode]:
                 if '\\n' in DefCodeLine and DefCodeLine.strip()[0] != '#':
                     if DefCodeLine.strip().startswith('"""') or DefCodeLine.strip().startswith("'''"):
-                        print(self.piClassName)
                         splitlines = DefCodeLine.split('\\n')
                         for splitline in splitlines:
                             rtnLines += self.__appednCodeLine(splitline, iniLevel)
@@ -540,72 +526,78 @@ class PiGenCode():
         return rtnLines
     def _genInitLines(self, iniLevel=0):
         indent = self.indent
-        startDefLine = 'def __init__(self'
+        startDefLine = 'def __init__('
         rtnLines = indent*iniLevel + startDefLine
-        for param in self.initArguments:
-            paramType = self.initArguments[param]["type"]
-            if paramType in ["none", "any", "Any",""]:
-                if self.initArguments[param]["value"] in ["none",""]:
-                    rtnLines += f',\n{indent*(iniLevel+3)} {param}'
-                else:
-                    rtnLines += f',\n{indent*(iniLevel+3)} {param} = {self.initArguments[param]["value"]}'
-            elif paramType == "bool":
-                rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = {self.initArguments[param]["value"]}'
-            elif paramType == "str":
-                rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = "{self.initArguments[param]["value"]}"'
-            elif paramType == "int":
-                rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = {self.initArguments[param]["value"]}'
-            elif paramType == "dict":
-                if str(self.initArguments[param]["value"]).lower() == "none":
-                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + 'None'
-                else:
-                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + '{}'
-            elif paramType == "list":
-                #print(self.initArguments[key]["value"])
-                rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = {self.initArguments[param]["value"]}'
-            elif paramType == "Path":
-                #print(self.initArguments[key]["value"])
-                rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = {self.initArguments[param]["value"]}'
-            elif paramType[:2] == "Pi":
-                # Extract base type from union types (e.g., "PiIndexer | None" -> "PiIndexer")
-                baseType = paramType.split(' | ')[0].strip()
-                
-                # Check if this class is already imported via fromImports
-                alreadyImported = False
-                for fromImport in self.fromImports:
-                    importList = self.fromImports[fromImport]["import"]
-                    # Check if the baseType is in the import list (handle comma-separated imports)
-                    if baseType in [imp.strip() for imp in importList.split(',')]:
-                        alreadyImported = True
-                        break
-                
-                # Only add to fromPiClasses if not already imported
-                if not alreadyImported and baseType not in self.fromPiClasses: 
-                    self.fromPiClasses.append(baseType)
-                # Check if the value is None (either None object or string "None")
-                paramValue = self.initArguments[param]["value"]
-                if paramValue is None or str(paramValue).lower() == "none":
-                    # Parameter value is None - use union type syntax
-                    # Check if paramType already contains | None to avoid duplication
-                    if "| None" in paramType:
-                        rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = None'
+        if self.initArguments:
+            iniLevel += 1
+            rtnLines += "\n" + indent*iniLevel + "self"
+            for param in self.initArguments:
+                paramType = self.initArguments[param]["type"]
+                if paramType in ["none", "any", "Any",""]:
+                    if self.initArguments[param]["value"] in ["none",""]:
+                        rtnLines += f',\n{indent*(iniLevel)}{param}'
                     else:
-                        rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} | None = None'
-                elif paramValue:
-                    # Parameter has a non-None value
-                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + f'{paramValue}'
+                        rtnLines += f',\n{indent*(iniLevel)}{param} = {self.initArguments[param]["value"]}'
+                elif paramType == "bool":
+                    rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = {self.initArguments[param]["value"]}'
+                elif paramType == "str":
+                    rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = "{self.initArguments[param]["value"]}"'
+                elif paramType == "int":
+                    rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = {self.initArguments[param]["value"]}'
+                elif paramType == "dict":
+                    if str(self.initArguments[param]["value"]).lower() == "none":
+                        rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = ' + 'None'
+                    else:
+                        rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = ' + '{}'
+                elif paramType == "list":
+                    #print(self.initArguments[key]["value"])
+                    rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = {self.initArguments[param]["value"]}'
+                elif paramType == "Path":
+                    #print(self.initArguments[key]["value"])
+                    rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = {self.initArguments[param]["value"]}'
+                elif paramType[:2] == "Pi":
+                    # Extract base type from union types (e.g., "PiIndexer | None" -> "PiIndexer")
+                    baseType = paramType.split(' | ')[0].strip()
+                    
+                    # Check if this class is already imported via fromImports
+                    alreadyImported = False
+                    for fromImport in self.fromImports:
+                        importList = self.fromImports[fromImport]["import"]
+                        # Check if the baseType is in the import list (handle comma-separated imports)
+                        if baseType in [imp.strip() for imp in importList.split(',')]:
+                            alreadyImported = True
+                            break
+                    
+                    # Only add to fromPiClasses if not already imported
+                    if not alreadyImported and baseType not in self.fromPiClasses: 
+                        self.fromPiClasses.append(baseType)
+                    # Check if the value is None (either None object or string "None")
+                    paramValue = self.initArguments[param]["value"]
+                    if paramValue is None or str(paramValue).lower() == "none":
+                        # Parameter value is None - use union type syntax
+                        # Check if paramType already contains | None to avoid duplication
+                        if "| None" in paramType:
+                            rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = None'
+                        else:
+                            rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} | None = None'
+                    elif paramValue:
+                        # Parameter has a non-None value
+                        rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = ' + f'{paramValue}'
+                    else:
+                        # Parameter has empty value - use default constructor
+                        rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = ' + f'{paramType}()'
+                elif "Optional" in paramType:
+                    if str(self.initArguments[param]["value"]).lower() == "none":
+                        rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = ' + 'None'
+                    else:
+                        rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = ' + '{}'
                 else:
-                    # Parameter has empty value - use default constructor
-                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + f'{paramType}()'
-            elif "Optional" in paramType:
-                if str(self.initArguments[param]["value"]).lower() == "none":
-                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + 'None'
-                else:
-                    rtnLines += f',\n{indent*(iniLevel+3)} {param}: {paramType} = ' + '{}'
-            else:
-                pass
-                # printIt(f'{param} {paramType} from {self.PiFileName} not defined01.',lable.ERROR)
-        rtnLines += '):\n'
+                    pass
+                    # printIt(f'{param} {paramType} from {self.PiFileName} not defined01.',lable.ERROR)
+            iniLevel -= 1
+            rtnLines += f',\n{indent*(iniLevel)}):\n'
+        else:
+            rtnLines += 'self):\n'
         if len(self.initArguments) == 0:
             if not (self.preSuperInitCode or \
                self.inheritance or \
@@ -698,7 +690,7 @@ class PiGenCode():
             for rawFromImportStr in self.rawFromImports:
                 rtnLines += f'{rawFromImportStr}\n'
             haveImports = True
-        if haveImports: rtnLines += '\n'
+        if haveImports: rtnLines += '\n\n'
         if len(self.globals) > 0:
             for aGlobal in self.globals:
                 globalType = type(self.globals[aGlobal])

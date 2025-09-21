@@ -277,11 +277,11 @@ class PiGermSeeds():
                                         # append def description here.
                                         if piExDefDictKeys[-1] in self.classDefCodeDescrtion.keys():
                                             if self.seeds.prevPi.piSD != "@property":
-                                                appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[piExDefDictKeys[-1]]+ "'"*3
+                                                appendStr = ' '*4 + '"'*3 + self.classDefCodeDescrtion[piExDefDictKeys[-1]]+ '"'*3
                                                 aDict[piExDefDictKeys[-1]].append(appendStr)
                                                 aDict[piExDefDictKeys[-1]].append(baseValue)
                                             elif self.seeds.prevPi.piSD == "@property":
-                                                appendStr = ' '*4 + "'"*3 + self.classDefCodeDescrtion[piExDefDictKeys[-1]]+ "'"*3
+                                                appendStr = ' '*4 + '"'*3 + self.classDefCodeDescrtion[piExDefDictKeys[-1]]+ '"'*3
                                                 aDict[piExDefDictKeys[-1]].append(baseValue)
                                                 aDict[piExDefDictKeys[-1]].append(appendStr)
                                             else:

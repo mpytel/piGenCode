@@ -551,7 +551,7 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                     iniLevel = 0
                                     defaltCode.append(indent*iniLevel + 'def __str__(self) -> str:')
                                     iniLevel += 1
-                                    defaltCode.append(f"{indent*iniLevel}'''return string of {className[0].lower()+class_name[1:]} json'''")
+                                    defaltCode.append(f'{indent*iniLevel}""" return string of {className[0].lower()+class_name[1:]} json """')
                                     defaltCode.append(f'{indent*iniLevel}rtnStr = super().__str__()')
                                     defaltCode.append(f'{indent*iniLevel}return rtnStr')
                                 elif method_name == 'json':
@@ -559,7 +559,7 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                     iniLevel = 0
                                     defaltCode.append(indent*iniLevel + 'def json(self) -> dict:')
                                     iniLevel += 1
-                                    defaltCode.append(f"{indent*iniLevel}'''return dict of {className[0].lower()+class_name[1:]} json'''")
+                                    defaltCode.append(f'{indent*iniLevel}""" return dict of {className[0].lower()+class_name[1:]} json """')
                                     defaltCode.append(f'{indent*iniLevel}rtnDict = super().json()')
                                     defaltCode.append(f'{indent*iniLevel}return rtnDict')
                                 else:

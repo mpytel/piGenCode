@@ -1065,6 +1065,8 @@ def extractMethodCode(method_name: str, pythonContent: str, methodNode: ast.Func
             line = lines[i]
             if i == startLine:
                 # First line (method definition) - remove class indentation
+                if f'@{method_name}' in line:
+                    methodLines.append("")
                 methodLines.append(line[methodIndent:] if len(line) > methodIndent else line.strip())
             else:
                 # Subsequent lines - preserve relative indentation
