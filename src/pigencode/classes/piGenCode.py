@@ -904,7 +904,7 @@ class PiGenCode():
         if pythonFile.is_file():
             with open(pythonFile, 'r', encoding='utf-8') as f:
                 content = f.read()
-            print(pythonFile)
+            #print(pythonFile)
             tree = ast.parse(content)
 
             for node in tree.body:

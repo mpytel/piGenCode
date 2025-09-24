@@ -415,6 +415,7 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                         arg_name = item.args.args[arg_index + 1].arg
 
                                         if arg_name in init_args:
+                                            print('arg_name =', arg_name)
                                             if isinstance(default, ast.Constant):
                                                 if isinstance(default.value, str):
                                                     init_args[arg_name]['value'] = f'"{default.value}"'
@@ -433,6 +434,12 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                                         # Look for the parameter pattern and then extract the balanced parentheses
                                                         param_start_pattern = rf'\b{re.escape(arg_name)}\s*:\s*[^=]*=\s*'
                                                         match = re.search(param_start_pattern, source_line)
+                                                        # add to source line becase the argument is on multiple lines.
+                                                        if "(" in source_line:
+                                                            while ")" not in source_line:
+                                                                print('default_line',default_line)
+                                                                default_line += 1
+                                                                source_line += contentList[default_line].strip()
                                                         if match:
                                                             start_pos = match.end()
                                                             # Extract the function call with balanced parentheses
@@ -459,7 +466,6 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                                                     elif char == ',' and paren_count == 0:
                                                                         # We've reached the next parameter
                                                                         break
-                                                            
                                                             if paren_count == 0:
                                                                 default_value = source_line[start_pos:end_pos].strip()
                                                                 # Escape double quotes for piSeed format

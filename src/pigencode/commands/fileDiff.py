@@ -1,52 +1,59 @@
 import sys
 import os
 import difflib
+from difflib import unified_diff
 from pathlib import Path
 from pigencode.defs.logIt import printIt, lable, cStr, color
+
+import black
+from black import FileMode
+from black.report import NothingChanged
 
 def fileDiff(argParse):
     global commands
     args = argParse.args
     theArgs = args.arguments
     if len(theArgs) == 2:
-        origFilePath = theArgs[0]
-        newFilePath = theArgs[1]
-        compare_python_files(origFilePath, newFilePath)
+        origFileName: str = theArgs[0]
+        newFileName: str = theArgs[1]
+        compare_python_files(origFileName, newFileName)
 
-def compare_python_files(file1_path, file2_path):
+def compare_python_files(origFileName: str, newFileName: str, chkBlack = False) -> bool:
     """
     Compares two Python files and prints their differences.
+    Return True if no differenc found or error occred.
 
     Args:
-        file1_path (str): The path to the first Python file (e.g., the original).
-        file2_path (str): The path to the second Python file (e.g., the modified).
+        origFileName (str): The path to the first Python file (e.g., the original).
+        newFileName (str): The path to the second Python file (e.g., the modified).
     """
+    rtnBool = False
     # 1. Validate file paths
-    if not os.path.exists(file1_path):
-        print(f"Error: File not found at '{file1_path}'", file=sys.stderr)
-        return
-    if not os.path.exists(file2_path):
-        print(f"Error: File not found at '{file2_path}'", file=sys.stderr)
-        return
-    if not os.path.isfile(file1_path):
-        print(f"Error: '{file1_path}' is not a file.", file=sys.stderr)
-        return
-    if not os.path.isfile(file2_path):
-        print(f"Error: '{file2_path}' is not a file.", file=sys.stderr)
-        return
+    if not os.path.exists(origFileName):
+        print(f"Error: File not found at '{origFileName}'", file=sys.stderr)
+        return rtnBool
+    if not os.path.exists(newFileName):
+        print(f"Error: File not found at '{newFileName}'", file=sys.stderr)
+        return rtnBool
+    if not os.path.isfile(origFileName):
+        print(f"Error: '{origFileName}' is not a file.", file=sys.stderr)
+        return rtnBool
+    if not os.path.isfile(newFileName):
+        print(f"Error: '{newFileName}' is not a file.", file=sys.stderr)
+        return rtnBool
 
     # 2. Read file contents as lists of lines
     try:
-        with open(file1_path, 'r', encoding='utf-8') as f1:
+        with open(origFileName, 'r', encoding='utf-8') as f1:
             lines1 = f1.readlines()
-        with open(file2_path, 'r', encoding='utf-8') as f2:
+        with open(newFileName, 'r', encoding='utf-8') as f2:
             lines2 = f2.readlines()
     except IOError as e:
         print(f"Error reading file: {e}", file=sys.stderr)
-        return
+        return rtnBool
     except UnicodeDecodeError:
         print(f"Error: Could not decode file with UTF-8. Try a different encoding if known.", file=sys.stderr)
-        return
+        return rtnBool
 
     # 3. Generate differences using difflib.unified_diff
     # unified_diff produces a diff in the unified format, like 'diff -u'
@@ -54,26 +61,75 @@ def compare_python_files(file1_path, file2_path):
     diff = difflib.unified_diff(
         lines1,
         lines2,
-        fromfile=file1_path,
-        tofile=file2_path
+        fromfile=origFileName,
+        tofile=newFileName
     )
         #lineterm=''  # Ensures difflib doesn't add an extra newline if lines already have them
+    # 4. check if black foprmatting removes diff
+    if chkBlack:
+        # print('------------ chkBlack')
+        diff = compare_black_diff(origFileName, newFileName)
 
-    # 4. Print the differences with optional color coding
-    print(f"\n--- Comparing '{file1_path}' and '{file2_path}' ---")
-    has_diff = False
-    for line in diff:
-        has_diff = True
-        # ANSI escape codes for coloring output in terminals
-        if line.startswith('+'):
-            print(f"\033[92m{line}\033[0m", end='')  # Green for added lines
-        elif line.startswith('-'):
-            print(f"\033[91m{line}\033[0m", end='')  # Red for removed lines
-        elif line.startswith('@'):
-            print(f"\033[94m{line}\033[0m", end='')  # Blue for hunk headers
-        else:
-            print(line, end='')  # Default color for context lines
+    if diff:
+        # 5. Print the differences with optional color coding
+        print(f"\n--- Comparing '{origFileName}' and '{newFileName}' ---")
+        for line in diff:
+            # ANSI escape codes for coloring output in terminals
+            if line.startswith('+'):
+                print(f"\033[92m{line}\033[0m", end='')  # Green for added lines
+            elif line.startswith('-'):
+                print(f"\033[91m{line}\033[0m", end='')  # Red for removed lines
+            elif line.startswith('@'):
+                print(f"\033[94m{line}\033[0m", end='')  # Blue for hunk headers
+            else:
+                print(line, end='')  # Default color for context lines
+        print("\n" + "=" * 60 + "\n")
+    else:
+        print(f"No differences found in {newFileName}.")
+        rtnBool =  True
+    return rtnBool
 
-    if not has_diff:
-        print("No differences found.")
-    print("\n" + "=" * 60 + "\n")
+def compare_black_diff(origFileName, newFileName):
+    """
+    Returns the diff of a Python file after black formatting, as a string.
+    Returns None if no changes are needed.
+    """
+    orig_file_path = Path(origFileName)
+    new_file_path = Path(newFileName)
+    try:
+        # Read the original content
+        orig_code = orig_file_path.read_text(encoding="utf-8")
+
+        # Format the code using Black
+        orig_formatted_code = black.format_file_contents(
+            orig_code, fast=True, mode=FileMode(line_length=88)
+        )
+
+        # Read the new content
+        new_code = new_file_path.read_text(encoding="utf-8")
+
+        # Format the code using Black
+        new_formatted_code = black.format_file_contents(
+            new_code, fast=True, mode=FileMode(line_length=88)
+        )
+
+        # Split the original and formatted code into lines
+        original_lines = orig_formatted_code.splitlines(keepends=True)
+        new_lines = new_formatted_code.splitlines(keepends=True)
+
+        # Generate the unified diff
+        diff = unified_diff(
+            original_lines,
+            new_lines,
+            fromfile=f"a/{origFileName}",
+            tofile=f"b/{newFileName}"
+        )
+        if not diff:
+            new_file_path.write_text(new_formatted_code, encoding="utf-8")
+        return "".join(diff)
+
+    except NothingChanged:
+        return None
+    except Exception as e:
+        print(f"Error processing {new_file_path}: {e}")
+        return None

@@ -4,6 +4,7 @@ from .rmGC import rmGC
 from .syncCode import syncDirectory
 from .germSeed import germAllSeedFiles
 from .genCode import genCodeFile
+from .fileDiff import compare_python_files
 
 import black
 from black import FileMode
@@ -23,11 +24,12 @@ def runClean(argParse):
     #print(dumps(savedCodeFiles,indent=2))
 
     for file_path in savedCodeFiles.values():
-        theDiff = get_black_diff(file_path)
-        print(theDiff)
-        if format_python_file(file_path):
+        newFileName: str = file_path
+        origFileName: str = newFileName.replace(options["dest_dir"],str(targetPath))
+        noDiff = compare_python_files(origFileName, newFileName,True)
+        if not noDiff:
             exit()
-        exit()
+            
 
 
 def get_black_diff(file_path):
