@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 from json import dumps
 from .rmGC import rmGC
@@ -28,7 +29,15 @@ def runClean(argParse):
         origFileName: str = newFileName.replace(options["dest_dir"],str(targetPath))
         noDiff = compare_python_files(origFileName, newFileName,True)
         if not noDiff:
-            exit()
+            replOrig = input(f"Replace {origFileName} (y/N)? ")
+            if replOrig:
+                if replOrig.lower()[0] == "y":
+                    shutil.copy(newFileName,origFileName)
+                else:
+                    exit()
+            else:
+                exit()
+
             
 
 

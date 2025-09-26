@@ -65,6 +65,8 @@ def extractCodeDocStr(codeLines: List[str], startLine: int = 0) ->  Tuple[List[s
                         line_num += 1
         elif line.strip().startswith('#'):
             # check if header containe a line comment
+            if rtnList:
+                return rtnList, line_num - 1
             rtnList.append(line)
         else:
             break

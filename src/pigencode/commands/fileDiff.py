@@ -72,7 +72,7 @@ def compare_python_files(origFileName: str, newFileName: str, chkBlack = False) 
 
     if diff:
         # 5. Print the differences with optional color coding
-        print(f"\n--- Comparing '{origFileName}' and '{newFileName}' ---")
+        print("\n--- Differences ---")
         for line in diff:
             # ANSI escape codes for coloring output in terminals
             if line.startswith('+'):

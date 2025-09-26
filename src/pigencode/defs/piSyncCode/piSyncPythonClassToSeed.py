@@ -216,8 +216,10 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
                         inLine = 0
                         chk4ADocString = True
                         skipDocStr = True
+                        #if className == 'piTrie': print('method_name',method_name)
                         while inLine < len(method_code):
                             line = method_code[inLine]
+                            #if method_name == 'setType' and className == 'piTrie': print(line)
                             if line.startswith('@'):
                                 skipDocStr = False
                                 if line.startswith('@property'):
@@ -225,6 +227,9 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
                             if chk4ADocString:
                                 if '"""' in line or "'''" in line:
                                     docStr, inLine = getDefDocString(inLine, method_name, methodNameSeeds, method_code)
+                                    if method_name == 'setType' and className == 'piTrie':
+                                         print('method_name:',method_name)
+                                         print(docStr)
                                     inLine -= 1
                                     methodNameSeeds[method_name] = docStr
                                     chk4ADocString = False
@@ -415,7 +420,6 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                         arg_name = item.args.args[arg_index + 1].arg
 
                                         if arg_name in init_args:
-                                            print('arg_name =', arg_name)
                                             if isinstance(default, ast.Constant):
                                                 if isinstance(default.value, str):
                                                     init_args[arg_name]['value'] = f'"{default.value}"'
@@ -437,7 +441,6 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                                         # add to source line becase the argument is on multiple lines.
                                                         if "(" in source_line:
                                                             while ")" not in source_line:
-                                                                print('default_line',default_line)
                                                                 default_line += 1
                                                                 source_line += contentList[default_line].strip()
                                                         if match:
@@ -569,6 +572,9 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                     defaltCode.append(f'{indent*iniLevel}rtnDict = super().json()')
                                     defaltCode.append(f'{indent*iniLevel}return rtnDict')
                                 else:
+                                    # if method_name == 'setType' and className == 'piTrie':
+                                    #     print('method_name:',method_name)
+                                    #     print('\n'.join(method_code))
                                     class_methods[method_name] = method_code
                             if defaltCode:
                                 #hprint('method_code == defaltCode',method_code == defaltCode)
