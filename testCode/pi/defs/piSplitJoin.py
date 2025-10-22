@@ -1,4 +1,6 @@
+# piSplitJoin functions - synced from existing code
 import re
+
 
 def piSplitStr(text: str) -> list[str]:
     """
@@ -482,3 +484,4 @@ def piReconstructMarkdown(original_text: str, modified_md_token_map: dict[str, l
         output_segments.append(processed_text[last_idx:])
 
     return "".join(output_segments)
+

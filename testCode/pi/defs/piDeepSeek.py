@@ -1,5 +1,7 @@
+# piDeepSeek functions - synced from existing code
 import requests
 import json
+
 
 # Replace with your actual API key and endpoint
 API_KEY = 'Bearer ' + 'sk-43b53ee281074cc485877e2433332a7f'

@@ -1,7 +1,9 @@
+# piHandler functions - synced from existing code
 import time
-from typing import Dict
 import jwt
+from typing import Dict
 from decouple import config
+
 
 JWT_SECRET = config("secret")
 JWT_ALGORITHM = config("algorithm")
@@ -26,3 +28,4 @@ def decode_jwt(token: str) -> dict:
         return decoded_token if decoded_token["expires"] >= time.time() else None
     except:
         return {}
+

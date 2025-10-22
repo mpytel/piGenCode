@@ -1,4 +1,6 @@
+# plural2Single functions - synced from existing code
 from pi.piClasses.piPiClasses import PiPiClasses
+
 
 def plural2Single(pluralWord, piPiClasses: PiPiClasses):
     '''Returns singuler version of a plural type name.

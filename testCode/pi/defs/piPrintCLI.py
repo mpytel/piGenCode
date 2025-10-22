@@ -1,6 +1,8 @@
+# piPrintCLI functions - synced from existing code
 import os
 import math
 from .logIt import color
+
 def getPiIndexerStr(thePiIndexerTitels: dict, thePiIndexerHash: dict | None = None, padding=6) -> str:
     spPaddingStr = f'{" "* padding}'
     if thePiIndexerHash:
@@ -143,4 +145,5 @@ def getIndexedStr(strList: list, numOfCol: int = 1, nextLinePadding: int = 0) ->
             output_lines.append(line)
 
     return "\n".join(output_lines)
+
 

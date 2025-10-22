@@ -274,6 +274,7 @@ def processAllPiGenClassFiles(verbose=False) -> dict:
     try:
         # Get piGerms directory
         piGermsDir = Path(getKeyItem("piGermDir"))
+        print('piGermsDir',piGermsDir)
         piGenClassDir = piGermsDir / "piGenClass"
 
         if not piGermsDir.exists():

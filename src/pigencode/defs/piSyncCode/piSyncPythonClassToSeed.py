@@ -227,9 +227,9 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
                             if chk4ADocString:
                                 if '"""' in line or "'''" in line:
                                     docStr, inLine = getDefDocString(inLine, method_name, methodNameSeeds, method_code)
-                                    if method_name == 'setType' and className == 'piTrie':
-                                         print('method_name:',method_name)
-                                         print(docStr)
+                                    # if method_name == 'setType' and className == 'piTrie':
+                                    #      print('method_name:',method_name)
+                                    #      print(docStr)
                                     inLine -= 1
                                     methodNameSeeds[method_name] = docStr
                                     chk4ADocString = False
@@ -541,7 +541,15 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
                                                 init_body.append(call_line)
                                 elif isinstance(stmt, ast.If):
                                     # Extract if statements like if self.packageOK: self.packageOK = self._chkBaseDirs()
-                                    _extract_compound_statement(stmt, contentList, lenContent, init_preSuper, init_postSuper, init_body)            
+                                    _extract_compound_statement(stmt, contentList, lenContent, init_preSuper, init_postSuper, init_body)       
+                                else :
+                                    line_num = stmt.lineno - 1
+                                    if line_num < lenContent:
+                                        codeLine = contentList[line_num].strip()
+                                        if init_preSuper:
+                                            init_postSuper.append(codeLine)
+                                        else:
+                                            init_body.append(codeLine)
                         else:
                             # Extract other class methods for classDefCode
                             isProperty, method_code = extractMethodCode(method_name, content, item)
@@ -881,13 +889,13 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                         changes.append("globalCode")
 
             # Write updated piSeed file if changes were made
-            if changes:
-                # Rebuild the piSeed file in the correct order
-                seedContent = rebuildPiSeedInCorrectOrder(
-                    seedContent, className)
+            # if changes:
+            #     # Rebuild the piSeed file in the correct order
+            #     seedContent = rebuildPiSeedInCorrectOrder(
+            #         seedContent, className)
 
-                with open(piSeedFile, 'w', encoding='utf-8') as f:
-                    f.write(seedContent)
+            #     with open(piSeedFile, 'w', encoding='utf-8') as f:
+            #         f.write(seedContent)
 
         except SyntaxError as e:
             printIt(

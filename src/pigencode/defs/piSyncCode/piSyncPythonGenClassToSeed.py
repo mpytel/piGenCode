@@ -2,6 +2,7 @@ import os
 import re
 import ast
 import traceback
+from json import dumps
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from ..logIt import printIt, lable
@@ -37,7 +38,7 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
     try:
         with open(pythonFile, 'r', encoding='utf-8') as f:
             content = f.read()
-
+        # print(content)
         tree = ast.parse(content)
 
         info = {
@@ -51,6 +52,7 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
 
         # Extract imports, classes, and other elements
         for node in tree.body:
+            # print('type',type(node))
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     import_name = alias.name
@@ -82,8 +84,14 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
                     inheritance_desc = f"inherits from {', '.join(base_names)}"
                 else:
                     inheritance_desc = "base class"
-
-                info['classes'][class_name] = f"Class {class_name} - {inheritance_desc}"
+                info['classes'][class_name] = {}
+                info['classes'][class_name]['discription'] = f"Class {class_name} - {inheritance_desc}"
+                info['classes'][class_name]['code'] = extractCompleteClassCode(content,node)
+                # for item in node.body:
+                #     print('item.lineno',item.lineno)
+                #     if isinstance(item, ast.FunctionDef):
+                #         method_name = item.name
+                #         isPropertry, methodCode = extractMethodCode(method_name, content, item)
 
             elif isinstance(node, ast.FunctionDef):
                 isPropertry, funcCode = extractMethodCode('functions', content, node)
@@ -155,7 +163,7 @@ def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Pat
 
         # Analyze the Python file to extract class information
         class_info = analyzeMultiClassFile(pythonFile)
-        #print(list(class_info.keys()))
+        # print(dumps(class_info,indent=2))
         #print('createNewPiGenClassSeedFile-fileDirectory',fileDirectory)
 
         # Create piGenClass piSeed content
@@ -192,10 +200,24 @@ piValueA {className}.piBody:piGenClass:headers '# {className} classes - synced f
                 seedContent += f"piValueA {className}.piBody:piGenClass:constants \"{escaped_constant}\"\n"
 
         # Add class definitions if found
+        '''
+        piStructA00 piUserBody.piBody:piGenClass:classDefs
+        piStructL01 PiUserBody 'Class definition for PiUserBody'
+        piValueA piUserBody.piBody:piGenClass:classDefs:PiUserBody "class PiUserBody():"
+
+        '''
         if class_info.get('classes'):
-            seedContent += f"piStructA00 {className}.piBody:piGenClass:classDefs\n"
-            for class_name, class_desc in class_info['classes'].items():
-                seedContent += f"piStructL01 {class_name} '{class_desc}'\n"
+            seedContent += f'piStructA00 {className}.piBody:piGenClass:classDefs\n'
+            for classDefname, items in class_info['classes'].items():
+                for itemName, codeLines in items.items():
+                    if itemName == "discription":
+                        seedContent += f'piStructL01 {classDefname} "{codeLines}"\n'
+                    else:
+                        for codeLine in codeLines:
+                            escaped_line = codeLine.replace('"', '\\"')
+                            seedContent += f'piValueA {className}.piBody:piGenClass:classDefs:{classDefname} "{escaped_line}"\n'
+
+
         # ['imports', 'from_imports', 'classes', 'constants', 'mlConstants', 'functions']
         # Add multi-line constants
         if class_info.get('mlConstants'):

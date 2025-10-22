@@ -1,7 +1,10 @@
+# piGemAI functions - synced from existing code
+import os
 from pi.defs.logIt import printIt, lable, cStr, color
 from pi.commands.commands import Commands
 from google import genai
 from google.genai import types
+
 import os
 
 API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -159,3 +162,4 @@ update_forward_refs
 validate
 
 '''
+

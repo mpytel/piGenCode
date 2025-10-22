@@ -16,9 +16,7 @@ from .piSyncCodeUtil import \
 from .piSyncPythonClassToSeed import \
     createNewPiClassGCSeedFile, \
     syncPythonClassToSeed
-from .piSyncPythonDefToSeed import \
-    createNewPiDefGCSeedFile, \
-    syncPythonDefToSeed
+from .piSyncPythonDefToSeed import createNewPiDefGCSeedFile
 from .piSyncPythonGenClassToSeed import \
     createNewPiGenClassSeedFile, \
     syncPythonGenClassToSeed
@@ -64,12 +62,13 @@ def syncSingleFile(fileName: str, options: dict):
         if dest_dir:
             dest_dir = getDestDirForFile(filePath, options)
         else:
-            dest_dir = ''
+            dest_dir = str(filePath.parent)
 
         # First, check for existing piSeed files of any type
-        existingPiSeedFile, existingType = findExistingPiSeedFile(
-            filePath, dest_dir)
-
+        existingPiSeedFile, existingType = findExistingPiSeedFile(filePath, dest_dir)
+        # print('existingPiSeedFile',existingType,f'findExistingPiSeedFile({filePath}, {dest_dir})')
+        # print('existingPiSeedFile',existingPiSeedFile)
+  
         if existingPiSeedFile:
             # Use existing piSeed file type
             file_type = existingType
@@ -77,6 +76,36 @@ def syncSingleFile(fileName: str, options: dict):
             if options.get('stats', False):
                 printIt(
                     f"Found existing {file_type} piSeed file: {piSeedFile.name}", lable.DEBUG)
+            # Try to find or create piSeed file based on optimal type
+            if file_type == "piDefGC":
+                if options.get('dry_run', False):
+                    printIt(
+                        f"DRY RUN: Would create new piDefGC piSeed file for: {className}", lable.INFO)
+                    return  # Don't actually create in dry-run mode
+                else:
+                    printIt(
+                        f"Creating new piDefGC piSeed file for: {className}", lable.INFO)
+                    piSeedFile = createNewPiDefGCSeedFile(className, filePath, piSeedFile, dest_dir)
+            elif file_type == "piGenClass":
+                if options.get('dry_run', False):
+                    printIt(
+                        f"DRY RUN: Would create new piGenClass piSeed file for: {className}", lable.INFO)
+                    return  # Don't actually create in dry-run mode
+                else:
+                    printIt(
+                        f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
+                    piSeedFile = createNewPiGenClassSeedFile(className, filePath, piSeedFile, dest_dir)
+
+            else:  # piClassGC
+                if options.get('dry_run', False):
+                    printIt(
+                        f"DRY RUN: Would create new piClassGC piSeed file for: {className}", lable.INFO)
+                    return  # Don't actually create in dry-run mode
+                else:
+                    printIt(
+                        f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
+                    piSeedFile = createNewPiClassGCSeedFile(className, filePath, piSeedFile, dest_dir)
+            return
         else:
             # No existing piSeed file, determine optimal type
             file_type = determineOptimalPiSeedType(filePath)
@@ -123,9 +152,9 @@ def syncSingleFile(fileName: str, options: dict):
                         printIt(
                             f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
                         print('seedContent01')
-                        piSeedFile = createNewPiClassGCSeedFile(
-                            className, filePath, None, dest_dir)
-                        return
+                piSeedFile = createNewPiClassGCSeedFile(className, filePath, None, dest_dir)
+                return
+            
         # Apply exclude pattern filter
         # Tuple[filePath, str, str]
         actual_type = determineOptimalPiSeedType(filePath)
@@ -184,17 +213,16 @@ def syncSingleFile(fileName: str, options: dict):
                         piSeedFile = createNewPiGenClassSeedFile(
                             className, filePath, None, dest_dir)
             else:  # piClassGC
-                piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
-                if not piSeedFile and options.get('create_piSeeds', False):
-                    if options.get('dry_run', False):
-                        printIt(
-                            f"DRY RUN: Would create new piClassGC piSeed file for: {className}", lable.INFO)
-                        return  # Don't actually create in dry-run mode
-                    else:
-                        printIt(
-                            f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
-                        piSeedFile = createNewPiClassGCSeedFile(
-                            className, filePath, None, dest_dir)
+                # piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
+                # if not piSeedFile and options.get('create_piSeeds', False):
+                #     if options.get('dry_run', False):
+                #         printIt(
+                #             f"DRY RUN: Would create new piClassGC piSeed file for: {className}", lable.INFO)
+                #         return  # Don't actually create in dry-run mode
+                #     else:
+                #         printIt(
+                #             f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
+                piSeedFile = createNewPiClassGCSeedFile(className, filePath, None, dest_dir)
 
         # Apply filter if specified
         if options.get('filter_type'):
@@ -231,28 +259,28 @@ def syncSingleFile(fileName: str, options: dict):
             return
 
         # Sync based on the determined file type
-        changes = []
-        if existingPiSeedFile:
-            if file_type == "piDefGC":
-                changes = syncPythonDefToSeed(filePath, piSeedFile, dest_dir)
-            elif file_type == "piGenClass":
-                changes = syncPythonGenClassToSeed(filePath, piSeedFile)
-            else:  # piClassGC
-                changes = syncPythonClassToSeed(filePath, piSeedFile, options)
+        # changes = []
+        # if existingPiSeedFile:
+        #     if file_type == "piDefGC":
+        #         changes = syncPythonDefToSeed(filePath, piSeedFile, dest_dir)
+        #     elif file_type == "piGenClass":
+        #         changes = syncPythonGenClassToSeed(filePath, piSeedFile)
+        #     else:  # piClassGC
+        #         changes = syncPythonClassToSeed(filePath, piSeedFile, options)
 
-        # Validate results if requested
-        if options.get('validate', False) and piSeedFile:
-            validateSyncResults(filePath, piSeedFile, changes)
+        # # Validate results if requested
+        # if options.get('validate', False) and piSeedFile:
+        #     validateSyncResults(filePath, piSeedFile, changes)
 
-        # Report results
-        if changes:
-            printIt(
-                f"01 Synced {len(changes)} changes from {filePath.name} to {piSeedFile.name}", lable.INFO)
-            if options.get('stats', False):
-                for change in changes:
-                    printIt(f"  • {change}", lable.DEBUG)
-        else:
-            printIt(f"No changes needed for {filePath}", lable.INFO)
+        # # Report results
+        # if changes:
+        #     printIt(
+        #         f"01 Synced {len(changes)} changes from {filePath.name} to {piSeedFile.name}", lable.INFO)
+        #     if options.get('stats', False):
+        #         for change in changes:
+        #             printIt(f"  • {change}", lable.DEBUG)
+        # else:
+        #     printIt(f"(SSF)No changes needed for {filePath}", lable.INFO)
 
     except Exception as e:
         if devExept:
@@ -390,37 +418,31 @@ def syncDirectory(directory: Path, options: dict):
 
                 if file_type == "piDefGC":
                     piSeedFile = findPiDefGCSeedFile(py_file, dest_dir)
-                    if not piSeedFile and options.get('create_piSeeds', False):
-                        piSeedFile = createNewPiDefGCSeedFile(
-                            defName, py_file, None, dest_dir)
-                        if piSeedFile:
-                            createdSeeds += 1
                     if piSeedFile:
-                        changes = syncPythonDefToSeed(
-                            py_file, piSeedFile, dest_dir)
+                        piSeedFile = createNewPiDefGCSeedFile(defName, py_file, piSeedFile, dest_dir)
+                    else:
+                        piSeedFile = createNewPiDefGCSeedFile(defName, py_file, None, dest_dir)
+                    if piSeedFile:
+                        createdSeeds += 1
 
                 elif file_type == "piGenClass":
                     className = py_file.stem
                     piSeedFile = findPiGenClassSeedFile(py_file, dest_dir)
-                    if not piSeedFile and options.get('create_piSeeds', False):
-                        piSeedFile = createNewPiGenClassSeedFile(
-                            className, py_file, None, dest_dir)
-                        if piSeedFile:
-                            createdSeeds += 1
                     if piSeedFile:
-                        changes = syncPythonGenClassToSeed(py_file, piSeedFile)
-
+                        piSeedFile = createNewPiGenClassSeedFile(className, py_file, piSeedFile, dest_dir)
+                    else:
+                        piSeedFile = createNewPiGenClassSeedFile(className, py_file, None, dest_dir)
+                    if piSeedFile:
+                        createdSeeds += 1
                 else:  # piClassGC
                     className = py_file.stem
                     piSeedFile = findPiClassGCSeedFile(py_file)
                     if piSeedFile:
-                        changes = syncPythonClassToSeed(
-                            py_file, piSeedFile, options)
-                    if not piSeedFile and options.get('create_piSeeds', False):
-                        piSeedFile = createNewPiClassGCSeedFile(
-                            className, py_file, None, dest_dir)
-                        if piSeedFile:
-                            createdSeeds += 1
+                        piSeedFile = createNewPiClassGCSeedFile(className, py_file, piSeedFile, dest_dir)
+                    else:
+                        piSeedFile = createNewPiClassGCSeedFile(className, py_file, None, dest_dir)
+                    if piSeedFile:
+                        createdSeeds += 1
 
                 # Validate results if requested
                 if options.get('validate', False) and piSeedFile:
@@ -629,8 +651,7 @@ def syncAllFiles(options: dict):
                     className = filePath.stem
                     piSeedFile = findPiGenClassSeedFile(filePath, dest_dir)
                     if piSeedFile and options.get('create_piSeeds', True):
-                        changes = syncPythonGenClassToSeed(
-                            filePath, piSeedFile)
+                        changes = createNewPiGenClassSeedFile(className, filePath, piSeedFile, dest_dir)
                         if changes:
                             totalChanges += len(changes)
                             if options.get('stats', False):
@@ -638,8 +659,7 @@ def syncAllFiles(options: dict):
                                     f"03 Synced {len(changes)} changes from {filePath.name}", lable.INFO)
                         processedFiles += 1
                     else:
-                        piSeedFile = createNewPiGenClassSeedFile(
-                            className, filePath, None, dest_dir)
+                        piSeedFile = createNewPiGenClassSeedFile(className, filePath, piSeedFile, dest_dir)
                         if piSeedFile:
                             createdSeeds += 1
                         else:
@@ -647,23 +667,22 @@ def syncAllFiles(options: dict):
 
                 else:  # piClassGC
                     className = filePath.stem
-                    piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
-                    if piSeedFile and options.get('create_piSeeds', True):
-                        changes = syncPythonClassToSeed(
-                            filePath, piSeedFile, options)
-                        if changes:
-                            totalChanges += len(changes)
-                            if options.get('stats', False):
-                                printIt(
-                                    f"04.1 Synced {len(changes)} changes from {filePath.name}", lable.INFO)
-                        processedFiles += 1
+                    # piSeedFile = findPiClassGCSeedFile(filePath, dest_dir)
+                    # if piSeedFile and options.get('create_piSeeds', True):
+                    #     changes = syncPythonClassToSeed(
+                    #         filePath, piSeedFile, options)
+                    #     if changes:
+                    #         totalChanges += len(changes)
+                    #         if options.get('stats', False):
+                    #             printIt(
+                    #                 f"04.1 Synced {len(changes)} changes from {filePath.name}", lable.INFO)
+                    #     processedFiles += 1
+                    # else:
+                    piSeedFile = createNewPiClassGCSeedFile(className, filePath, None, dest_dir)
+                    if piSeedFile:
+                        createdSeeds += 1
                     else:
-                        piSeedFile = createNewPiClassGCSeedFile(
-                            className, filePath, None, dest_dir)
-                        if piSeedFile:
-                            createdSeeds += 1
-                        else:
-                            skippedFiles += 1
+                        skippedFiles += 1
 
             except Exception as e:
                 lineNum = f"{e.__traceback__.tb_lineno})" if e.__traceback__ is not None else ""

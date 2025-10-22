@@ -1,3 +1,5 @@
+# piAPIServer functions - synced from existing code
+import logging
 from datetime import datetime
 from hashlib import sha256
 from fastapi import FastAPI, Body, Depends, Request, Response, status, HTTPException
@@ -16,11 +18,11 @@ from pi.piClasses.piPi import PiPi
 from pi.piClasses.piTopic import PiTopic
 from pi.piClasses.piTrie import PiTrie, PiTrieBody, PiTrieNode
 from pi.piClasses.piUser import PiUser, PiUserProfile
-# from pi.piClasses.piReqNewPi import PiReqNewPi
 from pi.piApi.piAPIModel import *
 from pi.piApi.piAuth.piHandler import sign_jwt
 from pi.piApi.piAuth.piBearer import PiJWTBearer
 from re import compile as reCompile
+
 import logging
 
 debugOff = lable.ABORTPRT # ^(.*)(printIt)(.*debugSet\)), $1# printIt$2
