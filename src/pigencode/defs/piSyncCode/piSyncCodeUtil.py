@@ -517,8 +517,8 @@ def findExistingPiSeedFile(filePath: Path, dest_dir: str) -> tuple[Path | None, 
 def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given function definition name (piDefGC)"""
     printIt('findPiDefGCSeedFile', showDefNames03)
+    defName = py_file.stem
     try:
-        defName = py_file.stem
         seedPath = getSeedPath()
         if dest_dir is not None:
             py_file_dir = dest_dir
@@ -558,8 +558,8 @@ def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[
 def findPiGenClassSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given class name (piGenClass)"""
     printIt('findPiGenClassSeedFile', showDefNames03)
+    className = py_file.stem
     try:
-        className = py_file.stem
         seedPath = getSeedPath()
         if dest_dir is not None:
             py_file_dir = dest_dir
@@ -599,8 +599,8 @@ def findPiGenClassSeedFile(py_file: Path, dest_dir: str | None = None) -> Option
 def findPiClassGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[Path]:
     """Find the piSeed file that corresponds to a given class name (piClassGC)"""
     printIt(f'findPiClassGCSeedFile: {str(py_file)}', showDefNames03)
+    className = py_file.stem
     try:
-        className = py_file.stem
         seedPath = getSeedPath()
         if dest_dir is not None:
             py_file_dir = dest_dir
@@ -1293,7 +1293,7 @@ def generateExpectedInitMethod(seedContent: str, className: str) -> str:
         genCode.genProps = False
 
         # Generate the expected __init__ method
-        expectedMethod = genCode.__genInitCodeLines(
+        expectedMethod = genCode._genInitCodeLines(
             1)  # iniLevel=1 for class method
 
         return expectedMethod.strip()
@@ -1849,6 +1849,8 @@ def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, classNa
             standard_assignments, remaining_lines = extractStandardAssignments(
                 postSuperLines, expectedAssignments)
             if remaining_lines:
+                remaining_line = remaining_lines[0].strip()
+                openParentheses = remaining_line.count('(') - remaining_line.count(')')
                 while openParentheses:
                     remaining_line = remaining_lines.pop(0).strip()
                     openParentheses = openParentheses + remaining_line.count('(') - remaining_line.count(')')
@@ -3146,6 +3148,7 @@ EXAMPLES:
     piGenCode syncCode --filter genclass            # Only sync piGenClass files
     piGenCode syncCode --exclude-pattern "test_*"   # Skip test files
     piGenCode syncCode --stats --validate           # Detailed sync with validation
+    piGenCode syncCode --dest_dir                   # Set destination directory for generated files
 
 FILE TYPES:
     class     - Single-class files (piClassGC)

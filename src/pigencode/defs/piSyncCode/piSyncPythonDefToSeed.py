@@ -36,6 +36,7 @@ def createNewPiDefGCSeedFile(defName: str, pythonFile: Path, seed_file: Path | N
         seedPath = getSeedPath()
 
         if seed_file:
+            seedFileName = seed_file.stem + ".pi"
             seedFilePath = seed_file
         else:
             # Get next available number
@@ -93,12 +94,12 @@ piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from e
             for globalCode in def_info['globalCode']:
                 escaped_line = escapeQuotesForPiSeed(globalCode)
                 seedContent += f"piValueA {defName}.piBody:piDefGC:globalCode \"{escaped_line}\"\n"
-            print(seedContent)
+            # print(seedContent)
         # Write the new piSeed file
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
 
-        printIt(f"Created new piDefGC piSeed file: {seedFileName}", lable.INFO)
+        printIt(f"piDefGC piSeed: {seedFilePath}", lable.SAVED)
         return seedFilePath
 
     except Exception as e:

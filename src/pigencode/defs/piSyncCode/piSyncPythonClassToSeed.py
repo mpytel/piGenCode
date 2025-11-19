@@ -254,7 +254,8 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
         # Write the new piSeed file
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
-        printIt(f"Created new piClassGC piSeed file: {seedFileName}", lable.INFO)
+            
+        printIt(f"piClassGC piSeed: {seedFilePath}", lable.SAVED)
         return seedFilePath
 
     except Exception as e:

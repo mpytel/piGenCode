@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 from ..defs.fileIO import getKeyItem, setKeyItem, piGCDirs
 
 # def getSeedPath() -> Path:
@@ -13,6 +14,7 @@ def getSeedPath() -> Path:
     """Get the piSeeds directory path"""
     # seedDirName = "piSeeds"
     seedPath = Path(getKeyItem(piGCDirs[0]))
+
     if seedPath.is_dir():
         writeBasePiSeeds(seedPath)
     else:
@@ -21,6 +23,7 @@ def getSeedPath() -> Path:
     return seedPath
 
 def writeBasePiSeeds(piSeedPath: Path):
+    """Write the base piSeed files to the piSeeds directory"""
 
     piSeeds = {
         "piStruct_piProlog": """# piStruct_piProlog

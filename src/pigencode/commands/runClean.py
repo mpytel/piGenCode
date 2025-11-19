@@ -38,9 +38,6 @@ def runClean(argParse):
             else:
                 exit()
 
-            
-
-
 def get_black_diff(file_path):
     """
     Returns the diff of a Python file after black formatting, as a string.

@@ -251,8 +251,7 @@ piValueA {className}.piBody:piGenClass:headers '# {className} classes - synced f
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
 
-        printIt(
-            f"Created new piGenClass piSeed file: {seedFileName}", lable.INFO)
+        printIt(f"piGenClass piSeed: {seedFilePath}", lable.SAVED)
         return seedFilePath
 
     except Exception as e:
@@ -269,9 +268,9 @@ def syncPythonGenClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
     Returns list of changes made.
     """
 
+    printIt(f'syncPythonGenClassToSeed: {pythonFile.name}', showDefNames)
+    changes = []
     try:
-        printIt(f'syncPythonGenClassToSeed: {pythonFile.name}', showDefNames)
-        changes = []
 
         # Read the Python file
         with open(pythonFile, 'r', encoding='utf-8') as f:
