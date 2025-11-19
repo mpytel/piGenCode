@@ -47,6 +47,6 @@
     "newFile": "New file name"
   },
   "runClean": {
-    "runClean_description": "Command to test the cleanliness of sinking Python source code with genCode results"
+    "runClean_description": "Command to test the cleanliness of syncing Python source code with genCode results"
   }
 }
