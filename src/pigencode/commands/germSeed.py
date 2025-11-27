@@ -2,7 +2,7 @@ import os, traceback
 from re import compile as reCompile
 from pathlib import Path
 from pigencode.classes.argParse import ArgParse
-from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.logIt import printIt, label
 from pigencode.defs.fileIO import getKeyItem, writeRC, piGCDirs
 from pigencode.defs.getSeedPath import getSeedPath
 from pigencode.classes.piGermSeeds import PiGermSeeds, germinateSeeds
@@ -31,12 +31,12 @@ def germSeed(argParse: ArgParse):
                 for classGCFile in piGermSeeds.piClassGCFiles.classGCFilePaths:
                     savedCodeFiles = genCodeFile(str(classGCFile))
                     for savedCodeFile in savedCodeFiles:
-                        printIt(f'{savedCodeFile} generated',lable.INFO)
+                        printIt(f'{savedCodeFile} generated',label.INFO)
                 # Generate code for piDefGC files
                 for defGCFile in piGermSeeds.piDefGCFiles.defGCFilePaths:
                     savedCodeFiles = genCodeFile(str(defGCFile))
                     for savedCodeFile in savedCodeFiles:
-                        printIt(f'{savedCodeFile} generated',lable.INFO)
+                        printIt(f'{savedCodeFile} generated',label.INFO)
         else:
             while argIndex < len(theArgs):
                 fileName = theArgs[argIndex]
@@ -46,18 +46,18 @@ def germSeed(argParse: ArgParse):
                     for classGCFile in piGermSeeds.piClassGCFiles.classGCFilePaths:
                         savedCodeFiles = genCodeFile(str(classGCFile))
                         for savedCodeFile in savedCodeFiles:
-                            printIt(f'{savedCodeFile} generated',lable.INFO)
+                            printIt(f'{savedCodeFile} generated',label.INFO)
                     # Generate code for piDefGC files
                     for defGCFile in piGermSeeds.piDefGCFiles.defGCFilePaths:
                         savedCodeFiles = genCodeFile(str(defGCFile))
                         for savedCodeFile in savedCodeFiles:
-                            printIt(f'{savedCodeFile} generated',lable.INFO)
+                            printIt(f'{savedCodeFile} generated',label.INFO)
                 argIndex += 1
         if piGermSeeds:
             for piGermSeed in piGermSeeds.piClassGCFiles.classGCFilePaths:
-                printIt(f'classGCFile created: {piGermSeed}',lable.INFO)
+                printIt(f'classGCFile created: {piGermSeed}',label.INFO)
             for piGermSeed in piGermSeeds.piDefGCFiles.defGCFilePaths:
-                printIt(f'defGCFile created: {piGermSeed}',lable.INFO)
+                printIt(f'defGCFile created: {piGermSeed}',label.INFO)
 
 def getSeedFileName(fileIntStr) -> str:
     fileName = ''
@@ -88,7 +88,7 @@ def germAllSeedFiles(verbose=True) -> PiGermSeeds:
                 seedFile = str(seedPath.joinpath(fileName))
                 piGermSeeds = germSeedFile(seedFile, verbose)
     else:
-        printIt(f'No piSeed Directory founc: {seedPath}',lable.FileNotFound)
+        printIt(f'No piSeed Directory founc: {seedPath}',label.FileNotFound)
     return piGermSeeds
 
 def germSeedFile(fileName: str, verbose=True) -> PiGermSeeds:
@@ -100,14 +100,14 @@ def germSeedFile(fileName: str, verbose=True) -> PiGermSeeds:
             seedCount = piGermSeeds.seeds.seedCount
             if verbose:
                 printIt(
-                    f'{seedCount} seeds germinated from: {seedFilePath.name}', lable.INFO)
+                    f'{seedCount} seeds germinated from: {seedFilePath.name}', label.INFO)
         else:
-            printIt(fileName, lable.FileNotFound)
+            printIt(fileName, label.FileNotFound)
             exit()
     except IndexError as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(f'germSeedFile:\n{tb_str}', lable.ERROR)
-        printIt('File name required', lable.IndexError)
+        printIt(f'germSeedFile:\n{tb_str}', label.ERROR)
+        printIt('File name required', label.IndexError)
     return piGermSeeds
 
 '''

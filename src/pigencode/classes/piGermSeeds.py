@@ -2,7 +2,7 @@ import os, datetime, copy, json, re, traceback
 from ..defs.fileIO import readRC, writeRC
 from ..defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles, PiGenClassFiles
 from ..defs.piID import getPiMD5, getPiID
-from ..defs.logIt import logIt, printIt, germDbug, lable, cStr, color
+from ..defs.logIt import logIt, printIt, germDbug, label, cStr, color
 from .piSeeds import PiSeeds, PiSeedTypes, piSeedTitelSplit
 from .piSeedRegistry import pi_seed_registry, register_pi_seed_handler
 
@@ -30,7 +30,7 @@ class PiGermSeeds():
             lastSeed = False
             while self.seeds.currPi.piType:
                 if self.seeds.currPi.piSeedType in PiSeedTypes:
-                    if dprint00: printIt(f'Processing piSeed type: {self.seeds.currPi.piSeedType}', lable.DEBUG)
+                    if dprint00: printIt(f'Processing piSeed type: {self.seeds.currPi.piSeedType}', label.DEBUG)
                     self.germinateSeeds()
                     if lastSeed: break # last seed run.
                     if self.seeds.nextPi == None:
@@ -44,17 +44,17 @@ class PiGermSeeds():
                         self.germinate_any()
         except piPiStrucNotFound: raise piPiStrucNotFound(f'{self.seeds.currPi.piTitle} is not defined. Line: {self.seeds.currPi.lineNumber}')
         except piDictLevelError:
-            printIt(f'piDictLevelError: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'piDictLevelError: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             pass
         except StopIteration:
-            printIt("__init__", "StopIteration", lable.DEBUG)
+            printIt("__init__", "StopIteration", label.DEBUG)
             pass
         except Exception as e:
             if self.seeds.currPi == None: lineNumber = self.seeds.seedCount
             else: lineNumber = self.seeds.currPi.lineNumber
-            printIt(f'__init__\nlineNumber: {lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'__init__\nlineNumber: {lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
     def germinateSeeds(self):
         dprint00 = False
@@ -73,27 +73,27 @@ class PiGermSeeds():
                             self.germinate_pi()
                         elif self.seeds.currPi.piSeedType == "piIndexer":
                             # piIndexer might need special handling - for now, skip
-                            printIt(f"piIndexer seed type not yet implemented: {self.seeds.currPi.piTitle}", lable.WARN)
+                            printIt(f"piIndexer seed type not yet implemented: {self.seeds.currPi.piTitle}", label.WARN)
                             self.seeds.next()
                         else:
-                            printIt(f"Unknown piSeed type: {self.seeds.currPi.piSeedType}", lable.ERROR)
+                            printIt(f"Unknown piSeed type: {self.seeds.currPi.piSeedType}", label.ERROR)
                             self.seeds.next()
                     if self.seeds.nextPi == None: break
                 else: break
 
         except piPiStrucNotFound: raise piPiStrucNotFound(f'{self.seeds.currPi.piTitle} is not defined. Line: {self.seeds.currPi.lineNumber}')
         except piDictLevelError:
-            printIt(f'piDictLevelError: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'piDictLevelError: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             pass
         except StopIteration:
-            printIt("germinateSeeds", "StopIteration", lable.DEBUG)
+            printIt("germinateSeeds", "StopIteration", label.DEBUG)
             pass
         except Exception as e:
             if self.seeds.currPi == None: lineNumber = self.seeds.seedCount
             else: lineNumber = self.seeds.currPi.lineNumber
-            printIt(f'germinateSeeds\nlineNumber: {lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinateSeeds\nlineNumber: {lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
     def germinate_pi(self):
         #print(self.seeds.currPi)
@@ -111,7 +111,7 @@ class PiGermSeeds():
         if self.seeds.currPi.piType:
             targetPi = self.getTargetPi(self.seeds.currPi.piType)
             if not targetPi:
-                printIt(f'pi used for {self.seeds.currPi.piType}: line {self.seeds.currPi.lineNumber}',lable.DEBUG)
+                printIt(f'pi used for {self.seeds.currPi.piType}: line {self.seeds.currPi.lineNumber}',label.DEBUG)
                 targetPi = self.getTargetPi("pi")
             targetPi["piBase"]["piType"] = self.seeds.currPi.piType
             targetPi["piBase"]["piTitle"] = self.seeds.currPi.piTitle
@@ -149,19 +149,19 @@ class PiGermSeeds():
                         lastSeed = True # Run the last piSeed
 
         except piIncorectPiValuePath:
-            printIt(f'{self.seeds.currPi.piTitle}',lable.IncorectPiValuePath)
+            printIt(f'{self.seeds.currPi.piTitle}',label.IncorectPiValuePath)
             print('here00')
             exit()
         except piPiStrucNotFound as e1:
-            printIt(f"germinate_piClassGC: '{cStr(str(e1),color.GREEN)}'", lable.DEBUG)
+            printIt(f"germinate_piClassGC: '{cStr(str(e1),color.GREEN)}'", label.DEBUG)
             raise piPiStrucNotFound
         except StopIteration:
             # print("germinate_piClassGC", "StopIteration")
             pass
         except Exception as e:
-            printIt(f'germinate_piClassGC\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinate_piClassGC\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
     def germinate_piDefGC(self):
         # print('in germinate_piDefGC"',self.seeds.currPi)
@@ -190,19 +190,19 @@ class PiGermSeeds():
                         lastSeed = True # Run the last piSeed
 
         except piIncorectPiValuePath:
-            printIt(f'{self.seeds.currPi.piTitle}',lable.IncorectPiValuePath)
+            printIt(f'{self.seeds.currPi.piTitle}',label.IncorectPiValuePath)
             print('here01')
             exit()
         except piPiStrucNotFound:
-            printIt("germinate_piDefGC", lable.DEBUG)
+            printIt("germinate_piDefGC", label.DEBUG)
             raise piPiStrucNotFound
         except StopIteration:
             # print("germinate_piDefGC", "StopIteration")
             pass
         except Exception as e:
-            printIt(f'germinate_piDefGC\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinate_piDefGC\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
 
     def germinate_piGenClass(self):
@@ -232,19 +232,19 @@ class PiGermSeeds():
                         lastSeed = True # Run the last piSeed
 
         except piIncorectPiValuePath:
-            printIt(f'{self.seeds.currPi.piTitle}', lable.IncorectPiValuePath)
+            printIt(f'{self.seeds.currPi.piTitle}', label.IncorectPiValuePath)
             print('here02')
             exit()
         except piPiStrucNotFound:
-            printIt("germinate_piGenClass", lable.DEBUG)
+            printIt("germinate_piGenClass", label.DEBUG)
             raise piPiStrucNotFound
         except StopIteration:
             # print("germinate_piGenClass", "StopIteration")
             pass
         except Exception as e:
-            printIt(f'germinate_piGenClass\\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinate_piGenClass\\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
 
     def germinate_piValueA(self):
@@ -303,19 +303,19 @@ class PiGermSeeds():
                 if self.seeds.nextPi == None:
                     lastSeed = True # Run the last piSeed
         except piIncorectPiValuePath:
-            printIt(f'{self.seeds.currPi.piTitle}',lable.IncorectPiValuePath)
+            printIt(f'{self.seeds.currPi.piTitle}',label.IncorectPiValuePath)
             print('here03')
             exit()
         except piPiStrucNotFound:
-            printIt("germinate_piValueA", lable.DEBUG)
+            printIt("germinate_piValueA", label.DEBUG)
             raise piPiStrucNotFound
         except StopIteration:
             # print("germinate_piValueA", "StopIteration")
             pass
         except Exception as e:
-            printIt(f'germinate_piValueA\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinate_piValueA\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
     def germinate_piValuesSetD(self):
         self.germinate_piValue()
@@ -347,7 +347,7 @@ class PiGermSeeds():
                 else:
                     assert self.seeds.currPi.piType == PiSeedTypes[2]
                     # populate with provided defaults
-                    if dprint00: printIt("debug05\n", str(self.seeds.currPi), lable.DEBUG)
+                    if dprint00: printIt("debug05\n", str(self.seeds.currPi), label.DEBUG)
                     self.germinatePiValues()
                     #print(self.seeds.currPi)
                     if self.seeds.nextPi == None:
@@ -364,13 +364,13 @@ class PiGermSeeds():
                         break
 
         except piPiStrucNotFound:
-            printIt("germinate_piValue", lable.DEBUG)
+            printIt("germinate_piValue", label.DEBUG)
             raise piPiStrucNotFound
         # except piPiStrucNotFound:
-        #     printIt(f'{self.seeds.currPi.piTitle} is not defined.',lable.ERROR)
+        #     printIt(f'{self.seeds.currPi.piTitle} is not defined.',label.ERROR)
         #     exit()
         except piDictLevelError:
-            printIt(f'piDictLevelError: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'piDictLevelError: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             pass
         except StopIteration:
             # print("germinate_piValue", "StopIteration")
@@ -378,9 +378,9 @@ class PiGermSeeds():
         except Exception as e:
             if self.seeds.currPi == None: lineNumber = self.seeds.seedCount
             else: lineNumber = self.seeds.currPi.lineNumber
-            printIt(f'germinate_piValue\nlineNumber: {lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinate_piValue\nlineNumber: {lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
     def chk4ExDef(self, piValue: str) -> str | dict:
         '''
@@ -405,7 +405,7 @@ class PiGermSeeds():
                         rtnValue = aDict
             else:
                 printIt(
-                    f'piSeedKey titles can not be numaric: {piExDefPITitle}\npiValue',lable.ERROR)
+                    f'piSeedKey titles can not be numaric: {piExDefPITitle}\npiValue',label.ERROR)
         return rtnValue
     def getTargetPi(self, piTitle, source = "") -> dict:
         '''
@@ -481,9 +481,9 @@ class PiGermSeeds():
                     #piDictPrint(targetPi)
                     aDict[structDictKeys[lastIndex]] = piValue
                     # except Exception as e:
-                    #     printIt(f'germinatePiValues\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+                    #     printIt(f'germinatePiValues\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
                     #     tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-                    #     printIt(tb_str,lable.ERROR)
+                    #     printIt(tb_str,label.ERROR)
                     #     exit()
                     ##### ****** Best end, same next loop control. !!!!!
                     if self.seeds.nextPi != None:
@@ -493,19 +493,19 @@ class PiGermSeeds():
                 self.piStructs[piTitle] = targetPi
 
         except piIncorectPiValuePath:
-            printIt(f'germinatePiValues: {self.seeds.currPi.piTitle}, line {self.seeds.currPi.lineNumber}',lable.IncorectPiValuePath)
+            printIt(f'germinatePiValues: {self.seeds.currPi.piTitle}, line {self.seeds.currPi.lineNumber}',label.IncorectPiValuePath)
             print('here04')
             exit()
         except piPiStrucNotFound:
-            printIt("germinate_piValues:", self.seeds.currPi.piTitle, lable.DEBUG)
+            printIt("germinate_piValues:", self.seeds.currPi.piTitle, label.DEBUG)
             raise piPiStrucNotFound
         except StopIteration:
             # print("germinatePiValues", "StopIteration")
             pass
         except Exception as e:
-            printIt(f'germinatePiValues\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinatePiValues\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
 
     def germinate_piStruct(self):
@@ -517,13 +517,13 @@ class PiGermSeeds():
                 processStruct = True
                 if dprint01: print(self.seeds.currPi)
                 if self.seeds.currPi.piType != PiSeedTypes[0]:
-                    if dprint00: printIt("test01",lable.DEBUG)
+                    if dprint00: printIt("test01",label.DEBUG)
                     processStruct = False
                 elif self.seeds.nextPi == None:
-                    if dprint00: printIt("test02",lable.DEBUG)
+                    if dprint00: printIt("test02",label.DEBUG)
                     processStruct = False
                 elif self.seeds.nextPi.piType == PiSeedTypes[0]:
-                    if dprint00: printIt("test03",lable.DEBUG)
+                    if dprint00: printIt("test03",label.DEBUG)
                     processStruct = False
                 elif self.seeds.nextPi.piSeedType != PiSeedTypes[0]: processStruct = False
                 if processStruct: # Start of structure found
@@ -558,15 +558,15 @@ class PiGermSeeds():
                 if self.seeds.currPi.piSeedType == PiSeedTypes[0]: self.seeds.next()
 
         except piDictLevelError:
-            printIt(f'piDictLevelError: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'piDictLevelError: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             pass
         except StopIteration:
-            #printIt(f'StopIteration: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            #printIt(f'StopIteration: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             raise StopIteration
         except Exception as e:
-            printIt(f'germinate_piStruct\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinate_piStruct\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
     def germinateSeedStructure(self):
         dprint00 = False
@@ -622,9 +622,9 @@ class PiGermSeeds():
                         self.appendDict(aDict, currDepth)
                         #piDictPrint(targetPi)
                     except Exception as e:
-                        printIt(f'germinateSeedStructure\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+                        printIt(f'germinateSeedStructure\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
                         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-                        printIt(tb_str,lable.ERROR)
+                        printIt(tb_str,label.ERROR)
                         exit()
                 else:
                     raise piPiStrucNotFound
@@ -640,9 +640,9 @@ class PiGermSeeds():
         except StopIteration:
             pass
         except Exception as e:
-            printIt(f'germinateSeedStructure\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinateSeedStructure\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
     def germinateDict(self, theDict, baseDepth):
         dprint02 = False
@@ -701,9 +701,9 @@ class PiGermSeeds():
         except StopIteration:
             pass
         except Exception as e:
-            printIt(f'germinateDict\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinateDict\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
     def germinateList(self, theList, baseDepth):
         dprint02 = False
@@ -739,7 +739,7 @@ class PiGermSeeds():
                         theList.append(aList)
                     elif self.seeds.currPi.piSeedKeyType == "C":
                         if dprint02: germDbug("L", self.seeds.currPi, self.seeds.nextPi)
-                        printIt(f'Case when list containes a cloned dictionary?',lable.DEBUG)
+                        printIt(f'Case when list containes a cloned dictionary?',label.DEBUG)
                         exit()
                         #theList.append(self.cloneDict(aList))
                     elif self.seeds.currPi.piSeedKeyType == "A":
@@ -764,9 +764,9 @@ class PiGermSeeds():
         except StopIteration:
             pass
         except Exception as e:
-            printIt(f'germinateList\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'germinateList\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
     def appendDict(self, theDict, baseDepth):
         dprint02 = False
@@ -835,9 +835,9 @@ class PiGermSeeds():
         except StopIteration:
             pass
         except Exception as e:
-            printIt(f'appendDict\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',lable.ERROR)
+            printIt(f'appendDict\nlineNumber: {self.seeds.currPi.lineNumber} in {self.seeds.seedFile}',label.ERROR)
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(tb_str,lable.ERROR)
+            printIt(tb_str,label.ERROR)
             exit()
     def cloneDict(self, theDict: dict):
         cloneFromDisk = readPiStruc(self.seeds.currPi.piTitle)

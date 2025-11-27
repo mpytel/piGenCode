@@ -2,7 +2,7 @@ import os, json, ast, traceback
 import inspect
 from pathlib import Path
 from ..defs.fileIO import getKeyItem, piGCDirs, readJson, piLoadPiClassGCJson
-from ..defs.logIt import logIt, printIt, lable, getCodeFile, getCodeLine
+from ..defs.logIt import logIt, printIt, label, getCodeFile, getCodeLine
 
 class PiGenCode():
     def __init__(self):
@@ -123,7 +123,7 @@ class PiGenCode():
                     #     supperParameters += [p for p in parameters if not p in supperParameters]
                     # else: raise Exception
                 except:
-                    printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(self.piClassDir))),lable.ERROR)
+                    printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(self.piClassDir))),label.ERROR)
                     printIt('Check title case for PiClass')
                     exit()
             for param in self.initArguments:
@@ -224,7 +224,7 @@ class PiGenCode():
                             #     if not aPiFilePI: raise Exception
                             # except:
                             #     printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(
-                            #         self.piClassDir))), lable.ERROR)
+                            #         self.piClassDir))), label.ERROR)
                             #     printIt('Check title case for PiClass')
                             #     exit()
                             parameters = self.__getInheritClassArgs(InheritKey, self.piClassDir)
@@ -251,7 +251,7 @@ class PiGenCode():
                                 #     if not aPiFilePI: raise Exception
                                 # except:
                                 #     printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(
-                                #         self.piClassDir))), lable.ERROR)
+                                #         self.piClassDir))), label.ERROR)
                                 #     printIt('Check title case for PiClass')
                                 #     exit()
                                 parameters = self.__getInheritClassArgs(paramType, self.piClassDir)
@@ -389,11 +389,11 @@ class PiGenCode():
             
 
             except Exception as e:
-                printIt('piGenCode._genJsonCodeLines()',lable.ERROR)
+                printIt('piGenCode._genJsonCodeLines()',label.ERROR)
                 tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
                 print(tb_str)
             # except as e:
-            #     printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(self.piClassDir))),lable.ERROR)
+            #     printIt(' '.join((getCodeFile(), self.piClassName, f'InheritKey({getCodeLine()}):', InheritKey, str(self.piClassDir))),label.ERROR)
             #     printIt('Check title case for PiClass')
             #     exit()
 
@@ -593,7 +593,7 @@ class PiGenCode():
                         rtnLines += f',\n{indent*(iniLevel)}{param}: {paramType} = ' + '{}'
                 else:
                     pass
-                    # printIt(f'{param} {paramType} from {self.PiFileName} not defined01.',lable.ERROR)
+                    # printIt(f'{param} {paramType} from {self.PiFileName} not defined01.',label.ERROR)
             iniLevel -= 1
             rtnLines += f',\n{indent*(iniLevel)}):\n'
         else:
@@ -684,7 +684,7 @@ class PiGenCode():
                     # remove last comma-=space and add newline
                     rtnLines = rtnLines[:-2] + '\n'
                 else:
-                    printIt('No piClass specified for fromPiClasses.',lable.ERROR)
+                    printIt('No piClass specified for fromPiClasses.',label.ERROR)
             haveImports = True
         if len(self.rawFromImports) > 0:
             for rawFromImportStr in self.rawFromImports:
@@ -694,7 +694,7 @@ class PiGenCode():
         if len(self.globals) > 0:
             for aGlobal in self.globals:
                 globalType = type(self.globals[aGlobal])
-                #printIt(str(globalType),lable.DEBUG)
+                #printIt(str(globalType),label.DEBUG)
                 if globalType == str:
                     # Check if this is a full assignment (contains variable name and type annotation)
                     globalValue = self.globals[aGlobal]
@@ -732,7 +732,7 @@ class PiGenCode():
                         rtnLines += f'{aGlobal} = []\n'
                 else:
                     printIt(f'{aGlobal} = {json.dumps(str(self.globals[aGlobal]),indent=len(indent))}')
-                    printIt(f'Incorrct type {str(globalType)} for {self.globals[aGlobal]}.',lable.ERROR)
+                    printIt(f'Incorrct type {str(globalType)} for {self.globals[aGlobal]}.',label.ERROR)
                 rtnLines += '\n'
         return rtnLines
     def _genBellowClassLines(self) -> str:
@@ -823,9 +823,9 @@ class PiGenCode():
         fileName = os.path.join(self.piClassDir, f"{baseFileName}.py")
 
         if os.path.isfile(fileName):
-            if verbose: printIt(f'{fileName}',lable.REPLACED)
+            if verbose: printIt(f'{fileName}',label.REPLACED)
         else:
-            if verbose: printIt(f'{fileName}',lable.SAVED)
+            if verbose: printIt(f'{fileName}',label.SAVED)
         with open(fileName, 'w') as f:
             f.write(piClassLines)
 
@@ -838,7 +838,7 @@ class PiGenCode():
     def _genPiClass(self, piJsonFileName, verbose = False) -> None:
         self.pi_piClassGC = readJson(piJsonFileName)
         self.PiFileName = piJsonFileName
-        # printIt(f'piJsonFileName: {piJsonFileName}',lable.WARN)
+        # printIt(f'piJsonFileName: {piJsonFileName}',label.WARN)
         self.__setPiPiGCAtters()
         self.__setPiClassDir()
         piClassLines = self._genClassLines()
@@ -899,7 +899,7 @@ class PiGenCode():
         lowerPiClassName = PiClassName[:2].lower() + PiClassName[2:]
         # look in class file for listm of parametersm being inharited as children of paramType
         pythonFile = Path(piClassGCDir).joinpath(lowerPiClassName + '.py')
-        #printIt(f'piLoadPiClassGCJson fileName: {str(pythonFile)}', lable.DEBUG)
+        #printIt(f'piLoadPiClassGCJson fileName: {str(pythonFile)}', label.DEBUG)
         init_args = {}
         if pythonFile.is_file():
             with open(pythonFile, 'r', encoding='utf-8') as f:

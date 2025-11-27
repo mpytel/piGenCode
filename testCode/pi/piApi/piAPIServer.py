@@ -8,7 +8,7 @@ from typing import Annotated
 from pi.defs.piFileIO import getKeyItem
 from pi.defs.piTouch import isPiID
 from pathlib import Path
-from pi.defs.logIt import printIt, lable
+from pi.defs.logIt import printIt, label
 from pi.classes.piCurrentIndexer import PiCurrentIndexer
 from pi.piClasses.piPiClasses import PiPiClasses
 from pi.piWords.piWords import isWord
@@ -25,8 +25,8 @@ from re import compile as reCompile
 
 import logging
 
-debugOff = lable.ABORTPRT # ^(.*)(printIt)(.*debugSet\)), $1# printIt$2
-debugOn = lable.DEBUG
+debugOff = label.ABORTPRT # ^(.*)(printIt)(.*debugSet\)), $1# printIt$2
+debugOn = label.DEBUG
 debugSet = debugOff
 #debugSet = debugOn
 
@@ -181,8 +181,8 @@ def getCurrPis(piType: str = "list") -> list[PI]:
     if piType == "list":
         outPis = piCurrentIndexer.getLatestPiList4CurrSubject(numOfPis=100)
         #outPis = piCurrentIndexer.getLatestPiList(numOfPis=100)
-        # if outPis: printIt(f'len(outPis): {len(outPis)}',lable.DEBUG)
-        # else: printIt(f'outPis: None',lable.DEBUG)
+        # if outPis: printIt(f'len(outPis): {len(outPis)}',label.DEBUG)
+        # else: printIt(f'outPis: None',label.DEBUG)
         # outPis = piCurrentIndexer.getLatestPiList(numOfPis=100)
     else:
         # here is the foced truncation of s from plural form.
@@ -195,7 +195,7 @@ def getCurrPis(piType: str = "list") -> list[PI]:
                     pi = piCurrentIndexer.piFromLink(piFilePath)[0]
                     outPis.append(pi.json())
         else:
-            printIt(f'\'{piType}\' is not a type of pi.',lable.INFO)
+            printIt(f'\'{piType}\' is not a type of pi.',label.INFO)
     return outPis
 def getTypeID(piType: str, currPiIndexer: PiIndexerBM) -> str:
     piCurrentIndexer = PiCurrentIndexer()
@@ -281,7 +281,7 @@ async def add_piUser(piUserBase: PiUserBaseBM, request: Request):
         piUserProfile = PiUserProfile(**piUserBase.piUserProfile.model_dump())
         newPiUser: PiUser = piCurrentIndexer.createNewUser(piUserBase.piTitle,piUserBase.piSD,piUserProfile)
     if newPiUser:
-        printIt(f'{newPiUser.piBase.piType}, {newPiUser.piBase.piTitle} ({newPiUser.piID})', lable.NewPi)
+        printIt(f'{newPiUser.piBase.piType}, {newPiUser.piBase.piTitle} ({newPiUser.piID})', label.NewPi)
         printIt(f'{newPiUser.piIndexer}',debugSet)
         piCurrentIndexer.setCurrentIndexer(newPiUser.piBase.piType,newPiUser.piBase.piTitle)
         newPiUser = newPiUser.json()
@@ -319,7 +319,7 @@ async def piAPIPost(piBase: PiBaseBM, request: Request, response: Response):
     client_host = request.client.host
     newPiPi = None
     dashStr = "_"* 50
-    printIt(f'{dashStr}',lable.INFO)
+    printIt(f'{dashStr}',label.INFO)
     if piBase.piSD: # Add new pi or change the currPi
         # print('piAPIPost',piBase)
         if piBase.piType in piCurrentIndexer.piPiClasses.piIndexerTypes[0:2]: # user and realm are immutable using pi post
@@ -336,7 +336,7 @@ async def piAPIPost(piBase: PiBaseBM, request: Request, response: Response):
                 piCurrentIndexer.setCurrentIndexer(newPiPi.piBase.piType,newPiPi.piBase.piTitle)
                 #print('currIndexerAsTitels_API',str(piCurrentIndexer.currIndexerAsTitels()))
                 piAPILogNewPi(newPiPi.piBase.piType,newPiPi.piBase.piTitle,newPiPi.piBase.piSD)
-                printIt(f'{newPiPi.piBase.piType}, {newPiPi.piBase.piTitle} ({newPiPi.piID})', lable.NewPi)
+                printIt(f'{newPiPi.piBase.piType}, {newPiPi.piBase.piTitle} ({newPiPi.piID})', label.NewPi)
             else:
                 raise HTTPException(
                     status_code=status.HTTP_302_FOUND,
@@ -349,7 +349,7 @@ async def piAPIPost(piBase: PiBaseBM, request: Request, response: Response):
             newPiPi = piCurrentIndexer.reqNewPi(thePiBase.piType, thePiBase.piTitle, thePiBase.piSD)
             if newPiPi:
                 piAPILogNewPi(newPiPi.piBase.piType,newPiPi.piBase.piTitle,newPiPi.piBase.piSD)
-                printIt(f'{newPiPi.piBase.piType}, {newPiPi.piBase.piTitle} ({newPiPi.piID})', lable.NewPi)
+                printIt(f'{newPiPi.piBase.piType}, {newPiPi.piBase.piTitle} ({newPiPi.piID})', label.NewPi)
                 piAPILogInfo(f'Post: {client_host}')
             else:
                 raise HTTPException(
@@ -378,7 +378,7 @@ async def piAPIPost(piBase: PiBaseBM, request: Request, response: Response):
                 newPiPi = currPis[0]
                 response.status_code = status.HTTP_202_ACCEPTED
                 piAPILogNewPi(newPiPi.piBase.piType,newPiPi.piBase.piTitle,'')
-                printIt(f'Current {newPiPi.piBase.piType} set to: {newPiPi.piBase.piTitle}',lable.INFO)
+                printIt(f'Current {newPiPi.piBase.piType} set to: {newPiPi.piBase.piTitle}',label.INFO)
             else:
                 response.status_code = status.HTTP_202_ACCEPTED
                 # raise HTTPException(

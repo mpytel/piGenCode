@@ -1,6 +1,6 @@
 from re import compile
 from getpass import getpass
-from pi.defs.logIt import printIt, lable, cStr, color
+from pi.defs.logIt import printIt, label, cStr, color
 from pi.defs.piFileIO import piAPIURL
 from fastapi import status
 import requests as req
@@ -35,7 +35,7 @@ def logedIn(piCurrentIndexer) -> dict[str, str]:
     piAuthHeader = {"Authorization": f"Bearer {piCurrentIndexer.getUserToken}"}
     res = req.get(theURL,headers=piAuthHeader)
     if res.status_code == status.HTTP_200_OK:
-        printIt(f'user {cStr(piCurrentIndexer.User.piBase.piTitle,color.UNDERLINE)} loged in', lable.INFO,lable.ABORTPRT)
+        printIt(f'user {cStr(piCurrentIndexer.User.piBase.piTitle,color.UNDERLINE)} loged in', label.INFO,label.ABORTPRT)
         return piAuthHeader
     elif res.status_code == status.HTTP_403_FORBIDDEN:
         tryTimes = 0
@@ -57,16 +57,16 @@ def logedIn(piCurrentIndexer) -> dict[str, str]:
                         return {"Authorization": f"Bearer {tempStr}"}
                     except: pass
                 tryTimes += 1
-                printIt(f'{res.status_code} ({tryTimes} of {maxTrys})', lable.WARN)
+                printIt(f'{res.status_code} ({tryTimes} of {maxTrys})', label.WARN)
             else:
                 tryTimes += 1
-                printIt(f'{userName} not found ({tryTimes} of {maxTrys})', lable.WARN)
+                printIt(f'{userName} not found ({tryTimes} of {maxTrys})', label.WARN)
     else:
-        printIt(res.status_code, lable.ERROR)
+        printIt(res.status_code, label.ERROR)
     return {}
 
 def piDupPiTitleZfill(piType: str, piTitle: str, piCurrentIndexer):
-    # printIt(f'piTitle: {piTitle}',lable.DEBUG)
+    # printIt(f'piTitle: {piTitle}',label.DEBUG)
     chkZfill = reCompile(r"([a-zA-Z]+)\s*([0-9]+)")
     fileMatch = chkZfill.findall(piTitle)
     rtnStr = ''
@@ -112,7 +112,7 @@ def piDupPiTitleZfill(piType: str, piTitle: str, piCurrentIndexer):
                                 maxIndex = fileIndex
             if maxIndex < int((str(9)*zWidth)):
                 rtnStr =  stemStr + str(maxIndex+1).zfill(zWidth)
-            else: printIt(f'Maximum zFill reached: {maxIndex}',lable.INFO)
+            else: printIt(f'Maximum zFill reached: {maxIndex}',label.INFO)
     return rtnStr
 
 def piJoinStr(strList: list) -> str:

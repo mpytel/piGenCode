@@ -4,7 +4,7 @@ from traceback import format_exception
 from pathlib import Path
 from json import load, loads, dump, dumps, JSONDecodeError
 from re import compile as reCompile
-from .logIt import logIt, printIt, lable
+from .logIt import logIt, printIt, label
 from ..classes.piSeeds import PiSeedTypes, PiSeed, PiSeedTypeREs
 from ..defs.fileIO import readRC, writeRC, getKeyItem, setKeyItem, piGenCodeDirs, piGCDirs
 from ..defs.piID import getPiIDs
@@ -15,7 +15,7 @@ def readJson(fileName: str, verbose=True) -> dict:
         with open(fileName, 'r') as rf:
             rtnDict = load(rf)
     except FileNotFoundError:
-        if verbose: printIt("piGen|readJson -", fileName,lable.FileNotFound)
+        if verbose: printIt("piGen|readJson -", fileName,label.FileNotFound)
     except JSONDecodeError as e:
         tb_str = ''.join(format_exception(None, e, e.__traceback__))
     return rtnDict
@@ -27,10 +27,10 @@ def writeJson(fileName: str, aDict: dict, verbose=True) -> bool:
             dump(aDict, wf, indent=2)
         rtnBool = True
     except FileNotFoundError:
-        if verbose: printIt("piGen|writeJson -", fileName,lable.FileNotFound)
+        if verbose: printIt("piGen|writeJson -", fileName,label.FileNotFound)
     except JSONDecodeError as e:
         tb_str = ''.join(format_exception(None, e, e.__traceback__))
-        printIt(tb_str,lable.ERROR)
+        printIt(tb_str,label.ERROR)
     return rtnBool
 
 def getPiStrucFileName(baseTitle: str) -> str:
@@ -46,7 +46,7 @@ def getPiStrucFileName(baseTitle: str) -> str:
 def writePiStruc(baseTitle: str, aDict: dict, verbose=True) -> bool:
     piStrucFileName = getPiStrucFileName(baseTitle)
     rtnBool = writeJson(piStrucFileName, aDict, verbose)
-    if rtnBool and verbose: printIt(piStrucFileName,lable.SAVED)
+    if rtnBool and verbose: printIt(piStrucFileName,label.SAVED)
     return rtnBool
 
 def readPiStruc(baseTitle: str, verbose=True) -> dict:
@@ -78,7 +78,7 @@ def writePiDefault(baseTitle: str, aDict: dict, verbose=True) -> bool:
         aDict["piTouch"]["piModificationDate"] = now
         aDict["piTouch"]["piTouchDate"] = now
     rtnBool = writeJson(piStrucFileName, aDict, verbose)
-    if rtnBool and verbose: printIt(piStrucFileName,lable.SAVED)
+    if rtnBool and verbose: printIt(piStrucFileName,label.SAVED)
     return rtnBool
 
 def readPiDefault(baseTitle: str, verbose=True) -> dict:
@@ -116,7 +116,7 @@ def writePi(aDict: dict, fileName = '', verbose=True) -> bool:
        piFileName = getPiFileName(aDict)
     rtnBool = writeJson(piFileName, aDict, verbose)
     if rtnBool and verbose:
-        printIt(piFileName, lable.SAVED)
+        printIt(piFileName, label.SAVED)
     return rtnBool
 
 def readPi(thePi: PiSeed, verbose=True) -> dict:
@@ -126,7 +126,7 @@ def readPi(thePi: PiSeed, verbose=True) -> dict:
 
 def printDict(theDict, piDictTitle="no title"):
     ps = dumps(theDict, indent=2)
-    printIt(f'{piDictTitle}:\n{ps}', lable.INFO)
+    printIt(f'{piDictTitle}:\n{ps}', label.INFO)
 
 
 def piLoadPiClassGCJson(PiClassName: str, piClassGCDir: str) -> dict:
@@ -134,7 +134,7 @@ def piLoadPiClassGCJson(PiClassName: str, piClassGCDir: str) -> dict:
     lowerPiClassName = PiClassName[:2].lower() + PiClassName[2:]
     # look in class file for listm of parametersm being inharited as children of paramType
     fileName = Path(piClassGCDir).joinpath(lowerPiClassName + '.py')
-    # printIt(f'piLoadPiClassGCJson fileName: {fileName}', lable.DEBUG)
+    # printIt(f'piLoadPiClassGCJson fileName: {fileName}', label.DEBUG)
     if fileName.is_file():
         piStartStr = f'{PiClassName}_PI = '
         piJsonStr = ''
@@ -145,10 +145,10 @@ def piLoadPiClassGCJson(PiClassName: str, piClassGCDir: str) -> dict:
                 else:
                     if piStartStr in line:
                         piJsonStr = line[len(piStartStr):]
-        printIt(f'piJsonStr: {piJsonStr}', lable.ABORTPRT)
+        printIt(f'piJsonStr: {piJsonStr}', label.ABORTPRT)
         rtnJson = loads(piJsonStr)
     else:
-        printIt('piLoadPiClassGCJson', fileName, lable.FileNotFound)
+        printIt('piLoadPiClassGCJson', fileName, label.FileNotFound)
     return rtnJson
 
 class PiDefGCFiles():
@@ -260,7 +260,7 @@ class PiDefGCFiles():
         if rtnBool:
             self.defGCFilePaths.append(piStrucFileName)
         if rtnBool and verbose:
-            printIt(piStrucFileName, lable.SAVED)
+            printIt(piStrucFileName, label.SAVED)
         return rtnBool
 
     def readPiDefGC(self, piType: str, piTitle: str, verbose=True) -> dict:
@@ -357,7 +357,7 @@ class PiGenClassFiles():
         if rtnBool:
             self.genClassFilePaths.append(piStrucFileName)
         if rtnBool and verbose:
-            printIt(piStrucFileName, lable.SAVED)
+            printIt(piStrucFileName, label.SAVED)
         return rtnBool
 
     def readPiGenClass(self, piType: str, piTitle: str, verbose=True) -> dict:
@@ -459,7 +459,7 @@ class PiClassGCFiles():
         #print('piStrucFileName:', piStrucFileName)
         rtnBool = writeJson(piStrucFileName, aDict, verbose)
         if rtnBool: self.classGCFilePaths.append(piStrucFileName)
-        if rtnBool and verbose: printIt(piStrucFileName,lable.SAVED)
+        if rtnBool and verbose: printIt(piStrucFileName,label.SAVED)
         return rtnBool
 
     def readPiClassGC(self, piType: str, piTitle: str, verbose=True) -> dict:

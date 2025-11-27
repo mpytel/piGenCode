@@ -1,23 +1,23 @@
 import os
 import watchdog
 import logging
-from .logIt import logIt, printIt, lable
+from .logIt import logIt, printIt, label
 
 class piDirWatcher:
   def __init__(self):
     self.dataframes = dict()
 
   def add_file(self, src_path):
-    printIt(f'file_added: {src_path}',lable.INFO)
+    printIt(f'file_added: {src_path}',label.INFO)
 
   def remove_file(self, src_path):
-    printIt(f'file_removed: {src_path}',lable.INFO)
+    printIt(f'file_removed: {src_path}',label.INFO)
 
   def update_file(self, src_path):
-    printIt(f'file_update: {src_path}',lable.INFO)
+    printIt(f'file_update: {src_path}',label.INFO)
 
   def update_dir(self, src_path):
-    printIt(f'dir_updated: {src_path}',lable.INFO)
+    printIt(f'dir_updated: {src_path}',label.INFO)
 
 
 class fsEventHander(watchdog.events.FileSystemEventHandler):

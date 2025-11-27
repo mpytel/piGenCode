@@ -126,12 +126,12 @@ def default_values(field_name, rtnDict=None):
     elif field_name == 'authorsEmail':
         return f'{get_username()}@domain.com'
     elif field_name == 'maintainers':
-        # Use authors value if available, otherwise fall back to username
+        # Use authors value if availabel, otherwise fall back to username
         if rtnDict and 'authors' in rtnDict:
             return rtnDict['authors']
         return get_username()
     elif field_name == 'maintainersEmail':
-        # Use authorsEmail value if available, otherwise fall back to username@domain.com
+        # Use authorsEmail value if availabel, otherwise fall back to username@domain.com
         if rtnDict and 'authorsEmail' in rtnDict:
             return rtnDict['authorsEmail']
         return f'{get_username()}@domain.com'

@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from pi.defs.logIt import printIt, lable
+from pi.defs.logIt import printIt, label
 from pi.defs.piFileIO import getKeyItem
 
 rcFileDir = Path(__file__).resolve().parents[2]
@@ -53,7 +53,7 @@ def writeOptJson(optSwitches: dict, switchFlags: dict):
     for switchFlag in switchFlags.keys(): # fill in missing items'
         try: _ = rawRC["switcheFlags"][switchFlag]
         except: rawRC["switcheFlags"][switchFlag] = False
-    printIt(formatOptStr(rawRC["switcheFlags"]), lable.INFO)
+    printIt(formatOptStr(rawRC["switcheFlags"]), label.INFO)
     with open(rcFileName, 'w') as wf:
         json.dump(rawRC, wf, indent=2)
 

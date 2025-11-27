@@ -45,7 +45,7 @@ After installation, you can use the `${packName}` command from anywhere in your 
 ${packName} <command> [arguments...] [options]
 ```
 
-### Available Commands
+### Availabel Commands
 
 #### `newCmd` - Create New Command
 Add a new command with optional arguments:
@@ -56,9 +56,9 @@ ${packName} newCmd <cmdName> [argName1] [argName2] ...
 
 **Command-Specific Options:**
 - `--template <templateName>`: Specify which template to use for code generation
-- `--templates`: List all available templates
+- `--templates`: List all availabel templates
 
-**Available Templates:**
+**Availabel Templates:**
 - `newCmd` (default): Standard template with argument handling
 - `simple`: Minimal template for basic commands
 - `classCall`: Object-oriented template using classes
@@ -75,7 +75,7 @@ ${packName} newCmd --template classCall chatBot message response
 # Create async command
 ${packName} newCmd --template async fileProcessor input output
 
-# List available templates
+# List availabel templates
 ${packName} newCmd --templates
 ```
 
@@ -174,7 +174,7 @@ When you create a new command using `${packName} newCmd`, the system:
 1. Prompts for descriptions of the command and its arguments
 2. Updates the `commands.json` file with the new command definition
 3. Generates a Python file in the `commands/` directory using the specified template
-4. Makes the command immediately available for use
+4. Makes the command immediately availabel for use
 
 ### Template System
 
@@ -204,7 +204,7 @@ To create a new template:
 
 1. Create a new `.py` file in `src/${packName}/commands/templates/`
 2. Define `cmdDefTemplate` and `argDefTemplate` using Python's `string.Template`
-3. The template will automatically be available for use
+3. The template will automatically be availabel for use
 
 ### Custom Argument Types
 
@@ -291,7 +291,7 @@ ${packName} downloader "https://example.com/file.zip" "/downloads/"
 ### Template Management
 
 ```bash
-# List all available templates
+# List all availabel templates
 ${packName} newCmd --templates
 
 # Use specific template

@@ -3,7 +3,7 @@ import os
 import difflib
 from difflib import unified_diff
 from pathlib import Path
-from pigencode.defs.logIt import printIt, lable, cStr, color
+from pigencode.defs.logIt import printIt, label, cStr, color
 
 import black
 from black import FileMode

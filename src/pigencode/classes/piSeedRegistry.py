@@ -3,8 +3,8 @@ Registry pattern for piSeed type handlers and command handlers.
 Replaces exec() calls with a cleaner, more maintainable approach.
 """
 
-from typing import Dict, Callable, Any, Protocol
-from ..defs.logIt import printIt, lable
+from typing import Dict, Callabel, Any, Protocol
+from ..defs.logIt import printIt, label
 
 
 class PiSeedHandler(Protocol):
@@ -31,7 +31,7 @@ class PiSeedTypeRegistry:
     def register(self, seed_type: str, handler: PiSeedHandler) -> None:
         """Register a handler for a specific piSeed type"""
         self._handlers[seed_type] = handler
-        # printIt(f"Registered handler for piSeed type: {seed_type}", lable.DEBUG)
+        # printIt(f"Registered handler for piSeed type: {seed_type}", label.DEBUG)
 
     def get_handler(self, seed_type: str) -> PiSeedHandler:
         """Get the handler for a specific piSeed type"""
@@ -54,10 +54,10 @@ class PiSeedTypeRegistry:
             handler = self.get_handler(seed_type)
             handler(germ_seeds_instance)
         except ValueError as e:
-            printIt(f"Handler error: {e}", lable.ERROR)
+            printIt(f"Handler error: {e}", label.ERROR)
             raise
         except Exception as e:
-            printIt(f"Error processing piSeed type '{seed_type}': {e}", lable.ERROR)
+            printIt(f"Error processing piSeed type '{seed_type}': {e}", label.ERROR)
             raise
 
     def _register_default_handlers(self) -> None:
@@ -79,12 +79,12 @@ class CommandRegistry:
         self._handlers[command_name] = handler
         if module_path:
             self._command_modules[command_name] = module_path
-        printIt(f"Registered handler for command: {command_name}", lable.DEBUG)
+        printIt(f"Registered handler for command: {command_name}", label.DEBUG)
 
     def register_lazy(self, command_name: str, module_path: str) -> None:
         """Register a command for lazy loading"""
         self._command_modules[command_name] = module_path
-        # printIt(f"Registered lazy handler for command: {command_name}", lable.DEBUG)
+        # printIt(f"Registered lazy handler for command: {command_name}", label.DEBUG)
 
     def get_handler(self, command_name: str) -> CommandHandler:
         """Get the handler for a specific command, loading if necessary"""
@@ -105,7 +105,7 @@ class CommandRegistry:
                 self._handlers[command_name] = handler
                 return handler
             except (ImportError, AttributeError) as e:
-                #printIt(f"Failed to load command '{command_name}' from '{module_path}': {e}", lable.ERROR)
+                #printIt(f"Failed to load command '{command_name}' from '{module_path}': {e}", label.ERROR)
                 raise ValueError(f"Could not load handler for command: {command_name}")
 
         raise ValueError(f"No handler registered for command: {command_name}")
@@ -125,10 +125,10 @@ class CommandRegistry:
             handler = self.get_handler(command_name)
             handler(arg_parse)
         except ValueError as e:
-            #printIt(f"Command error: {e}", lable.ERROR)
+            #printIt(f"Command error: {e}", label.ERROR)
             raise
         except Exception as e:
-            printIt(f"Error executing command '{command_name}': {e}", lable.ERROR)
+            printIt(f"Error executing command '{command_name}': {e}", label.ERROR)
             raise
 
 

@@ -2,7 +2,7 @@ import os, json
 from pathlib import Path
 from ..defs.fileIO import getKeyItem, piGCDirs
 from ..defs.piJsonFile import readJson
-from ..defs.logIt import logIt, printIt, lable
+from ..defs.logIt import logIt, printIt, label
 
 class PiGenDefCode():
     def __init__(self):
@@ -107,7 +107,7 @@ class PiGenDefCode():
                     # remove last comma-space and add newline
                     rtnLines = rtnLines[:-2] + '\n'
                 else:
-                    printIt('No piClass specified for fromPiClasses.', lable.ERROR)
+                    printIt('No piClass specified for fromPiClasses.', label.ERROR)
             haveImports = True
 
         # Raw from imports
@@ -158,7 +158,7 @@ class PiGenDefCode():
                     else:
                         rtnLines += f'{aGlobal} = []\n'
                 else:
-                    printIt(f'Incorrect type {str(globalType)} for {self.globals[aGlobal]}.', lable.ERROR)
+                    printIt(f'Incorrect type {str(globalType)} for {self.globals[aGlobal]}.', label.ERROR)
 
         # Constants from constants list
         if len(self.constants) > 0:
@@ -206,7 +206,7 @@ class PiGenDefCode():
                             rtnLines += f'{unescaped_line}\n'
                     rtnLines += '\n'  # Add blank line after each function
                 else:
-                    printIt(f'Warning: Function {functionName} is not a list of lines', lable.WARN)
+                    printIt(f'Warning: Function {functionName} is not a list of lines', label.WARN)
 
         return rtnLines
 
@@ -272,10 +272,10 @@ class PiGenDefCode():
         fileName = os.path.join(self.piDefDir, f"{self.fileName}.py")
         if os.path.isfile(fileName):
             if verbose:
-                printIt(f'{fileName}', lable.REPLACED)
+                printIt(f'{fileName}', label.REPLACED)
         else:
             if verbose:
-                printIt(f'{fileName}', lable.SAVED)
+                printIt(f'{fileName}', label.SAVED)
 
         with open(fileName, 'w') as f:
             f.write(piDefLines)
@@ -324,7 +324,7 @@ class PiGenDefCode():
                         piJsonFileName = os.path.join(piJsonDefGCDir, piJsonDefGCFilename)
                         self.__genPiDefFile(piJsonFileName, verbose)
             else:
-                printIt(f'piDefGC directory not found: {piJsonDefGCDir}', lable.WARN)
+                printIt(f'piDefGC directory not found: {piJsonDefGCDir}', label.WARN)
 
 
 ##### Public Functions

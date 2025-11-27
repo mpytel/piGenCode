@@ -1,5 +1,5 @@
 import os, json
-from pigencode.defs.logIt import printIt, lable, cStr, color
+from pigencode.defs.logIt import printIt, label, cStr, color
 from .commands import Commands
 
 cmdObj = Commands()
@@ -18,14 +18,14 @@ def rmCmd(argParse):
         if anArg in commands and len(theArgs) == 1:
             if anArg == cmdName:
                 if anArg in ["newCmd", "modCmd", "rmCmd"]:
-                    printIt(f'Permission denied for "{anArg}".',lable.WARN)
+                    printIt(f'Permission denied for "{anArg}".',label.WARN)
                     exit(0)
                 chkRm: str = input(f"Perminantly delete {anArg} (y/N): ")
                 if chkRm == '': chkRm = 'N'
                 if chkRm.lower() == 'y':
                     removeCmd(anArg)
             else:
-                printIt(f'Command "{anArg}" must be removed seperataly from "{cmdName}".',lable.WARN)
+                printIt(f'Command "{anArg}" must be removed seperataly from "{cmdName}".',label.WARN)
         elif cmdName in commands:
             if anArg in commands[cmdName]:
                 chkRm: str = input(f"Perminantly delete {anArg} (y/N): ")
@@ -33,7 +33,7 @@ def rmCmd(argParse):
                 if chkRm.lower() == 'y':
                     removeCmdArg(cmdName, anArg)
         else:
-            printIt(f'"{cmdName}" is not currently a Command.',lable.WARN)
+            printIt(f'"{cmdName}" is not currently a Command.',label.WARN)
             argIndex = len(theArgs)
         argIndex += 1
 
@@ -44,7 +44,7 @@ def removeCmdArg(cmdName, argName):
         del theJson[cmdName][argName]
     with open(jsonFileName, 'w') as wf:
         json.dump(theJson, wf, indent=2)
-    printIt(argName,lable.RmArg)
+    printIt(argName,label.RmArg)
 
 def removeCmd(cmdName):
     global jsonFileName
@@ -57,4 +57,4 @@ def removeCmd(cmdName):
     pyFileName = os.path.join(theDir, pyFileName)
     if os.path.isfile(pyFileName):
         os.remove(pyFileName)
-    printIt(cmdName,lable.RmCmd)
+    printIt(cmdName,label.RmCmd)

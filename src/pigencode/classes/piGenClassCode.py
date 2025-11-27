@@ -2,7 +2,7 @@ import os, json
 from pathlib import Path
 from ..defs.fileIO import getKeyItem, piGCDirs
 from ..defs.piJsonFile import readJson
-from ..defs.logIt import logIt, printIt, lable
+from ..defs.logIt import logIt, printIt, label
 
 class PiGenClassCode():
     def __init__(self):
@@ -159,7 +159,7 @@ class PiGenClassCode():
                     f.write(f"{tracked_file}\n")
 
         except Exception as e:
-            printIt(f"Warning: Could not update tracking file: {e}", lable.WARN)
+            printIt(f"Warning: Could not update tracking file: {e}", label.WARN)
 
     def genPiGenClass(self, piGenClassFile: str) -> str:
         """
@@ -170,7 +170,7 @@ class PiGenClassCode():
             # Read the piGenClass JSON file
             self.pi_piGenClass = readJson(piGenClassFile)
             if not self.pi_piGenClass:
-                printIt(f"Failed to read piGenClass file: {piGenClassFile}", lable.ERROR)
+                printIt(f"Failed to read piGenClass file: {piGenClassFile}", label.ERROR)
                 return ""
 
             # Extract attributes
@@ -197,7 +197,7 @@ class PiGenClassCode():
             return str(output_path)
 
         except Exception as e:
-            printIt(f"Error generating piGenClass file: {e}", lable.ERROR)
+            printIt(f"Error generating piGenClass file: {e}", label.ERROR)
             return ""
 
 def genPiGenClass(piGenClassFile: str) -> str:

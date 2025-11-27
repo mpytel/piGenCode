@@ -4,7 +4,7 @@ import ast
 import traceback
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
-from ..logIt import printIt, lable
+from ..logIt import printIt, label
 from ..getSeedPath import getSeedPath
 from ...classes.piGenCode import PiGenCode
 from .piSyncCodeUtil import \
@@ -21,12 +21,12 @@ global options
 global devExept
 devExept = True
 global showDefNames
-# showDefNames = lable.ABORTPRT
-# showDefNames = lable.IMPORT
-showDefNames = lable.ABORTPRT
-showDefNames01 = lable.ABORTPRT
-showDefNames02 = lable.ABORTPRT
-showDefNames03 = lable.ABORTPRT
+# showDefNames = label.ABORTPRT
+# showDefNames = label.IMPORT
+showDefNames = label.ABORTPRT
+showDefNames01 = label.ABORTPRT
+showDefNames02 = label.ABORTPRT
+showDefNames03 = label.ABORTPRT
 # Intelligent pattern detection functions
 
 def createNewPiDefGCSeedFile(defName: str, pythonFile: Path, seed_file: Path | None = None, dest_dir: str | None = None) -> Optional[Path]:
@@ -39,7 +39,7 @@ def createNewPiDefGCSeedFile(defName: str, pythonFile: Path, seed_file: Path | N
             seedFileName = seed_file.stem + ".pi"
             seedFilePath = seed_file
         else:
-            # Get next available number
+            # Get next availabel number
             nextNum = getNextPiSeedNumber()
 
             # Create new piSeed file name
@@ -99,15 +99,15 @@ piValueA {defName}.piBody:piDefGC:headers '# {defName} functions - synced from e
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
 
-        printIt(f"piDefGC piSeed: {seedFilePath}", lable.SAVED)
+        printIt(f"piDefGC piSeed: {seedFilePath}", label.SAVED)
         return seedFilePath
 
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def createNewPiDefGCSeedFile', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def createNewPiDefGCSeedFile', label.ERROR)
         printIt(
-            f"Error creating new piDefGC piSeed file for {defName}: {e}", lable.ERROR)
+            f"Error creating new piDefGC piSeed file for {defName}: {e}", label.ERROR)
         return None
 
 def analyzePythonDefFile(pythonFile: Path) -> Dict:
@@ -176,6 +176,6 @@ def analyzePythonDefFile(pythonFile: Path) -> Dict:
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def analyzePythonDefFile', lable.ERROR)
-        printIt(f"Error analyzing Python def file {pythonFile}: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def analyzePythonDefFile', label.ERROR)
+        printIt(f"Error analyzing Python def file {pythonFile}: {e}", label.ERROR)
         return {}

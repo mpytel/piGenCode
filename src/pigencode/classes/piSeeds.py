@@ -1,6 +1,6 @@
 import shlex
 from traceback import format_exception
-from ..defs.logIt import logIt, printIt, lable
+from ..defs.logIt import logIt, printIt, label
 from re import Pattern, compile as reCompile, match, Match
 from typing import Any
 
@@ -52,7 +52,7 @@ class PiSeeds():
                     theMatchLen = len(theMatchGroups)
                 except Exception as e:
                     # tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-                    # printIt(f'piGerminator.py\n{tb_str}',lable.ERROR)
+                    # printIt(f'piGerminator.py\n{tb_str}',label.ERROR)
                     # exit()
                     theMatchLen = 0
                     theMatchGroups = {}
@@ -155,7 +155,7 @@ def piSeedTitelSplit(piValueTitle: str) -> tuple:
 
     except Exception as e:
         tb_str = ''.join(format_exception(None, e, e.__traceback__))
-        printIt(tb_str,lable.ERROR)
+        printIt(tb_str,label.ERROR)
         exit()
     return piPiTitleKey, piElemKeys
 
@@ -203,15 +203,15 @@ def readSeedPis(piFileName) -> list[tuple]:
                                 raise Exception("Could not parse line with quote issues")
                         except Exception as fallback_e:
                             tb_str = ''.join(format_exception(None, fallback_e, fallback_e.__traceback__))
-                            printIt(f'{__file__}, line:{inLineNumber}\n{tb_str}', lable.ERROR)
-                            printIt(f'current line: {currLine}', lable.ERROR)
+                            printIt(f'{__file__}, line:{inLineNumber}\n{tb_str}', label.ERROR)
+                            printIt(f'current line: {currLine}', label.ERROR)
                     else:
                         # Re-raise other ValueError types
                         raise ve
                 except Exception as e:
                     tb_str = ''.join(format_exception(None, e, e.__traceback__))
-                    printIt(f'{piFileName}, line:{inLineNumber}\n{tb_str}',lable.ERROR)
-                    printIt(f'current line: {currLine}\n{tb_str}',lable.ERROR)
+                    printIt(f'{piFileName}, line:{inLineNumber}\n{tb_str}',label.ERROR)
+                    printIt(f'current line: {currLine}\n{tb_str}',label.ERROR)
             inLineNumber += 1
     return piBaseList
 

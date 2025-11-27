@@ -2,7 +2,7 @@ import os, traceback, re
 from pathlib import Path
 from json import dumps
 from pigencode.classes.argParse import ArgParse
-from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.logIt import printIt, label
 from pigencode.defs.fileIO import getKeyItem, piGCDirs
 from pigencode.classes.piGenCode import genPiPiClass
 from pigencode.classes.piGenDefCode import genPiDefCode
@@ -32,7 +32,7 @@ def genCode(argParse: ArgParse):
 
     for savedCodeFile in savedCodeFiles.values():
         fileName = Path(savedCodeFile).resolve().relative_to(Path.cwd().resolve())
-        printIt(f'generated: {fileName} ', lable.INFO)
+        printIt(f'generated: {fileName} ', label.INFO)
 
 def processNumberShortcut(number: int) -> dict:
     """
@@ -51,25 +51,25 @@ def processNumberShortcut(number: int) -> dict:
             foundFiles.append((fileType, fileName))
 
     if not foundFiles:
-        printIt(f"No germ files found for number {number:03d}", lable.ERROR)
-        printIt("Searched for:", lable.INFO)
-        printIt(f"  • piGerms/piClassGC/piClassGC{number:03d}_*.json", lable.INFO)
-        printIt(f"  • piGerms/piDefGC/piDefGC{number:03d}_*.json", lable.INFO)
-        printIt(f"  • piGerms/piGenClass/piGenClass{number:03d}_*.json", lable.INFO)
+        printIt(f"No germ files found for number {number:03d}", label.ERROR)
+        printIt("Searched for:", label.INFO)
+        printIt(f"  • piGerms/piClassGC/piClassGC{number:03d}_*.json", label.INFO)
+        printIt(f"  • piGerms/piDefGC/piDefGC{number:03d}_*.json", label.INFO)
+        printIt(f"  • piGerms/piGenClass/piGenClass{number:03d}_*.json", label.INFO)
         return savedCodeFiles
 
     if len(foundFiles) > 1:
-        printIt(f"Multiple germ files found for number {number:03d}:", lable.WARN)
+        printIt(f"Multiple germ files found for number {number:03d}:", label.WARN)
         for fileType, fileName in foundFiles:
-            printIt(f"  • {fileType}: {fileName}", lable.WARN)
-        printIt("Using the first one found. Use explicit syntax to specify type:", lable.WARN)
-        printIt(f"  piGenCode genCode piClass {number}", lable.WARN)
-        printIt(f"  piGenCode genCode piDef {number}", lable.WARN)
-        printIt(f"  piGenCode genCode piGenClass {number}", lable.WARN)
+            printIt(f"  • {fileType}: {fileName}", label.WARN)
+        printIt("Using the first one found. Use explicit syntax to specify type:", label.WARN)
+        printIt(f"  piGenCode genCode piClass {number}", label.WARN)
+        printIt(f"  piGenCode genCode piDef {number}", label.WARN)
+        printIt(f"  piGenCode genCode piGenClass {number}", label.WARN)
 
     # Process the first (or only) found file
     fileType, fileName = foundFiles[0]
-    printIt(f"Processing {fileType} file: {fileName}", lable.INFO)
+    printIt(f"Processing {fileType} file: {fileName}", label.INFO)
 
     try:
         if fileType == 'piclass':
@@ -84,7 +84,7 @@ def processNumberShortcut(number: int) -> dict:
                 files = {}
         savedCodeFiles.update(files)
     except Exception as e:
-        printIt(f"Error processing {fileName}: {e}", lable.ERROR)
+        printIt(f"Error processing {fileName}: {e}", label.ERROR)
 
     return savedCodeFiles
 
@@ -110,7 +110,7 @@ def processShortcutSyntax(args: list) -> dict:
 
     # Validate file type
     if fileType not in ['piclass', 'pidef', 'pigenclass']:
-        printIt(f"Invalid file type '{args[0]}'. Use 'piClass', 'piDef', or 'piGenClass'", lable.ERROR)
+        printIt(f"Invalid file type '{args[0]}'. Use 'piClass', 'piDef', or 'piGenClass'", label.ERROR)
         printUsageHelp()
         return savedCodeFiles
 
@@ -118,11 +118,11 @@ def processShortcutSyntax(args: list) -> dict:
     numbers = parseNumberArguments(numberArgs)
 
     if not numbers:
-        printIt("No valid numbers found in arguments", lable.ERROR)
+        printIt("No valid numbers found in arguments", label.ERROR)
         printUsageHelp()
         return savedCodeFiles
 
-    printIt(f"Processing {fileType} files: {sorted(numbers)}", lable.INFO)
+    printIt(f"Processing {fileType} files: {sorted(numbers)}", label.INFO)
 
     # Generate files for each number
     successCount = 0
@@ -143,25 +143,25 @@ def processShortcutSyntax(args: list) -> dict:
                 savedCodeFiles.update(files)
                 successCount += 1
             except Exception as e:
-                printIt(f"Error processing {fileName}: {e}", lable.ERROR)
+                printIt(f"Error processing {fileName}: {e}", label.ERROR)
         else:
-            printIt(f"Germ file not found for {fileType} {number:03d}", lable.WARN)
+            printIt(f"Germ file not found for {fileType} {number:03d}", label.WARN)
 
     if successCount > 0:
-        printIt(f"Successfully processed {successCount} germ files", lable.INFO)
+        printIt(f"Successfully processed {successCount} germ files", label.INFO)
 
     return savedCodeFiles
 
 def printUsageHelp():
     """Print usage help for the shortcut syntax"""
-    printIt("Usage examples:", lable.INFO)
-    printIt("  piGenCode genCode piClass 21          # Generate from piClassGC021", lable.INFO)
-    printIt("  piGenCode genCode piDef 2             # Generate from piDefGC002", lable.INFO)
-    printIt("  piGenCode genCode piGenClass 1 2      # Generate from piGenClass001 and piGenClass002", lable.INFO)
-    printIt("  piGenCode genCode piClass 4-16        # Generate from piClassGC004 to piClassGC016", lable.INFO)
-    printIt("  piGenCode genCode piGenClass 1-3      # Generate from piGenClass001 to piGenClass003", lable.INFO)
-    printIt("  piGenCode genCode piClass 5 7 21      # Generate from piClassGC005, 007, and 021", lable.INFO)
-    printIt("  piGenCode genCode piClass 2 8 14-21   # Generate from piClassGC002, 008, and 014-021", lable.INFO)
+    printIt("Usage examples:", label.INFO)
+    printIt("  piGenCode genCode piClass 21          # Generate from piClassGC021", label.INFO)
+    printIt("  piGenCode genCode piDef 2             # Generate from piDefGC002", label.INFO)
+    printIt("  piGenCode genCode piGenClass 1 2      # Generate from piGenClass001 and piGenClass002", label.INFO)
+    printIt("  piGenCode genCode piClass 4-16        # Generate from piClassGC004 to piClassGC016", label.INFO)
+    printIt("  piGenCode genCode piGenClass 1-3      # Generate from piGenClass001 to piGenClass003", label.INFO)
+    printIt("  piGenCode genCode piClass 5 7 21      # Generate from piClassGC005, 007, and 021", label.INFO)
+    printIt("  piGenCode genCode piClass 2 8 14-21   # Generate from piClassGC002, 008, and 014-021", label.INFO)
 
 def parseNumberArguments(args: list) -> set:
     """Parse number arguments supporting ranges (4-16) and individual numbers (5 7 21)"""
@@ -180,15 +180,15 @@ def parseNumberArguments(args: list) -> set:
                 if start_num <= end_num:
                     numbers.update(range(start_num, end_num + 1))
                 else:
-                    printIt(f"Invalid range '{arg_str}': start must be <= end", lable.WARN)
+                    printIt(f"Invalid range '{arg_str}': start must be <= end", label.WARN)
             except ValueError:
-                printIt(f"Invalid range format '{arg_str}': use format like '4-16'", lable.WARN)
+                printIt(f"Invalid range format '{arg_str}': use format like '4-16'", label.WARN)
         else:
             # Individual number
             try:
                 numbers.add(int(arg_str))
             except ValueError:
-                printIt(f"Invalid number '{arg_str}': must be an integer", lable.WARN)
+                printIt(f"Invalid number '{arg_str}': must be an integer", label.WARN)
 
     return numbers
 
@@ -211,14 +211,14 @@ def findGermFile(fileType: str, number: int) -> str:
         germDir = piGermsDir / subdir
 
         if not piGermsDir.exists():
-            printIt(f"piGerms directory not found: {piGermsDir}", lable.ERROR)
-            printIt("Run 'pigencode germSeed' first to create germ files", lable.INFO)
+            printIt(f"piGerms directory not found: {piGermsDir}", label.ERROR)
+            printIt("Run 'pigencode germSeed' first to create germ files", label.INFO)
             return ""
 
         if not germDir.exists():
-            printIt(f"Germ subdirectory not found: {germDir}", lable.WARN)
-            printIt(f"No {fileType} files have been processed yet", lable.INFO)
-            printIt(f"Run 'pigencode germSeed' to process piSeed files", lable.INFO)
+            printIt(f"Germ subdirectory not found: {germDir}", label.WARN)
+            printIt(f"No {fileType} files have been processed yet", label.INFO)
+            printIt(f"Run 'pigencode germSeed' to process piSeed files", label.INFO)
             return ""
 
         # Find matching files
@@ -227,12 +227,12 @@ def findGermFile(fileType: str, number: int) -> str:
             return str(matchingFiles[0])  # Return first match
 
         # File not found - provide helpful message
-        printIt(f"Germ file not found: {germDir}/{pattern}", lable.WARN)
-        printIt(f"Make sure piSeed{number:03d}_*.pi exists and has been processed with 'germSeed'", lable.INFO)
+        printIt(f"Germ file not found: {germDir}/{pattern}", label.WARN)
+        printIt(f"Make sure piSeed{number:03d}_*.pi exists and has been processed with 'germSeed'", label.INFO)
         return ""
 
     except Exception as e:
-        printIt(f"Error finding germ file for {fileType} {number}: {e}", lable.ERROR)
+        printIt(f"Error finding germ file for {fileType} {number}: {e}", label.ERROR)
         return ""
 
 def genCodeFile(fileName="", verbose=False) -> dict:
@@ -250,9 +250,9 @@ def genCodeFile(fileName="", verbose=False) -> dict:
                     if result:
                         savedCodeFiles[result] = fileName
                 else:
-                    printIt(f'Unknown file type: {fileName}', lable.WARN)
+                    printIt(f'Unknown file type: {fileName}', label.WARN)
             else:
-                printIt(fileName, lable.FileNotFound)
+                printIt(fileName, label.FileNotFound)
         else:
             # Process all files - in specifec order becase inhareted class need to be present
             #  1) piDefGC, 2)piGenClass, and 3) piClassGC
@@ -264,8 +264,8 @@ def genCodeFile(fileName="", verbose=False) -> dict:
             savedCodeFiles.update(genClassFiles)
     except IndexError as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(f'genCode:\n{tb_str}', lable.ERROR)
-        printIt('File name required', lable.IndexError)
+        printIt(f'genCode:\n{tb_str}', label.ERROR)
+        printIt('File name required', label.IndexError)
     return savedCodeFiles
 
 def processAllPiGenClassFiles(verbose=False) -> dict:
@@ -278,32 +278,32 @@ def processAllPiGenClassFiles(verbose=False) -> dict:
         piGenClassDir = piGermsDir / "piGenClass"
 
         if not piGermsDir.exists():
-            printIt(f"piGerms directory not found: {piGermsDir}", lable.WARN)
-            printIt("Run 'pigencode germSeed' first to create germ files", lable.INFO)
+            printIt(f"piGerms directory not found: {piGermsDir}", label.WARN)
+            printIt("Run 'pigencode germSeed' first to create germ files", label.INFO)
             return savedCodeFiles
 
         if not piGenClassDir.exists():
             if verbose:
-                printIt(f"piGenClass directory not found: {piGenClassDir}", lable.DEBUG)
-                printIt("No piGenClass files to process", lable.DEBUG)
+                printIt(f"piGenClass directory not found: {piGenClassDir}", label.DEBUG)
+                printIt("No piGenClass files to process", label.DEBUG)
             return savedCodeFiles
 
         # Find all piGenClass JSON files
         json_files = list(piGenClassDir.glob("piGenClass*.json"))
         if not json_files:
             if verbose:
-                printIt("No piGenClass JSON files found", lable.DEBUG)
+                printIt("No piGenClass JSON files found", label.DEBUG)
             return savedCodeFiles
 
         for json_file in json_files:
             if verbose:
-                printIt(f"Processing piGenClass file: {json_file}", lable.DEBUG)
+                printIt(f"Processing piGenClass file: {json_file}", label.DEBUG)
 
             outFileName = genPiGenClass(str(json_file))
             if outFileName:
                 savedCodeFiles[outFileName] = outFileName
 
     except Exception as e:
-        printIt(f"Error processing piGenClass files: {e}", lable.ERROR)
+        printIt(f"Error processing piGenClass files: {e}", label.ERROR)
 
     return savedCodeFiles

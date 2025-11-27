@@ -1,5 +1,5 @@
 import os, copy
-from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.logIt import printIt, label
 from pigencode.classes.argParse import ArgParse
 from .commands import Commands, cmdDescriptionTagStr
 from .templates.newCmd import cmdDefTemplate, argDefTemplate
@@ -19,11 +19,11 @@ def modCmd(argParse: ArgParse):
         theArgs = verifyArgsWithDiscriptions(cmdObj, args.arguments)
         if len(theArgs.keys()) > 0:
             updateCMDJson(cmdObj, modCmdName, theArgs)
-            printIt(f'"{modCmdName}" modified.',lable.ModCmd)
+            printIt(f'"{modCmdName}" modified.',label.ModCmd)
         else:
-            printIt(f'"{modCmdName}" unchanged.',lable.INFO)
+            printIt(f'"{modCmdName}" unchanged.',label.INFO)
     else:
-        printIt(f'"{modCmdName}" does not exists. use newCmd or add it.',lable.INFO)
+        printIt(f'"{modCmdName}" does not exists. use newCmd or add it.',label.INFO)
 
 def verifyArgsWithDiscriptions(cmdObj: Commands, theArgs) -> dict:
     rtnDict = {}
@@ -34,13 +34,13 @@ def verifyArgsWithDiscriptions(cmdObj: Commands, theArgs) -> dict:
         if argName[0] == '-':
             if len(argName) >= 2:
                 if argName[2] == '-':
-                    printIt("Only single hyphen options allowed.",lable.WARN)
+                    printIt("Only single hyphen options allowed.",label.WARN)
                     exit(0)
                 else:
                     theDisc = input(f'Enter help description for {argName}:\n')
                     if theDisc == '': theDisc = f'no help for {argName}'
             else:
-                printIt("Missing ascii letters after hyphen.",lable.WARN)
+                printIt("Missing ascii letters after hyphen.",label.WARN)
                 exit(0)
         else:
             theDisc = ''
@@ -70,12 +70,12 @@ def writeCodeFile(theArgs: dict) -> str:
     fileDir = os.path.dirname(__file__)
     fileName = os.path.join(fileDir, f'{list(theArgs.keys())[0]}.py')
     if os.path.isfile(fileName):
-        rtnStr = lable.EXISTS
+        rtnStr = label.EXISTS
     else:
         ourStr = cmdCodeBlock(theArgs)
         with open(fileName, 'w') as fw:
             fw.write(ourStr)
-        rtnStr = lable.SAVED
+        rtnStr = label.SAVED
     return rtnStr
 
 def cmdCodeBlock(theArgs: dict) -> str:

@@ -1,7 +1,7 @@
 import os
 import sys
 import copy
-from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.logIt import printIt, label
 from pigencode.classes.argParse import ArgParse
 from .commands import Commands, cmdDescriptionTagStr
 from .templates.newCmd import cmdDefTemplate, argDefTemplate
@@ -13,7 +13,7 @@ readline.parse_and_bind('set editing-mode vi')
 def newCmd(argParse: ArgParse):
     args = argParse.args
 
-    # Handle --templates option to list available templates
+    # Handle --templates option to list availabel templates
     if hasattr(argParse, 'cmd_options') and 'templates' in argParse.cmd_options:
         list_templates()
         return
@@ -22,7 +22,7 @@ def newCmd(argParse: ArgParse):
     argsDict = args.arguments
 
     if len(argsDict) == 0:
-        printIt("Command name required", lable.ERROR)
+        printIt("Command name required", label.ERROR)
         return
 
     newCmdName = args.arguments[0]
@@ -36,19 +36,19 @@ def newCmd(argParse: ArgParse):
             template_name = argParse.cmd_options['template']
             if not template_exists(template_name):
                 printIt(
-                    f"Template '{template_name}' not found. Using default template.", lable.WARN)
+                    f"Template '{template_name}' not found. Using default template.", label.WARN)
                 template_name = 'newCmd'
 
         writeCodeFile(theArgs, template_name)
         printIt(
-            f'"{newCmdName}" added using {template_name} template.', lable.NewCmd)
+            f'"{newCmdName}" added using {template_name} template.', label.NewCmd)
     else:
         printIt(
-            f'"{newCmdName}" exists. use modCmd or rmCmd to modify or remove this command.', lable.INFO)
+            f'"{newCmdName}" exists. use modCmd or rmCmd to modify or remove this command.', label.INFO)
 
 
 def list_templates():
-    '''List all available templates'''
+    '''List all availabel templates'''
     template_dir = os.path.join(os.path.dirname(__file__), 'templates')
     templates = []
 
@@ -57,9 +57,9 @@ def list_templates():
             template_name = file[:-3]  # Remove .py extension
             templates.append(template_name)
 
-    printIt("Available templates:", lable.INFO)
+    printIt("Availabel templates:", label.INFO)
     for template in sorted(templates):
-        printIt(f"  - {template}", lable.INFO)
+        printIt(f"  - {template}", label.INFO)
 
 
 def template_exists(template_name):
@@ -78,14 +78,14 @@ def verifyArgsWithDiscriptions(cmdObj: Commands, theArgs) -> dict:
         if argName[0] == '-':
             if len(argName) >= 2:
                 if argName[2] == '-':
-                    printIt("Only single hyphen options allowed.", lable.WARN)
+                    printIt("Only single hyphen options allowed.", label.WARN)
                     exit(0)
                 else:
                     theDisc = input(f'Enter help description for {argName}:\n')
                     if theDisc == '':
                         theDisc = f'no help for {argName}'
             else:
-                printIt("Missing ascii letters after hyphen.", lable.WARN)
+                printIt("Missing ascii letters after hyphen.", label.WARN)
                 exit(0)
         else:
             theDisc = input(f'Enter help description for {argName}:\n')
@@ -100,12 +100,12 @@ def writeCodeFile(theArgs: dict, template_name: str = 'newCmd') -> str:
     fileDir = os.path.dirname(__file__)
     fileName = os.path.join(fileDir, f'{list(theArgs.keys())[0]}.py')
     if os.path.isfile(fileName):
-        rtnStr = lable.EXISTS
+        rtnStr = label.EXISTS
     else:
         ourStr = cmdCodeBlock(theArgs, template_name)
         with open(fileName, 'w') as fw:
             fw.write(ourStr)
-        rtnStr = lable.SAVED
+        rtnStr = label.SAVED
     return rtnStr
 
 
@@ -122,7 +122,7 @@ def cmdCodeBlock(theArgs: dict, template_name: str = 'newCmd') -> str:
         argDefTemplate = template_module.argDefTemplate
     except ImportError:
         printIt(
-            f"Could not import template '{template_name}', using default", lable.WARN)
+            f"Could not import template '{template_name}', using default", label.WARN)
         from .templates.newCmd import cmdDefTemplate, argDefTemplate
 
     rtnStr = cmdDefTemplate.substitute(

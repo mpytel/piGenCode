@@ -3,7 +3,7 @@ import json
 import traceback
 from datetime import datetime
 from pathlib import Path
-from .logIt import printIt, logIt, lable
+from .logIt import printIt, logIt, label
 from .piFileIO import getKeyItem
 from re import compile as reCompile
 
@@ -15,7 +15,7 @@ def isPiID(chkStr:str) -> bool:
 def touchPiDir(dirName):
     dirPath = Path(dirName)
     if not dirPath.is_dir():
-        logIt(f'{dirName}',lable.MKDIR)
+        logIt(f'{dirName}',label.MKDIR)
         dirPath.mkdir(mode=511, parents=True, exist_ok=True)
 
 def touchPiFile(fileName)-> dict:
@@ -29,7 +29,7 @@ def touchPiFile(fileName)-> dict:
         return rtnJson
     except Exception as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(f'touchPiFile\n{tb_str}',lable.ERROR)
+        printIt(f'touchPiFile\n{tb_str}',label.ERROR)
         exit()
 
 def piPathLn(theLink:str, PiPiLnDir: str|Path) -> Path | None:

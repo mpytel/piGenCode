@@ -4,7 +4,7 @@ import traceback
 from json import dump
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Set, Any, Union
-from ..logIt import printIt, lable
+from ..logIt import printIt, label
 from ..fileIO import getKeyItem, piGCDirs
 from ..getSeedPath import getSeedPath
 from ...classes.piGenCode import PiGenCode
@@ -13,13 +13,13 @@ global options
 global devExept
 devExept = True
 global showDefNames
-# showDefNames = lable.ABORTPRT
-# showDefNames = lable.IMPORT
-showDefNames = lable.ABORTPRT
-showDefNames00 = lable.DEBUG
-showDefNames01 = lable.ABORTPRT
-showDefNames02 = lable.ABORTPRT
-showDefNames03 = lable.ABORTPRT
+# showDefNames = label.ABORTPRT
+# showDefNames = label.IMPORT
+showDefNames = label.ABORTPRT
+showDefNames00 = label.DEBUG
+showDefNames01 = label.ABORTPRT
+showDefNames02 = label.ABORTPRT
+showDefNames03 = label.ABORTPRT
 
 def extractCodeDocStr(codeLines: List[str], startLine: int = 0) ->  Tuple[List[str], int]:
     lenContent = len(codeLines)
@@ -200,8 +200,8 @@ def isCustomCodeUsingArchitecture(elementType: str, actualCode: List[str], class
         defaultCodeStr = defaultCode.strip()
 
         # For debugging - uncomment these lines to see the comparison
-        # printIt(f"ACTUAL ({elementType}):\n{repr(actualCodeStr)}", lable.DEBUG)
-        # printIt(f"DEFAULT ({elementType}):\n{repr(defaultCodeStr)}", lable.DEBUG)
+        # printIt(f"ACTUAL ({elementType}):\n{repr(actualCodeStr)}", label.DEBUG)
+        # printIt(f"DEFAULT ({elementType}):\n{repr(defaultCodeStr)}", label.DEBUG)
 
         # Return True if they're different (custom code)
         return actualCodeStr != defaultCodeStr
@@ -209,9 +209,9 @@ def isCustomCodeUsingArchitecture(elementType: str, actualCode: List[str], class
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def isCustomCodeUsingArchitecture', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def isCustomCodeUsingArchitecture', label.ERROR)
         printIt(
-            f"Error in architecture-based comparison for {elementType}: {e}", lable.DEBUG)
+            f"Error in architecture-based comparison for {elementType}: {e}", label.DEBUG)
         # Fall back to exact detection for strCode
         if elementType == 'strCode':
             return not isExactDefaultStrCode(actualCode, className)
@@ -411,7 +411,7 @@ def shouldPreserveElegantPattern(seedContent: str, className: str, codeType: str
                     len([line for line in codeLines if line.strip()]) <= 5):  # Very simple default pattern
                 if options and options.get('stats', False):
                     printIt(
-                        f"PRESERVE: {codeType} for {className} - exact default pattern", lable.DEBUG)
+                        f"PRESERVE: {codeType} for {className} - exact default pattern", label.DEBUG)
                 return True
         # For any other strCode, sync it (user has customized it)
         return False
@@ -433,7 +433,7 @@ def shouldPreserveElegantPattern(seedContent: str, className: str, codeType: str
             if autoGenCount == totalCount and totalCount > 0:
                 if options and options.get('stats', False):
                     printIt(
-                        f"PRESERVE: {codeType} for {className} - all imports auto-generated", lable.DEBUG)
+                        f"PRESERVE: {codeType} for {className} - all imports auto-generated", label.DEBUG)
                 return True
         # For any other imports, sync them (user has customized them)
         return False
@@ -451,7 +451,7 @@ def shouldPreserveElegantPattern(seedContent: str, className: str, codeType: str
                 if isDefault:
                     if options and options.get('stats', False):
                         printIt(
-                            f"PRESERVE: {codeType} for {className} - exact default pattern", lable.DEBUG)
+                            f"PRESERVE: {codeType} for {className} - exact default pattern", label.DEBUG)
                     return True
         # For any other jsonCode, sync it (user has customized it)
         return False
@@ -465,7 +465,7 @@ def shouldPreserveElegantPattern(seedContent: str, className: str, codeType: str
             if isDefault:
                 if options and options.get('stats', False):
                     printIt(
-                        f"PRESERVE: {codeType} for {className} - default initialization", lable.DEBUG)
+                        f"PRESERVE: {codeType} for {className} - default initialization", label.DEBUG)
                 return True
         # For any other initAppendCode, sync it (user has customized it)
         return False
@@ -485,7 +485,7 @@ def shouldPreserveElegantPattern(seedContent: str, className: str, codeType: str
     # Default: allow syncing to capture real changes
     if options and options.get('stats', False):
         printIt(
-            f"SYNC: {codeType} for {className} - allowing sync for real changes", lable.DEBUG)
+            f"SYNC: {codeType} for {className} - allowing sync for real changes", label.DEBUG)
 
     return False  # Allow syncing by default
 
@@ -550,9 +550,9 @@ def findPiDefGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[
         if devExept:
             tb_str = ''.join(traceback.format_exception(
                 None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def findPiDefGCSeedFile', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def findPiDefGCSeedFile', label.ERROR)
         printIt(
-            f"Error finding piDefGC piSeed file for {defName}: {e}", lable.ERROR)
+            f"Error finding piDefGC piSeed file for {defName}: {e}", label.ERROR)
         return None
 
 def findPiGenClassSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[Path]:
@@ -591,9 +591,9 @@ def findPiGenClassSeedFile(py_file: Path, dest_dir: str | None = None) -> Option
         if devExept:
             tb_str = ''.join(traceback.format_exception(
                 None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def findPiGenClassSeedFile', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def findPiGenClassSeedFile', label.ERROR)
         printIt(
-            f"Error finding piGenClass piSeed file for {className}: {e}", lable.ERROR)
+            f"Error finding piGenClass piSeed file for {className}: {e}", label.ERROR)
         return None
 
 def findPiClassGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optional[Path]:
@@ -628,9 +628,9 @@ def findPiClassGCSeedFile(py_file: Path, dest_dir: str | None = None) -> Optiona
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def findPiClassGCSeedFile', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def findPiClassGCSeedFile', label.ERROR)
         printIt(
-            f"Error finding piClassGC piSeed file for {className}: {e}", lable.ERROR)
+            f"Error finding piClassGC piSeed file for {className}: {e}", label.ERROR)
         return None
 
 def isPythonFileDefType(filePath: Path) -> bool:
@@ -760,13 +760,13 @@ def determineOptimalPiSeedType(pythonFile: Path) -> str:
             tree = ast.parse(content)
         except SyntaxError as e:
             printIt(
-                f"WARN: Syntax error in {pythonFile.name}: {e}. Skipping file type analysis.", lable.WARN)
+                f"WARN: Syntax error in {pythonFile.name}: {e}. Skipping file type analysis.", label.WARN)
             return "piClassGC"  # Default fallback for malformed files
         except Exception as e:
             if devExept:
                 tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-                printIt(f'{tb_str}\n\n --- def determineOptimalPiSeedType', lable.ERROR)
-            printIt(f"WARN: Parse error in {pythonFile.name}: {e}. Skipping file type analysis.", lable.WARN)
+                printIt(f'{tb_str}\n\n --- def determineOptimalPiSeedType', label.ERROR)
+            printIt(f"WARN: Parse error in {pythonFile.name}: {e}. Skipping file type analysis.", label.WARN)
             return "piClassGC"  # Default fallback
 
         classes = []
@@ -801,9 +801,9 @@ def determineOptimalPiSeedType(pythonFile: Path) -> str:
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def determineOptimalPiSeedType', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def determineOptimalPiSeedType', label.ERROR)
         printIt(
-            f"WARN: Error analyzing file type for {pythonFile.name}: {e}. Using default piClassGC.", lable.WARN)
+            f"WARN: Error analyzing file type for {pythonFile.name}: {e}. Using default piClassGC.", label.WARN)
     return "piClassGC"  # Safe fallback
 
 
@@ -869,7 +869,7 @@ def updatePiSeedFileDirectory(piSeedFile: Path, className: str, piSeedType: str,
         return True
     except Exception as e:
         printIt(
-            f"Error updating fileDirectory in {piSeedFile}: {e}", lable.ERROR)
+            f"Error updating fileDirectory in {piSeedFile}: {e}", label.ERROR)
         return False
 
 def extract_ImportFrom(node: ast.ImportFrom) -> Tuple[str, list]:
@@ -958,12 +958,12 @@ def extractCompleteClassCode(pythonContent: str, classNode: ast.ClassDef) -> Lis
         return removeTrailingBlankLines(classLines)
 
     except Exception as e:
-        printIt(f"Error extracting complete class code: {e}", lable.ERROR)
+        printIt(f"Error extracting complete class code: {e}", label.ERROR)
         return []
         return []
 
 def getNextPiSeedNumber() -> str:
-    """Get the next available piSeed number as a zero-padded string"""
+    """Get the next availabel piSeed number as a zero-padded string"""
     printIt('getNextPiSeedNumber', showDefNames03)
     try:
         seedPath = getSeedPath()
@@ -980,12 +980,12 @@ def getNextPiSeedNumber() -> str:
         if not numbers:
             return "001"
 
-        # Return next available number as zero-padded string
+        # Return next availabel number as zero-padded string
         nextNum = max(numbers) + 1
         return f"{nextNum:03d}"
 
     except Exception as e:
-        printIt(f"Error getting next piSeed number: {e}", lable.ERROR)
+        printIt(f"Error getting next piSeed number: {e}", label.ERROR)
         return "001"
 
 def mapMethodToCodeElement(methodName: str) -> Optional[str]:
@@ -1086,7 +1086,7 @@ def extractMethodCode(method_name: str, pythonContent: str, methodNode: ast.Func
         return isPropertry, removeTrailingBlankLines(methodLines)
 
     except Exception as e:
-        printIt(f"Error extracting method code: {e}", lable.ERROR)
+        printIt(f"Error extracting method code: {e}", label.ERROR)
         return isPropertry, []
 
 def updateSeedCodeElement(seedContent: str, className: str, codeElementName: str, methodCode: List[str]) -> Tuple[str, bool]:
@@ -1183,7 +1183,7 @@ def updateSeedCodeElement(seedContent: str, className: str, codeElementName: str
         return '\n'.join(newLines), changed
 
     except Exception as e:
-        printIt(f"Error updating seed code element: {e}", lable.ERROR)
+        printIt(f"Error updating seed code element: {e}", label.ERROR)
         return seedContent, False
 
 def findCorrectInsertionPosition(lines: List[str], className: str, codeElementName: str) -> int:
@@ -1299,7 +1299,7 @@ def generateExpectedInitMethod(seedContent: str, className: str) -> str:
         return expectedMethod.strip()
 
     except Exception as e:
-        printIt(f"Error generating expected init method: {e}", lable.ERROR)
+        printIt(f"Error generating expected init method: {e}", label.ERROR)
         return ""
 
 def generateExpectedDefaultStrCode(className: str, initArgs: Dict[str, Dict[str, str]], inheritance: List[str] = [], seedContent: str = "") -> List[str]:
@@ -1360,7 +1360,7 @@ def generateExpectedDefaultStrCode(className: str, initArgs: Dict[str, Dict[str,
         return lines
 
     except Exception as e:
-        printIt(f"Error generating expected default strCode: {e}", lable.ERROR)
+        printIt(f"Error generating expected default strCode: {e}", label.ERROR)
         return []
 
 
@@ -1387,7 +1387,7 @@ def extractJsonCodeWithComparison(pythonContent: str, jsonNode: ast.FunctionDef,
         if not expectedDefaultJsonCode:
             # Can't generate expected default, return actual (safe fallback)
             printIt(
-                f"DEBUG: Could not generate expected default jsonCode for {className}", lable.DEBUG)
+                f"DEBUG: Could not generate expected default jsonCode for {className}", label.DEBUG)
             return actualJsonCode
 
         # Compare actual vs expected default
@@ -1399,8 +1399,8 @@ def extractJsonCodeWithComparison(pythonContent: str, jsonNode: ast.FunctionDef,
             return actualJsonCode
 
     except Exception as e:
-        printIt(f"Error in enhanced jsonCode extraction: {e}", lable.ERROR)
-        printIt(f"Traceback: {traceback.format_exc()}", lable.ERROR)
+        printIt(f"Error in enhanced jsonCode extraction: {e}", label.ERROR)
+        printIt(f"Traceback: {traceback.format_exc()}", label.ERROR)
         return extractJsonCode_original(pythonContent, jsonNode, className)
 
 
@@ -1463,7 +1463,7 @@ def generateExpectedDefaultJsonCode(className: str, initArgs: Dict[str, Dict[str
 
     except Exception as e:
         printIt(
-            f"Error generating expected default jsonCode: {e}", lable.ERROR)
+            f"Error generating expected default jsonCode: {e}", label.ERROR)
         return []
 
 
@@ -1528,8 +1528,8 @@ def extractStrCodeWithComparison(pythonContent: str, strNode: ast.FunctionDef, c
             return actualStrCode
 
     except Exception as e:
-        printIt(f"Error in enhanced strCode extraction: {e}", lable.ERROR)
-        printIt(f"Traceback: {traceback.format_exc()}", lable.ERROR)
+        printIt(f"Error in enhanced strCode extraction: {e}", label.ERROR)
+        printIt(f"Traceback: {traceback.format_exc()}", label.ERROR)
         return extractStrCode_original(pythonContent, strNode, className)
 
 
@@ -1662,7 +1662,7 @@ def resolvePiSeedValue(value: str, seedContent: str) -> str:
         return value
 
     except Exception as e:
-        printIt(f"Error resolving piSeed value {value}: {e}", lable.DEBUG)
+        printIt(f"Error resolving piSeed value {value}: {e}", label.DEBUG)
         return value
 
 
@@ -1696,7 +1696,7 @@ def extractInitCodeWithComparison(pythonContent: str, initNode: ast.FunctionDef,
         return result
 
     except Exception as e:
-        printIt(f"Error in enhanced init code extraction: {e}", lable.ERROR)
+        printIt(f"Error in enhanced init code extraction: {e}", label.ERROR)
         return extractInitCode_original(pythonContent, initNode, className)
 
 
@@ -1770,7 +1770,7 @@ def generateExpectedInitComponents(seedContent: str, className: str) -> Dict[str
         }
 
     except Exception as e:
-        printIt(f"Error generating expected init components: {e}", lable.ERROR)
+        printIt(f"Error generating expected init components: {e}", label.ERROR)
         return {}
 
 
@@ -1900,8 +1900,8 @@ def parseActualInitMethod(pythonContent: str, initNode: ast.FunctionDef, classNa
         return items
 
     except Exception as e:
-        printIt(f"Error parsing actual init method: {e}", lable.ERROR)
-        printIt(f"Traceback: {traceback.format_exc()}", lable.ERROR)
+        printIt(f"Error parsing actual init method: {e}", label.ERROR)
+        printIt(f"Traceback: {traceback.format_exc()}", label.ERROR)
         return {}
 
 
@@ -2026,8 +2026,8 @@ def compareInitComponents(expected: Dict[str, list[str]], actual: Dict[str, list
         return result
 
     except Exception as e:
-        printIt(f"Error comparing init components: {e}", lable.ERROR)
-        printIt(f"Traceback: {traceback.format_exc()}", lable.ERROR)
+        printIt(f"Error comparing init components: {e}", label.ERROR)
+        printIt(f"Traceback: {traceback.format_exc()}", label.ERROR)
         return result
 
 
@@ -2123,7 +2123,7 @@ def extractInitCode_original(pythonContent: str, initNode: ast.FunctionDef, clas
         return result
 
     except Exception as e:
-        printIt(f"Error extracting init code: {e}", lable.ERROR)
+        printIt(f"Error extracting init code: {e}", label.ERROR)
         return {'preSuperInitCode': [], 'postSuperInitCode': [], 'initAppendCode': []}
 
 
@@ -2193,7 +2193,7 @@ def extractInitArguments(initNode: ast.FunctionDef) -> Dict[str, Dict[str, str]]
         return arguments
 
     except Exception as e:
-        printIt(f"Error extracting init arguments: {e}", lable.ERROR)
+        printIt(f"Error extracting init arguments: {e}", label.ERROR)
         return {}
 
 
@@ -2300,7 +2300,7 @@ def updateSeedInitArguments(seedContent: str, className: str, initArgs: Dict[str
                             continue
                         else:
                             printIt(
-                                f'No type part after pattern for line: {line.strip()}', lable.WARN)
+                                f'No type part after pattern for line: {line.strip()}', label.WARN)
                             i += 1  # Always advance to prevent infinite loop
                             continue
                     # Extract argument value definitions
@@ -2318,7 +2318,7 @@ def updateSeedInitArguments(seedContent: str, className: str, initArgs: Dict[str
                             i += 1
                         else:
                             printIt(
-                                f'No value part after pattern for line: {line.strip()}', lable.WARN)
+                                f'No value part after pattern for line: {line.strip()}', label.WARN)
                             i += 1  # Always advance to prevent infinite loop
                         continue
 
@@ -2440,7 +2440,7 @@ def updateSeedInitArguments(seedContent: str, className: str, initArgs: Dict[str
         return '\n'.join(newLines), changed
 
     except Exception as e:
-        printIt(f"Error updating seed init arguments: {e}", lable.ERROR)
+        printIt(f"Error updating seed init arguments: {e}", label.ERROR)
         return seedContent, False
 
 
@@ -2479,7 +2479,7 @@ def extractPiClassTypesFromInitArgs(seedContent: str, className: str) -> Set[str
 
     except Exception as e:
         printIt(
-            f"Error extracting Pi class types from initArgs: {e}", lable.ERROR)
+            f"Error extracting Pi class types from initArgs: {e}", label.ERROR)
         return set()
 
 
@@ -2525,7 +2525,7 @@ def extractImportStatements(importNodes: List) -> Tuple[Dict[str, Dict[str, str]
         return fromImports, regularImports
 
     except Exception as e:
-        printIt(f"Error extracting import statements: {e}", lable.ERROR)
+        printIt(f"Error extracting import statements: {e}", label.ERROR)
         return {}, []
 
 
@@ -2631,7 +2631,7 @@ def updateSeedFromImports(seedContent: str, className: str, fromImports: Dict[st
         return '\n'.join(newLines), changed
 
     except Exception as e:
-        printIt(f"Error updating seed fromImports: {e}", lable.ERROR)
+        printIt(f"Error updating seed fromImports: {e}", label.ERROR)
         return seedContent, False
 
 
@@ -2772,7 +2772,7 @@ def updateSeedImports(seedContent: str, className: str, regularImports: List[str
             return seedContent, False
 
     except Exception as e:
-        printIt(f"Error updating seed imports: {e}", lable.ERROR)
+        printIt(f"Error updating seed imports: {e}", label.ERROR)
         return seedContent, False
 
 
@@ -2787,7 +2787,7 @@ def extractCallCode(pythonContent: str, exprNode: ast.Expr) -> Optional[str]:
         if start_line >= len(lines):
             return None
 
-        # Use AST end_lineno information if available (Python 3.8+)
+        # Use AST end_lineno information if availabel (Python 3.8+)
         if hasattr(exprNode, 'end_lineno') and exprNode.end_lineno is not None:
             end_line = exprNode.end_lineno - 1
 
@@ -2808,8 +2808,8 @@ def extractCallCode(pythonContent: str, exprNode: ast.Expr) -> Optional[str]:
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def extractCallCode', lable.ERROR)
-        printIt(f"Error extracting call code: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def extractCallCode', label.ERROR)
+        printIt(f"Error extracting call code: {e}", label.ERROR)
         return None
 
 
@@ -2823,7 +2823,7 @@ def extractAssignmentCode(pythonContent: str, assignNode: Union[ast.Assign, ast.
         if start_line >= len(lines):
             return None
 
-        # Use AST end_lineno information if available (Python 3.8+)
+        # Use AST end_lineno information if availabel (Python 3.8+)
         if hasattr(assignNode, 'end_lineno') and assignNode.end_lineno is not None:
             end_line = assignNode.end_lineno - 1
 
@@ -2838,7 +2838,7 @@ def extractAssignmentCode(pythonContent: str, assignNode: Union[ast.Assign, ast.
                         result_lines.append(lines[i].rstrip())
                 return '\n'.join(result_lines)
 
-        # Fallback for older Python versions or when end_lineno is not available
+        # Fallback for older Python versions or when end_lineno is not availabel
         first_line = lines[start_line].strip()
 
         # Check if this is a multi-line string assignment (be more precise about triple quotes)
@@ -2878,8 +2878,8 @@ def extractAssignmentCode(pythonContent: str, assignNode: Union[ast.Assign, ast.
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def extractAssignmentCode', lable.ERROR)
-        printIt(f"Error extracting assignment code: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def extractAssignmentCode', label.ERROR)
+        printIt(f"Error extracting assignment code: {e}", label.ERROR)
         return None
 
 
@@ -2925,8 +2925,8 @@ def extractIfMainCode(pythonContent: str, ifNode: ast.If) -> List[str]:
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def extractIfMainCode', lable.ERROR)
-        printIt(f"Error extracting if main code: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def extractIfMainCode', label.ERROR)
+        printIt(f"Error extracting if main code: {e}", label.ERROR)
         return []
 
 
@@ -2946,8 +2946,8 @@ def extractModuleDocstring(pythonContent: str) -> List[str]:
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def extractModuleDocstring', lable.ERROR)
-        printIt(f"Error extracting module docstring: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def extractModuleDocstring', label.ERROR)
+        printIt(f"Error extracting module docstring: {e}", label.ERROR)
         return []
 
 def enhancedFileDiscovery(fileName: str) -> Optional[Path]:
@@ -3025,8 +3025,8 @@ def enhancedFileDiscovery(fileName: str) -> Optional[Path]:
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def enhancedFileDiscovery', lable.ERROR)
-        printIt(f"Error in enhanced file discovery for {fileName}: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def enhancedFileDiscovery', label.ERROR)
+        printIt(f"Error in enhanced file discovery for {fileName}: {e}", label.ERROR)
         return None
 
 
@@ -3052,7 +3052,7 @@ def findPythonFilesRecursively(directory: Path, file_type: str) -> List[Tuple[Pa
         return files
 
     except Exception as e:
-        printIt(f"Error finding Python files in {directory}: {e}", lable.ERROR)
+        printIt(f"Error finding Python files in {directory}: {e}", label.ERROR)
         return []
 
 
@@ -3103,21 +3103,21 @@ def validateSyncResults(pythonFile: Path, piSeedFile: Path, changes: List[str]):
         if not changes:
             # This might be normal, but worth noting
             printIt(
-                f"No changes detected for {pythonFile.name} - file may be up to date", lable.DEBUG)
+                f"No changes detected for {pythonFile.name} - file may be up to date", label.DEBUG)
 
         # Report warnings
         if warnings:
-            printIt(f"Validation warnings for {pythonFile.name}:", lable.WARN)
+            printIt(f"Validation warnings for {pythonFile.name}:", label.WARN)
             for warning in warnings:
-                printIt(f"  • {warning}", lable.WARN)
+                printIt(f"  • {warning}", label.WARN)
         else:
-            printIt(f"Validation passed for {pythonFile.name}", lable.DEBUG)
+            printIt(f"Validation passed for {pythonFile.name}", label.DEBUG)
 
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def findPythonFilesRecursively', lable.ERROR)
-        printIt(f"Error validating sync results: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def findPythonFilesRecursively', label.ERROR)
+        printIt(f"Error validating sync results: {e}", label.ERROR)
 
 
 def printSyncCodeHelp():
@@ -3167,4 +3167,4 @@ The system automatically detects the optimal piSeed type for each file:
 - Files with only functions → piDefGC
 - Simple single classes → piClassGC (backward compatibility)
 """
-    printIt(help_text, lable.INFO)
+    printIt(help_text, label.INFO)

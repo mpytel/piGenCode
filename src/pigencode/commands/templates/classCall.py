@@ -1,7 +1,7 @@
 from string import Template
 from textwrap import dedent
 
-cmdDefTemplate = Template(dedent("""from pigencode.defs.logIt import printIt, lable, cStr, color
+cmdDefTemplate = Template(dedent("""from pigencode.defs.logIt import printIt, label, cStr, color
 from .commands import Commands
 
 class ${defName}Command:
@@ -16,10 +16,10 @@ class ${defName}Command:
 
     def execute(self):
         '''Main execution method for ${defName} command'''
-        printIt(f"Executing {self.theCmd} command with class-based approach", lable.INFO)
+        printIt(f"Executing {self.theCmd} command with class-based approach", label.INFO)
 
         if len(self.theArgs) == 0:
-            printIt("No arguments provided", lable.WARN)
+            printIt("No arguments provided", label.WARN)
             return
 
         argIndex = 0
@@ -29,7 +29,7 @@ class ${defName}Command:
             if hasattr(self, method_name):
                 getattr(self, method_name)()
             else:
-                printIt(f"Processing argument: {anArg}", lable.INFO)
+                printIt(f"Processing argument: {anArg}", label.INFO)
             argIndex += 1
 
 def ${defName}(argParse):
@@ -43,7 +43,7 @@ def ${defName}(argParse):
 
 argDefTemplate = Template(dedent("""def ${argName}(argParse):
     args = argParse.args
-    printIt(args, lable.INFO)
+    printIt(args, label.INFO)
 
 
 """))

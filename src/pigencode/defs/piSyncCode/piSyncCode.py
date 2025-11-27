@@ -1,7 +1,7 @@
 import traceback
 from pathlib import Path
 from typing import Tuple  # , Dict, List, Optional, Set, Any
-from ..logIt import printIt, lable
+from ..logIt import printIt, label
 from ..fileIO import getKeyItem, piGCDirs
 from .piSyncCodeUtil import \
     enhancedFileDiscovery, \
@@ -25,12 +25,12 @@ global options
 global devExept
 devExept = True
 global showDefNames
-# showDefNames = lable.ABORTPRT
-# showDefNames = lable.IMPORT
-showDefNames = lable.ABORTPRT
-showDefNames01 = lable.ABORTPRT
-showDefNames02 = lable.ABORTPRT
-showDefNames03 = lable.ABORTPRT
+# showDefNames = label.ABORTPRT
+# showDefNames = label.IMPORT
+showDefNames = label.ABORTPRT
+showDefNames01 = label.ABORTPRT
+showDefNames02 = label.ABORTPRT
+showDefNames03 = label.ABORTPRT
 # Intelligent pattern detection functions
 
 def syncSingleFile(fileName: str, options: dict):
@@ -41,16 +41,16 @@ def syncSingleFile(fileName: str, options: dict):
         filePath = enhancedFileDiscovery(fileName)
 
         if not filePath:
-            printIt(f"File not found: {fileName}", lable.FileNotFound)
+            printIt(f"File not found: {fileName}", label.FileNotFound)
             return
 
         if not filePath.suffix == '.py':
-            printIt(f"File must be a Python file: {fileName}", lable.ERROR)
+            printIt(f"File must be a Python file: {fileName}", label.ERROR)
             return
 
         # Show what we found
         if options.get('stats', False):
-            printIt(f"Found file: {filePath}", lable.INFO)
+            printIt(f"Found file: {filePath}", label.INFO)
 
         className = filePath.stem
 
@@ -75,35 +75,35 @@ def syncSingleFile(fileName: str, options: dict):
             piSeedFile = existingPiSeedFile
             if options.get('stats', False):
                 printIt(
-                    f"Found existing {file_type} piSeed file: {piSeedFile.name}", lable.DEBUG)
+                    f"Found existing {file_type} piSeed file: {piSeedFile.name}", label.DEBUG)
             # Try to find or create piSeed file based on optimal type
             if file_type == "piDefGC":
                 if options.get('dry_run', False):
                     printIt(
-                        f"DRY RUN: Would create new piDefGC piSeed file for: {className}", lable.INFO)
+                        f"DRY RUN: Would create new piDefGC piSeed file for: {className}", label.INFO)
                     return  # Don't actually create in dry-run mode
                 else:
                     printIt(
-                        f"Creating new piDefGC piSeed file for: {className}", lable.INFO)
+                        f"Creating new piDefGC piSeed file for: {className}", label.INFO)
                     piSeedFile = createNewPiDefGCSeedFile(className, filePath, piSeedFile, dest_dir)
             elif file_type == "piGenClass":
                 if options.get('dry_run', False):
                     printIt(
-                        f"DRY RUN: Would create new piGenClass piSeed file for: {className}", lable.INFO)
+                        f"DRY RUN: Would create new piGenClass piSeed file for: {className}", label.INFO)
                     return  # Don't actually create in dry-run mode
                 else:
                     printIt(
-                        f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
+                        f"Creating new piGenClass piSeed file for: {className}", label.INFO)
                     piSeedFile = createNewPiGenClassSeedFile(className, filePath, piSeedFile, dest_dir)
 
             else:  # piClassGC
                 if options.get('dry_run', False):
                     printIt(
-                        f"DRY RUN: Would create new piClassGC piSeed file for: {className}", lable.INFO)
+                        f"DRY RUN: Would create new piClassGC piSeed file for: {className}", label.INFO)
                     return  # Don't actually create in dry-run mode
                 else:
                     printIt(
-                        f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
+                        f"Creating new piClassGC piSeed file for: {className}", label.INFO)
                     piSeedFile = createNewPiClassGCSeedFile(className, filePath, piSeedFile, dest_dir)
             return
         else:
@@ -111,7 +111,7 @@ def syncSingleFile(fileName: str, options: dict):
             file_type = determineOptimalPiSeedType(filePath)
             if options.get('stats', False):
                 printIt(
-                    f"No existing piSeed file found, detected optimal type: {file_type}", lable.DEBUG)
+                    f"No existing piSeed file found, detected optimal type: {file_type}", label.DEBUG)
 
             # Try to find or create piSeed file based on optimal type
             if file_type == "piDefGC":
@@ -119,11 +119,11 @@ def syncSingleFile(fileName: str, options: dict):
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(
-                            f"DRY RUN: Would create new piDefGC piSeed file for: {className}", lable.INFO)
+                            f"DRY RUN: Would create new piDefGC piSeed file for: {className}", label.INFO)
                         return  # Don't actually create in dry-run mode
                     else:
                         printIt(
-                            f"Creating new piDefGC piSeed file for: {className}", lable.INFO)
+                            f"Creating new piDefGC piSeed file for: {className}", label.INFO)
                         piSeedFile = createNewPiDefGCSeedFile(
                             className, filePath, None, dest_dir)
             elif file_type == "piGenClass":
@@ -133,11 +133,11 @@ def syncSingleFile(fileName: str, options: dict):
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(
-                            f"DRY RUN: Would create new piGenClass piSeed file for: {className}", lable.INFO)
+                            f"DRY RUN: Would create new piGenClass piSeed file for: {className}", label.INFO)
                         return  # Don't actually create in dry-run mode
                     else:
                         printIt(
-                            f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
+                            f"Creating new piGenClass piSeed file for: {className}", label.INFO)
                         piSeedFile = createNewPiGenClassSeedFile(
                             className, filePath, None, dest_dir)
 
@@ -146,11 +146,11 @@ def syncSingleFile(fileName: str, options: dict):
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(
-                            f"DRY RUN: Would create new piClassGC piSeed file for: {className}", lable.INFO)
+                            f"DRY RUN: Would create new piClassGC piSeed file for: {className}", label.INFO)
                         return  # Don't actually create in dry-run mode
                     else:
                         printIt(
-                            f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
+                            f"Creating new piClassGC piSeed file for: {className}", label.INFO)
                         print('seedContent01')
                 piSeedFile = createNewPiClassGCSeedFile(className, filePath, None, dest_dir)
                 return
@@ -168,10 +168,10 @@ def syncSingleFile(fileName: str, options: dict):
                 if not fnmatch.fnmatch(f.name, pattern)
             ]
 
-        printIt(f"Found {len(files_to_process)} files to process", lable.INFO)
+        printIt(f"Found {len(files_to_process)} files to process", label.INFO)
 
         if options.get('dry_run', False):
-            printIt("DRY RUN MODE - No changes will be made", lable.WARN)
+            printIt("DRY RUN MODE - No changes will be made", label.WARN)
             if options.get('create_piSeeds', False):
                 # Only show files that actually need piSeed creation
                 files_needing_piSeeds = []
@@ -193,11 +193,11 @@ def syncSingleFile(fileName: str, options: dict):
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(
-                            f"DRY RUN: Would create new piDefGC piSeed file for: {className}", lable.INFO)
+                            f"DRY RUN: Would create new piDefGC piSeed file for: {className}", label.INFO)
                         return  # Don't actually create in dry-run mode
                     else:
                         printIt(
-                            f"Creating new piDefGC piSeed file for: {className}", lable.INFO)
+                            f"Creating new piDefGC piSeed file for: {className}", label.INFO)
                         piSeedFile = createNewPiDefGCSeedFile(
                             className, filePath, None, dest_dir)
             elif file_type == "piGenClass":
@@ -205,11 +205,11 @@ def syncSingleFile(fileName: str, options: dict):
                 if not piSeedFile and options.get('create_piSeeds', False):
                     if options.get('dry_run', False):
                         printIt(
-                            f"DRY RUN: Would create new piGenClass piSeed file for: {className}", lable.INFO)
+                            f"DRY RUN: Would create new piGenClass piSeed file for: {className}", label.INFO)
                         return  # Don't actually create in dry-run mode
                     else:
                         printIt(
-                            f"Creating new piGenClass piSeed file for: {className}", lable.INFO)
+                            f"Creating new piGenClass piSeed file for: {className}", label.INFO)
                         piSeedFile = createNewPiGenClassSeedFile(
                             className, filePath, None, dest_dir)
             else:  # piClassGC
@@ -217,11 +217,11 @@ def syncSingleFile(fileName: str, options: dict):
                 # if not piSeedFile and options.get('create_piSeeds', False):
                 #     if options.get('dry_run', False):
                 #         printIt(
-                #             f"DRY RUN: Would create new piClassGC piSeed file for: {className}", lable.INFO)
+                #             f"DRY RUN: Would create new piClassGC piSeed file for: {className}", label.INFO)
                 #         return  # Don't actually create in dry-run mode
                 #     else:
                 #         printIt(
-                #             f"Creating new piClassGC piSeed file for: {className}", lable.INFO)
+                #             f"Creating new piClassGC piSeed file for: {className}", label.INFO)
                 piSeedFile = createNewPiClassGCSeedFile(className, filePath, None, dest_dir)
 
         # Apply filter if specified
@@ -231,7 +231,7 @@ def syncSingleFile(fileName: str, options: dict):
             if file_type != filter_map.get(options['filter_type']):
                 if options.get('stats', False):
                     printIt(
-                        f"Skipping {filePath.name} - doesn't match filter {options['filter_type']}", lable.DEBUG)
+                        f"Skipping {filePath.name} - doesn't match filter {options['filter_type']}", label.DEBUG)
                 return
 
         # Apply exclude pattern if specified
@@ -240,22 +240,22 @@ def syncSingleFile(fileName: str, options: dict):
             if fnmatch.fnmatch(filePath.name, options['exclude_pattern']):
                 if options.get('stats', False):
                     printIt(
-                        f"Skipping {filePath.name} - matches exclude pattern", lable.DEBUG)
+                        f"Skipping {filePath.name} - matches exclude pattern", label.DEBUG)
                 return
 
         # Check if we have a piSeed file to work with
         if not piSeedFile:
             printIt(
-                f"{file_type} piSeed file not found for: {className}", lable.WARN)
+                f"{file_type} piSeed file not found for: {className}", label.WARN)
             if not options.get('create_piSeeds', False):
                 printIt(
-                    "Use --create-piSeeds to auto-create piSeed file", lable.INFO)
+                    "Use --create-piSeeds to auto-create piSeed file", label.INFO)
             return
 
         # Dry run check
         if options.get('dry_run', False):
             printIt(
-                f"DRY RUN: Would sync {filePath.name} to {piSeedFile.name}", lable.INFO)
+                f"DRY RUN: Would sync {filePath.name} to {piSeedFile.name}", label.INFO)
             return
 
         # Sync based on the determined file type
@@ -275,20 +275,20 @@ def syncSingleFile(fileName: str, options: dict):
         # # Report results
         # if changes:
         #     printIt(
-        #         f"01 Synced {len(changes)} changes from {filePath.name} to {piSeedFile.name}", lable.INFO)
+        #         f"01 Synced {len(changes)} changes from {filePath.name} to {piSeedFile.name}", label.INFO)
         #     if options.get('stats', False):
         #         for change in changes:
-        #             printIt(f"  • {change}", lable.DEBUG)
+        #             printIt(f"  • {change}", label.DEBUG)
         # else:
-        #     printIt(f"(SSF)No changes needed for {filePath}", lable.INFO)
+        #     printIt(f"(SSF)No changes needed for {filePath}", label.INFO)
 
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(
                 None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def syncSingleFile', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def syncSingleFile', label.ERROR)
         printIt(
-            f"Error syncing {fileName}: {e}", lable.ERROR)
+            f"Error syncing {fileName}: {e}", label.ERROR)
 
 
 def syncDirectory(directory: Path, options: dict):
@@ -298,7 +298,7 @@ def syncDirectory(directory: Path, options: dict):
         printIt(f'syncDirectory: {str(directory)}', showDefNames)
         if not directory.exists() or not directory.is_dir():
             printIt(
-                f"Directory not found or not a directory: {directory}", lable.ERROR)
+                f"Directory not found or not a directory: {directory}", label.ERROR)
             return
 
         # Find all Python files in the directory recursively
@@ -309,7 +309,7 @@ def syncDirectory(directory: Path, options: dict):
 
         if not python_files:
             printIt(
-                f"No Python files found in directory: {directory}", lable.INFO)
+                f"No Python files found in directory: {directory}", label.INFO)
             return
 
         # Apply exclude file pattern filter
@@ -319,13 +319,13 @@ def syncDirectory(directory: Path, options: dict):
             python_files = [
                 f for f in python_files if not fnmatch.fnmatch(f.name, pattern)]
 
-        # printIt(f"Found {len(python_files)} Python files in {directory}", lable.INFO)
+        # printIt(f"Found {len(python_files)} Python files in {directory}", label.INFO)
         if not Path(getKeyItem(piGCDirs[0])).is_dir():
             options['create_piSeeds'] = True
 
         if options.get('dry_run', False):
 
-            printIt("DRY RUN MODE - No changes will be made", lable.WARN)
+            printIt("DRY RUN MODE - No changes will be made", label.WARN)
 
             if options.get('create_piSeeds', False):
                 # Only show files that actually need piSeed creation
@@ -366,25 +366,25 @@ def syncDirectory(directory: Path, options: dict):
 
                 if files_needing_piSeeds:
                     printIt(
-                        f"Found {len(files_needing_piSeeds)} files that need piSeed creation:", lable.INFO)
+                        f"Found {len(files_needing_piSeeds)} files that need piSeed creation:", label.INFO)
                     # Show first 10
                     for py_file, file_type in files_needing_piSeeds[:10]:
                         printIt(
-                            f"  Would create {file_type} piSeed for: {py_file.name}", lable.DEBUG)
+                            f"  Would create {file_type} piSeed for: {py_file.name}", label.DEBUG)
                     if len(files_needing_piSeeds) > 10:
                         printIt(
-                            f"  ... and {len(files_needing_piSeeds) - 10} more files", lable.DEBUG)
+                            f"  ... and {len(files_needing_piSeeds) - 10} more files", label.DEBUG)
                 else:
-                    printIt("No files found that need piSeed creation", lable.INFO)
+                    printIt("No files found that need piSeed creation", label.INFO)
             else:
                 # Show regular sync operations
                 for py_file in python_files[:10]:  # Show first 10
                     file_type = determineOptimalPiSeedType(py_file)
                     printIt(
-                        f"  Would process: {py_file.name} ({file_type})", lable.DEBUG)
+                        f"  Would process: {py_file.name} ({file_type})", label.DEBUG)
                 if len(python_files) > 10:
                     printIt(
-                        f"  ... and {len(python_files) - 10} more files", lable.DEBUG)
+                        f"  ... and {len(python_files) - 10} more files", label.DEBUG)
             return
 
         # Process each file
@@ -408,7 +408,7 @@ def syncDirectory(directory: Path, options: dict):
                     if file_type != filter_map.get(options['filter_type']):
                         if options.get('stats', False):
                             printIt(
-                                f"Skipping {py_file.name} - doesn't match filter", lable.DEBUG)
+                                f"Skipping {py_file.name} - doesn't match filter", label.DEBUG)
                         continue
 
                 # here is where one file is processed
@@ -455,7 +455,7 @@ def syncDirectory(directory: Path, options: dict):
                     totalChanges += len(changes)
                     if options.get('stats', False):
                         printIt(
-                            f"04 Synced {len(changes)} changes from {py_file.name}", lable.INFO)
+                            f"04 Synced {len(changes)} changes from {py_file.name}", label.INFO)
                     processedFiles += 1
                 elif piSeedFile:
                     processedFiles += 1
@@ -465,31 +465,31 @@ def syncDirectory(directory: Path, options: dict):
             except Exception as e:
                 lineNum = f"{e.__traceback__.tb_lineno})" if e.__traceback__ is not None else ""
                 printIt(
-                    f"Error processing {py_file}: {e} {lineNum}", lable.ERROR)
+                    f"Error processing {py_file}: {e} {lineNum}", label.ERROR)
                 errors += 1
 
         # Final summary
-        printIt(f"Directory Sync Complete:", lable.INFO)
-        printIt(f"  • Processed: {processedFiles} files", lable.BLANK)
-        printIt(f"  • Changes made: {totalChanges}", lable.BLANK)
-        printIt(f"  • Skipped: {skippedFiles} files", lable.BLANK)
+        printIt(f"Directory Sync Complete:", label.INFO)
+        printIt(f"  • Processed: {processedFiles} files", label.BLANK)
+        printIt(f"  • Changes made: {totalChanges}", label.BLANK)
+        printIt(f"  • Skipped: {skippedFiles} files", label.BLANK)
         if createdSeeds > 0:
-            printIt(f"  • Created piSeed files: {createdSeeds}", lable.BLANK)
+            printIt(f"  • Created piSeed files: {createdSeeds}", label.BLANK)
 
         # if skippedFiles > 0 and not options.get('create_piSeeds', False):
-        #     printIt("Tip: Use --create-piSeeds to auto-create piSeed files for orphaned Python files", lable.INFO)
+        #     printIt("Tip: Use --create-piSeeds to auto-create piSeed files for orphaned Python files", label.INFO)
 
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(
                 None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def syncDirectory', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def syncDirectory', label.ERROR)
         printIt(
-            f"Error syncing directory {directory}: {e}", lable.ERROR)
+            f"Error syncing directory {directory}: {e}", label.ERROR)
         errors += 1
 
     if errors > 0:
-        printIt(f"  • Errors: {errors}", lable.BLANK)
+        printIt(f"  • Errors: {errors}", label.BLANK)
 
 def syncAllFiles(options: dict):
     """sync all files with piGenClass support, filtering and advanced options"""
@@ -552,10 +552,10 @@ def syncAllFiles(options: dict):
                 if not fnmatch.fnmatch(f.name, pattern)
             ]
 
-        printIt(f"Found {len(files_to_process)} files to process", lable.INFO)
+        printIt(f"Found {len(files_to_process)} files to process", label.INFO)
 
         if options.get('dry_run', False):
-            printIt("DRY RUN MODE - No changes will be made", lable.WARN)
+            printIt("DRY RUN MODE - No changes will be made", label.WARN)
 
             if options.get('create_piSeeds', False):
                 # Only show files that actually need piSeed creation
@@ -596,25 +596,25 @@ def syncAllFiles(options: dict):
 
                 if files_needing_piSeeds:
                     printIt(
-                        f"Found {len(files_needing_piSeeds)} files that need piSeed creation:", lable.INFO)
+                        f"Found {len(files_needing_piSeeds)} files that need piSeed creation:", label.INFO)
                     # Show first 10
                     for filePath, file_type in files_needing_piSeeds[:10]:
                         printIt(
-                            f"  Would create {file_type} piSeed for: {filePath.name}", lable.DEBUG)
+                            f"  Would create {file_type} piSeed for: {filePath.name}", label.DEBUG)
                     if len(files_needing_piSeeds) > 10:
                         printIt(
-                            f"  ... and {len(files_needing_piSeeds) - 10} more files", lable.DEBUG)
+                            f"  ... and {len(files_needing_piSeeds) - 10} more files", label.DEBUG)
                 else:
-                    printIt("No files found that need piSeed creation", lable.INFO)
+                    printIt("No files found that need piSeed creation", label.INFO)
             else:
                 # Show regular sync operations
                 # Show first 10
                 for filePath, file_type, dir_type in files_to_process[:10]:
                     printIt(
-                        f"  Would process: {filePath.name} ({file_type})", lable.DEBUG)
+                        f"  Would process: {filePath.name} ({file_type})", label.DEBUG)
                 if len(files_to_process) > 10:
                     printIt(
-                        f"  ... and {len(files_to_process) - 10} more files", lable.DEBUG)
+                        f"  ... and {len(files_to_process) - 10} more files", label.DEBUG)
             return
 
         # Process files
@@ -637,7 +637,7 @@ def syncAllFiles(options: dict):
                             totalChanges += len(changes)
                             if options.get('stats', False):
                                 printIt(
-                                    f"02 Synced {len(changes)} changes from {filePath.name}", lable.INFO)
+                                    f"02 Synced {len(changes)} changes from {filePath.name}", label.INFO)
                         processedFiles += 1
                     else:
                         piSeedFile = createNewPiDefGCSeedFile(
@@ -656,7 +656,7 @@ def syncAllFiles(options: dict):
                             totalChanges += len(changes)
                             if options.get('stats', False):
                                 printIt(
-                                    f"03 Synced {len(changes)} changes from {filePath.name}", lable.INFO)
+                                    f"03 Synced {len(changes)} changes from {filePath.name}", label.INFO)
                         processedFiles += 1
                     else:
                         piSeedFile = createNewPiGenClassSeedFile(className, filePath, piSeedFile, dest_dir)
@@ -675,7 +675,7 @@ def syncAllFiles(options: dict):
                     #         totalChanges += len(changes)
                     #         if options.get('stats', False):
                     #             printIt(
-                    #                 f"04.1 Synced {len(changes)} changes from {filePath.name}", lable.INFO)
+                    #                 f"04.1 Synced {len(changes)} changes from {filePath.name}", label.INFO)
                     #     processedFiles += 1
                     # else:
                     piSeedFile = createNewPiClassGCSeedFile(className, filePath, None, dest_dir)
@@ -687,25 +687,25 @@ def syncAllFiles(options: dict):
             except Exception as e:
                 lineNum = f"{e.__traceback__.tb_lineno})" if e.__traceback__ is not None else ""
                 printIt(
-                    f"Error processing {filePath}: {e} {lineNum}", lable.ERROR)
+                    f"Error processing {filePath}: {e} {lineNum}", label.ERROR)
                 skippedFiles += 1
 
         # Final summary
-        printIt(f"Sync Complete:", lable.INFO)
-        printIt(f"  • Processed: {processedFiles} files", lable.INFO)
-        printIt(f"  • Changes made: {totalChanges}", lable.INFO)
-        printIt(f"  • Skipped: {skippedFiles} files", lable.INFO)
+        printIt(f"Sync Complete:", label.INFO)
+        printIt(f"  • Processed: {processedFiles} files", label.INFO)
+        printIt(f"  • Changes made: {totalChanges}", label.INFO)
+        printIt(f"  • Skipped: {skippedFiles} files", label.INFO)
         if createdSeeds > 0:
-            printIt(f"  • Created piSeed files: {createdSeeds}", lable.INFO)
+            printIt(f"  • Created piSeed files: {createdSeeds}", label.INFO)
 
         if skippedFiles > 0 and not options.get('create_piSeeds', False):
             printIt(
-                "Tip: Use --create-piSeeds to auto-create piSeed files for orphaned Python files", lable.INFO)
+                "Tip: Use --create-piSeeds to auto-create piSeed files for orphaned Python files", label.INFO)
 
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(
                 None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def syncAllFiles', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def syncAllFiles', label.ERROR)
         printIt(
-            f"Error syncing all files: {e}", lable.ERROR)
+            f"Error syncing all files: {e}", label.ERROR)

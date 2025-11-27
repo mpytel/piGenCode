@@ -51,7 +51,7 @@ class color():
         }
 
 
-class lable():
+class label():
     SAVED = "SAVED: "
     REPLACED = "REPLACED: "
     BLANK = "BK"
@@ -92,7 +92,7 @@ def logIt(*message, logFileName="pi.log"):
     needClip = False
     if len(message) > 0:
         for mess in message:
-            if mess == lable.BLANK:
+            if mess == label.BLANK:
                 pass
             elif mess in color.l2cDict:
                 prtStr = mess + prtStr
@@ -113,11 +113,11 @@ def printIt(*message, asStr: bool=False) -> str:
     needClip = False
     abortPrt = False
     for mess in message:
-        if mess == lable.ABORTPRT: abortPrt = True
+        if mess == label.ABORTPRT: abortPrt = True
     if not abortPrt:
         if len(message) > 0:
             for mess in message:
-                if mess == lable.BLANK:
+                if mess == label.BLANK:
                     prtStr = message[0]
                     rtnStr = message[0]
                     needClip = False
@@ -167,14 +167,14 @@ def printPiPath(thePiPath: str | Path):
         else: Exception("Path is to long")
         print(prtStr[:-1])
     except Exception as e:
-        printIt(e.args[0], lable.DirNotFound)
+        printIt(e.args[0], label.DirNotFound)
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(tb_str,lable.ERROR)
+        printIt(tb_str,label.ERROR)
         exit()
 
 def piDictPrint(theDict, piDictTitle="no title"):
     ps = dumps(theDict,indent=2)
-    printIt(f'{piDictTitle}:\n{ps}',lable.INFO)
+    printIt(f'{piDictTitle}:\n{ps}',label.INFO)
 
 def getCodeFile():
     cf = currentframe()

@@ -2,7 +2,7 @@ from string import Template
 from textwrap import dedent
 
 cmdDefTemplate = Template(dedent("""import asyncio
-from pigencode.defs.logIt import printIt, lable, cStr, color
+from pigencode.defs.logIt import printIt, label, cStr, color
 from .commands import Commands
 
 async def ${defName}_async(argParse):
@@ -11,10 +11,10 @@ async def ${defName}_async(argParse):
     theCmd = args.commands[0]
     theArgs = args.arguments
 
-    printIt(f"Starting async {theCmd} command", lable.INFO)
+    printIt(f"Starting async {theCmd} command", label.INFO)
 
     if len(theArgs) == 0:
-        printIt("No arguments provided", lable.WARN)
+        printIt("No arguments provided", label.WARN)
         return
 
     # Process arguments asynchronously
@@ -23,13 +23,13 @@ async def ${defName}_async(argParse):
         tasks.append(process_argument_async(arg))
 
     results = await asyncio.gather(*tasks)
-    printIt(f"Completed processing {len(results)} arguments", lable.PASS)
+    printIt(f"Completed processing {len(results)} arguments", label.PASS)
 
 async def process_argument_async(arg):
     '''Process individual argument asynchronously'''
     # Simulate async work
     await asyncio.sleep(0.1)
-    printIt(f"Processed: {arg}", lable.INFO)
+    printIt(f"Processed: {arg}", label.INFO)
     return arg
 
 def ${defName}(argParse):
@@ -41,7 +41,7 @@ def ${defName}(argParse):
 
 argDefTemplate = Template(dedent("""def ${argName}(argParse):
     args = argParse.args
-    printIt(args, lable.INFO)
+    printIt(args, label.INFO)
 
 
 """))

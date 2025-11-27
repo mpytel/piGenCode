@@ -1,6 +1,6 @@
 import sys, traceback
 from argparse import Namespace
-from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.logIt import printIt, label
 from .commands import Commands
 from .cmdOptSwitchbord import cmdOptSwitchbord
 from pigencode.classes.argParse import ArgParse
@@ -23,7 +23,7 @@ def cmdSwitchbord(argParse: ArgParse):
                         cmdOptSwitchbord(switchFlagChk, switchFlags)
                     else:
                         if switchFlagChk not in ["-h", "--help"]:
-                            printIt(f'{switchFlagChk} not defined',lable.WARN)
+                            printIt(f'{switchFlagChk} not defined',label.WARN)
                         else:
                             argParse.parser.print_help()
                     exit()
@@ -39,20 +39,20 @@ def cmdSwitchbord(argParse: ArgParse):
                     exec(f'{theCmd}(argParse)')
             else:
                 print(args)
-                printIt(f'Command "{theCmd}" not present.\n',lable.ERROR)
+                printIt(f'Command "{theCmd}" not present.\n',label.ERROR)
                 argParse.parser.print_help()
         else:
             argParse.parser.print_help()
     except Exception as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(f'{theCmd}\n{tb_str}', lable.ERROR)
+        printIt(f'{theCmd}\n{tb_str}', label.ERROR)
         exit()
 
 
 # Register all commands with the command registry for lazy loading
 # This replaces the exec() pattern with a cleaner registry approach
 def _register_commands():
-    """Register all available commands with the command registry"""
+    """Register all availabel commands with the command registry"""
     # Register commands for lazy loading
     command_registry.register_lazy("newCmd", "newCmd")
     command_registry.register_lazy("modCmd", "modCmd")

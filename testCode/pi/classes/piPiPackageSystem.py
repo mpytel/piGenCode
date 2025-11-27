@@ -3,7 +3,7 @@ from sys import stdout
 from re import compile as reCompile
 from pathlib import Path
 from copy import deepcopy
-from pi.defs.logIt import printIt, lable, logIt, cStr, color
+from pi.defs.logIt import printIt, label, logIt, cStr, color
 from pi.defs.piFileIO import getKeyItem, savePiLn, writeRC, setKeyItem, delKey
 from pi.defs.piTouch import piPathLn
 from pi.piClasses.piUser import PiBase, PiPi, PiUser
@@ -14,8 +14,8 @@ readline.parse_and_bind('tab: compleat')
 readline.parse_and_bind('set editing-mode vi')
 
 
-debugOff = lable.ABORTPRT # ^(.*)(printIt)(.*debugOff\)), $1# printIt$2
-debugOn = lable.DEBUG
+debugOff = label.ABORTPRT # ^(.*)(printIt)(.*debugOff\)), $1# printIt$2
+debugOn = label.DEBUG
 debugSet = debugOff
 #debugSet = debugOn
 
@@ -60,7 +60,7 @@ class PiPiPackageSystem():
                 currChk = datetime.datetime.now()
                 diffMin = (currChk - lastChk).total_seconds() / 60.0
                 if diffMin > 50:
-                    printIt("Root user access has expired.\n",lable.WARN)
+                    printIt("Root user access has expired.\n",label.WARN)
                     print(cStr('Choose a current user, or create a new user.',cVal=color.UNDERLINE))
                     self.piCurrentIndexer.setUser(rootUserName)
             else:
@@ -120,7 +120,7 @@ class PiPiPackageSystem():
                 # this need to be changed tom go througjh piAPIServer
                 thePiBase: PiBase = PiBase(setTypeName,newTypeTitle[str(picklistID)],'')
         else:
-            printIt(f'{setTypeName} is not a {setTypeTitle}',lable.WARN)
+            printIt(f'{setTypeName} is not a {setTypeTitle}',label.WARN)
         return thePiBase
     def setCurrDomain(self):
         pass

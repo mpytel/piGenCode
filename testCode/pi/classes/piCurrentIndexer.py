@@ -6,7 +6,7 @@ from re import findall, compile as reCompile
 from datetime import datetime
 from time import time
 from pi.defs.piFileIO import getKeyItem, delKey, setKeyItem, getPisPath
-from pi.defs.logIt import printIt, lable, logIt, cStr, color
+from pi.defs.logIt import printIt, label, logIt, cStr, color
 from pi.defs.piLogger import piLogger, piPiLogStr
 from pi.defs.piTouch import isPiID
 #from pi.defs.plural2Single import plural2Single
@@ -38,8 +38,8 @@ untitled = 'untitled'
 globalStoragePiTypes = ['PiWord']
 globalStorageContainers = ['word']
 
-debugOff = lable.ABORTPRT # ^(.*)(printIt)(.*debugSet\)), $1# printIt$2
-debugOn = lable.DEBUG
+debugOff = label.ABORTPRT # ^(.*)(printIt)(.*debugSet\)), $1# printIt$2
+debugOn = label.DEBUG
 debugSet = debugOff
 # debugSet = debugOn
 
@@ -114,7 +114,7 @@ class PiCurrentIndexer(PiIndexer):
                 for aPath in self.pisPath.iterdir():
                     if aPath.is_dir() and isPiID(aPath.name):
                         file_list = [f for f in aPath.glob('**/*') if f.is_file()]
-                        # printIt('possible error here becase userfile used befor defined',lable.ERROR)
+                        # printIt('possible error here becase userfile used befor defined',label.ERROR)
                         userfile = [f for f in file_list if f.name == f'{aPath.name}.json']
                         if userfile: userfile = userfile[0]
                         if userfile: chkPiUser = PiUser(fileName=userfile)
@@ -127,8 +127,8 @@ class PiCurrentIndexer(PiIndexer):
                 if rootPiUser:
                     self.rootUser = rootPiUser
                     setKeyItem('rootUser', str(userfile))
-                    printIt(f'Root user set to 0: {self.rootUser.piBase.piTitle}',lable.INFO)
-                    logIt(f'Root user set to: {self.rootUser.piBase.piTitle}',lable.INFO)
+                    printIt(f'Root user set to 0: {self.rootUser.piBase.piTitle}',label.INFO)
+                    logIt(f'Root user set to: {self.rootUser.piBase.piTitle}',label.INFO)
             if not self.rootUser: # no pis dir exist becuse piRootUser was not set
                 # therfor creat new user
                 print(cStr(cStr('Create root user',cVal=color.UNDERLINE),cVal=color.YELLOW))
@@ -152,7 +152,7 @@ class PiCurrentIndexer(PiIndexer):
             # print('goodRoot = True  ')
             goodRoot = True
         else:
-            printIt('piRootUser not set.',lable.ERROR)
+            printIt('piRootUser not set.',label.ERROR)
         return goodRoot
     def _checkUsersInRoot(self):
         currUserName = self.rootUser.piBody.user
@@ -248,12 +248,12 @@ class PiCurrentIndexer(PiIndexer):
                     self.Subject = PiSubject(fileName=self.Domain.subjects[self.Domain.subject])
                 else:
                     self.setCurrentIndexer(self.piIndexerTypes[0], self.rootUser.piBase.piTitle)
-                    if not self.rootUser: printIt(f'rootUser not set.',lable.ERROR)
+                    if not self.rootUser: printIt(f'rootUser not set.',label.ERROR)
             elif picklistID > 1:
                 print(userNames[str(picklistID)])
                 self.setCurrentIndexer(self.piIndexerTypes[0],userNames[str(picklistID)])
             else: pass # 0 picked to cancel
-        else: printIt('type file not set properly',lable.ERROR)
+        else: printIt('type file not set properly',label.ERROR)
     def createNewUser(self, newUserPiTitle='', newUserPiSD='', piUserProfile: PiUserProfile=None) -> PiUser:
         '''Create a new standard user from CLI. A call to buildUser
            from pi.piClasses.piUser creates the user files.
@@ -292,7 +292,7 @@ class PiCurrentIndexer(PiIndexer):
                 self.setCurrentIndexer(self.piIndexerTypes[1], 'public')
             else:
                 self.setCurrentIndexer(self.piIndexerTypes[0], self.rootUser.piBase.piTitle)
-                if not self.rootUser: printIt(f'rootUser not set.',lable.ERROR)
+                if not self.rootUser: printIt(f'rootUser not set.',label.ERROR)
         else:
             newUser = None
         return newUser
@@ -358,7 +358,7 @@ class PiCurrentIndexer(PiIndexer):
                             parrent = thePiType
         if not piTypePiFiles:
             pass
-            printIt(f'xx{thePiType} is not a topic.',lable.ERROR)
+            printIt(f'xx{thePiType} is not a topic.',label.ERROR)
         return parrent, piTypePiFiles
 
     def getUserPublicTypeFileList(self,thePiType: str) -> tuple[str, dict]:
@@ -408,7 +408,7 @@ class PiCurrentIndexer(PiIndexer):
         if chkTuple[0] == 'trie':
             if chkTuple[1]:
                 self.glbWordTrieFileName = chkTuple[1]
-                printIt(f'glbWordTrieFileName: {self.glbWordTrieFileName}',lable.DEBUG)
+                printIt(f'glbWordTrieFileName: {self.glbWordTrieFileName}',label.DEBUG)
                 self.glbWordTrie = PiTrie(fileName=self.glbWordTrieFileName)
         else:
             if not self.__populateGlbWordTrie(): return None
@@ -450,7 +450,7 @@ class PiCurrentIndexer(PiIndexer):
                 i +=1
             print("--- %s total ---" % (time() - start_time00))
         else:
-            printIt(f'{seedGlbWordFileName}',lable.FileNotFound)
+            printIt(f'{seedGlbWordFileName}',label.FileNotFound)
     def getWordPiTrie(self,thePiType: str) -> PiTrie:
         ''' currentaly used to return root.public.untitled.untitled topic list '''
         # print(f'in getUserPublicTypeFileList, thePiType = {thePiType}')
@@ -605,7 +605,7 @@ class PiCurrentIndexer(PiIndexer):
                 piPi = eval(f'{thePiType}(fileName=self.Subject.piBody.types[{thePiType}])')
                 printIt(f'getCurrPiType piPi {type(piPi)}',debugSet)
             else:
-                #printIt(f'{thePiType} type not valid.',lable.ERROR)
+                #printIt(f'{thePiType} type not valid.',label.ERROR)
                 pass
         return piPi
     def sortPiModDateList(self,arr):
@@ -656,7 +656,7 @@ class PiCurrentIndexer(PiIndexer):
                 if addPi:
                     rtnPis.append(piPi)
             else:
-                printIt(f'{piID}',lable.FileNotFound)
+                printIt(f'{piID}',label.FileNotFound)
         return rtnPis
 
     def getCurrUserBodyRealms(self) -> list:
@@ -684,11 +684,11 @@ class PiCurrentIndexer(PiIndexer):
         if piType in self.piPiClasses.piIndexerTypes:
             rtnList = pi_type_map.get(piType)
         return rtnList
-        # printIt(f'CLI output number of pis and the numOfPis to list.',lable.TODO)
-        # printIt(f'Store numOfPis in .pirc. Consider creating a piRC ',lable.TODO)
-        # printIt(f'piType to store this information per user. Just',lable.TODO)
-        # printIt(f'like piIDIndex are stored. Also we need piIndex files',lable.TODO)
-        # printIt(f'to store pis indexed  by piType.',lable.TODO)
+        # printIt(f'CLI output number of pis and the numOfPis to list.',label.TODO)
+        # printIt(f'Store numOfPis in .pirc. Consider creating a piRC ',label.TODO)
+        # printIt(f'piType to store this information per user. Just',label.TODO)
+        # printIt(f'like piIDIndex are stored. Also we need piIndex files',label.TODO)
+        # printIt(f'to store pis indexed  by piType.',label.TODO)
         # piIDIndexFileName = self.User.piBody.piIDIndex
         # piIDIndex = PiIDIndex(fileName=piIDIndexFileName)
         # print(piIDIndex.piBase)
@@ -765,7 +765,7 @@ class PiCurrentIndexer(PiIndexer):
                 except:
                     return None
         if not piFileName:
-            printIt(f'piID: {piID}',lable.FileNotFound)
+            printIt(f'piID: {piID}',label.FileNotFound)
             return None
         return piFileName
     def piFromLink(self, piID: str|Path, userSource: PiUser = None, suppress = False):
@@ -790,7 +790,7 @@ class PiCurrentIndexer(PiIndexer):
             else: source = self.User.piID
         else:
             if not suppress:
-                printIt(f'{piID} ({self.User.piBase.piTitle})',lable.FileNotFound)
+                printIt(f'{piID} ({self.User.piBase.piTitle})',label.FileNotFound)
         return rtnPi, source
     def piTitleFromLink(self, piID):
         rtnPiTitle = f'piID not found'
@@ -883,7 +883,7 @@ class PiCurrentIndexer(PiIndexer):
                 self.Domain.subject = piTitle
                 self.Domain.piSave()
             else:
-                printIt(f'{piTitle} not in self.Domain.subjects.keys',lable.WARN)
+                printIt(f'{piTitle} not in self.Domain.subjects.keys',label.WARN)
         return chgSubject
     def setCurrentIndexer(self, piType: str, piTitle: str) -> bool:
         printIt('in setCurrentIndexer',debugOff)
@@ -894,7 +894,7 @@ class PiCurrentIndexer(PiIndexer):
                     printIt(f'setCurrentIndexer: {piType}',debugSet)
                     indexerChanged = self.setUser(piTitle)
                 else:
-                    printIt(f'user set to: {piTitle}',lable.INFO)
+                    printIt(f'user set to: {piTitle}',label.INFO)
             elif piType == self.piIndexerTypes[1]: # realm
                 indexerChanged = self.setRealm(piTitle)
             elif piType == self.piIndexerTypes[2]: # domain
@@ -947,10 +947,10 @@ class PiCurrentIndexer(PiIndexer):
                 if piType == globalType: # word == word or root.private.untitled.untitled word storage
                     print('reqNewPi',piType, piTitle, targetRealm, globalType)
                     globalSubject: PiSubject = self.getRootUntiledRealmSubject(targetRealm)
-                    # printIt('globalSubject.piID:',globalSubject.piID,lable.DEBUG)
+                    # printIt('globalSubject.piID:',globalSubject.piID,label.DEBUG)
                     # start_time01 = time()
                     piIndexer01 = globalSubject.piIndexer.copy()
-                    printIt('root.public.piSubject:',piIndexer01.piSubject,lable.DEBUG)
+                    printIt('root.public.piSubject:',piIndexer01.piSubject,label.DEBUG)
                     newPi = globalSubject.setTopic(piBase, piIndexer01, self.piIDIndexUpdates)
                     if newPi == None: return newPi
                     # print(f'{time() - start_time01} - root.{targetRealm}.{piType}: {piTitle}')
@@ -962,30 +962,30 @@ class PiCurrentIndexer(PiIndexer):
                         globalSubject: PiSubject = self.getRootUntiledRealmSubject(targetRealm)
                         # start_time01 = time()
                         piIndexer02 = globalSubject.piIndexer.copy()
-                        printIt('root.public.piSubject:',piIndexer02.piSubject,lable.DEBUG)
+                        printIt('root.public.piSubject:',piIndexer02.piSubject,label.DEBUG)
                         newPi = globalSubject.setTopic(piBase, piIndexer02, self.piIDIndexUpdates)
                         # print(f'{time() - start_time01} - root.{targetRealm}.{piType}: {piTitle}')
                     currSubject: PiSubject = self.getCurrUntiledRealmSubject(targetRealm)
                     piIndexer03 = currSubject.piIndexer.copy()
-                    printIt(f'user.{targetRealm}.piIndexer03.piSubject:',piIndexer03.piSubject,lable.DEBUG)
-                    printIt(f'user.{targetRealm}.currSubject.piID:',currSubject.piID,lable.DEBUG)
+                    printIt(f'user.{targetRealm}.piIndexer03.piSubject:',piIndexer03.piSubject,label.DEBUG)
+                    printIt(f'user.{targetRealm}.currSubject.piID:',currSubject.piID,label.DEBUG)
                     # start_time01 = time()
                     newPi = currSubject.setTopic(piBase, piIndexer03, self.piIDIndexUpdates)
                     # print(f'{time() - start_time01} - {currIndexerAsTitels.piUser}.{targetRealm}.{piType}: {piTitle}')
                     piExists = True
             # else:
-            #     printIt(f'should be {piType}', lable.ERROR)
+            #     printIt(f'should be {piType}', label.ERROR)
             if not piExists:
                 if piType == globalType:
                     print(piBase.piType,piBase.piTitle,piBase.piSD)
                     testWord = self.chkIfWord(piBase.piTitle)
                     if not testWord:
                         newPi = self.Subject.setTopic(piBase, piIndexer01, self.piIDIndexUpdates)
-                    #printIt(f'why are we here, piType == globalType',lable.DEBUG)
-                    #printIt(f'why are we here, {piType} == {globalType}',lable.DEBUG)
+                    #printIt(f'why are we here, piType == globalType',label.DEBUG)
+                    #printIt(f'why are we here, {piType} == {globalType}',label.DEBUG)
                 else:
-                    printIt('why are we here, piType != globalType',lable.DEBUG)
-                    printIt(f'why are we here, {piType} != {globalType}',lable.DEBUG)
+                    printIt('why are we here, piType != globalType',label.DEBUG)
+                    printIt(f'why are we here, {piType} != {globalType}',label.DEBUG)
                     piIndexer = self.Subject.piIndexer.copy()
                     newPi = self.Subject.setTopic(piBase, piIndexer, self.piIDIndexUpdates)
         if self.piIDIndexUpdates.updates:
@@ -1096,7 +1096,7 @@ class PiCurrentIndexer(PiIndexer):
             print(dumps(updates,indent=2))
             for filename in updates.values():
                 outPi, _ = self.piFromLink(filename)
-                if not outPi: printIt(filename,lable.FileNotFound)
+                if not outPi: printIt(filename,label.FileNotFound)
                 outPis.append(outPi.json())
         self.piIDIndexUpdates.rmFlush(self)
         return outPis

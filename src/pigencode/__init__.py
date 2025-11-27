@@ -5,6 +5,6 @@ from .classes.piGenCode import PiGenCode, genPiPiClass
 from .classes.piGenDefCode import genPiDefCode
 from .classes.piGenClassCode import genPiGenClass
 from .defs.fileIO import piGenCodeDirs, piGCDirs, getKeyItem, setKeyItem, readJson, piLoadPiClassGCJson, getKeyItem, writeRC
-from .defs.logIt import logIt, printIt, lable, getCodeFile, getCodeLine, germDbug
+from .defs.logIt import logIt, printIt, label, getCodeFile, getCodeLine, germDbug
 from .defs.piID import getPiMD5, getPiID
 from .defs.piJsonFile import readPiStruc, writePiStruc, readPiDefault, writePiDefault, writePi, PiClassGCFiles, PiDefGCFiles, PiGenClassFiles

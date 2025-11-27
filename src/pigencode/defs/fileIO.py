@@ -2,7 +2,7 @@ from json import load, loads, dump, JSONDecodeError
 from traceback import format_exception
 from pathlib import Path
 import difflib
-from ..defs.logIt import printIt, lable, logIt, cStr, color
+from ..defs.logIt import printIt, label, logIt, cStr, color
 
 cswPath = Path.cwd()
 rcFileName = Path.cwd()
@@ -85,7 +85,7 @@ def readJson(fileName: str, verbose=True) -> dict:
         with open(fileName, 'r') as rf:
             rtnDict = load(rf)
     except FileNotFoundError:
-        if verbose: printIt("pi|readJson -", fileName,lable.FileNotFound)
+        if verbose: printIt("pi|readJson -", fileName,label.FileNotFound)
     except JSONDecodeError as e:
         tb_str = ''.join(format_exception(None, e, e.__traceback__))
     return rtnDict
@@ -96,17 +96,17 @@ def writeJson(fileName: str, aDict: dict, verbose=True) -> bool:
             dump(aDict, wf, indent=2)
         rtnBool = True
     except FileNotFoundError:
-        if verbose: printIt("pi|writeJson -", fileName,lable.FileNotFound)
+        if verbose: printIt("pi|writeJson -", fileName,label.FileNotFound)
     except JSONDecodeError as e:
         tb_str = ''.join(format_exception(None, e, e.__traceback__))
-        printIt(tb_str,lable.ERROR)
+        printIt(tb_str,label.ERROR)
     return rtnBool
 def piLoadPiClassGCJson(PiClassName, piClassGCDir) -> dict:
     rtnJson = {}
     lowerPiClassName = PiClassName[:2].lower() + PiClassName[2:]
     # look in class file for listm of parametersm being inharited as children of paramType
     fileName =Path(piClassGCDir).joinpath(lowerPiClassName + '.py')
-    printIt(f'piLoadPiClassGCJson fileName: {fileName}',lable.ABORTPRT)
+    printIt(f'piLoadPiClassGCJson fileName: {fileName}',label.ABORTPRT)
     if fileName.is_file():
         piStartStr = f'{PiClassName}_PI = '
         piJsonStr = ''
@@ -117,10 +117,10 @@ def piLoadPiClassGCJson(PiClassName, piClassGCDir) -> dict:
                 else:
                     if piStartStr in line:
                         piJsonStr = line[len(piStartStr):]
-        printIt(f'piJsonStr: {piJsonStr}',lable.ABORTPRT)
+        printIt(f'piJsonStr: {piJsonStr}',label.ABORTPRT)
         rtnJson = loads(piJsonStr)
     else:
-        printIt('piLoadPiClassGCJson', fileName,lable.FileNotFound)
+        printIt('piLoadPiClassGCJson', fileName,label.FileNotFound)
     return rtnJson
 def writePiLink(piRealm: str, piRootLink: str, piUserLink: str, piPath: Path):
     pass
@@ -163,24 +163,24 @@ def savePiLn(softLinkMD5: Path, fileNameMD5: Path, suppress=True):
             if chkPiFilePath.is_file() and fileNameMD5.is_file() and (chkPiFilePath == fileNameMD5):
                 softLinkMD5.unlink()
             elif not chkPiFilePath.is_file():
-                logStr, loglbl = (f'Broken link found {chkPiFilePath}', lable.WARN)
+                logStr, loglbl = (f'Broken link found {chkPiFilePath}', label.WARN)
                 if not suppress: printIt(logStr, loglbl)
                 logIt(logStr, loglbl)
                 softLinkMD5.unlink()
             if fileNameMD5.is_file():
                 if softLinkMD5.is_symlink(): softLinkMD5.unlink()
                 softLinkMD5.symlink_to(fileNameMD5)
-                logStr, loglbl = (f'Current pi changed: {fileNameMD5}', lable.INFO)
+                logStr, loglbl = (f'Current pi changed: {fileNameMD5}', label.INFO)
                 if not suppress: printIt(logStr, loglbl)
                 logIt(logStr, loglbl)
             else:
-                logStr, loglbl = (fileNameMD5, lable.FileNotFound)
+                logStr, loglbl = (fileNameMD5, label.FileNotFound)
                 if not suppress: printIt(logStr, loglbl)
                 logIt(logStr, loglbl)
         else:
             if fileNameMD5.is_file():
                 softLinkMD5.symlink_to(fileNameMD5)
-                logStr, loglbl = (f'Current pi changed: {fileNameMD5}', lable.INFO)
+                logStr, loglbl = (f'Current pi changed: {fileNameMD5}', label.INFO)
                 if not suppress: printIt(logStr, loglbl)
                 logIt(logStr, loglbl)
     else:

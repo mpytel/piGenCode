@@ -4,7 +4,7 @@ import traceback
 from json import dumps
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
-from ...defs.logIt import printIt, lable
+from ...defs.logIt import printIt, label
 from ...defs.getSeedPath import getSeedPath
 from ...classes.piSeeds import extractPiSeed
 from .piSyncCodeUtil import extractCodeDocStr, \
@@ -35,12 +35,12 @@ global options
 global devExept
 devExept = True
 global showDefNames
-# showDefNames = lable.ABORTPRT
-# showDefNames = lable.IMPORT
-showDefNames = lable.ABORTPRT
-showDefNames01 = lable.ABORTPRT
-showDefNames02 = lable.ABORTPRT
-showDefNames03 = lable.ABORTPRT
+# showDefNames = label.ABORTPRT
+# showDefNames = label.IMPORT
+showDefNames = label.ABORTPRT
+showDefNames01 = label.ABORTPRT
+showDefNames02 = label.ABORTPRT
+showDefNames03 = label.ABORTPRT
 # Intelligent pattern detection functions
 
 
@@ -53,7 +53,7 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
             seedFileName = seed_file.name
             seedFilePath = seed_file
         else:
-            # Get next available number
+            # Get next availabel number
             nextNum = getNextPiSeedNumber()
             # Create new piSeed file name
             seedFileName = f"piSeed{nextNum}_piClassGC_{className}.pi"
@@ -181,7 +181,7 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
             for init_line in class_info['init_preSuper']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:preSuperInitCode \"{init_line}\"\n"
         if class_info.get('init_postSuper'):
-            # printIt(f"class_info['init_postSuper']: {class_info['init_postSuper']}", lable.DEBUG)
+            # printIt(f"class_info['init_postSuper']: {class_info['init_postSuper']}", label.DEBUG)
             for init_line in class_info['init_postSuper']:
                 seedContent += f"piValueA {className}.piBody:piClassGC:postSuperInitCode \"{init_line}\"\n"
         if class_info.get('init_body'):
@@ -255,15 +255,15 @@ def createNewPiClassGCSeedFile(className: str, pythonFile: Path, seed_file: Path
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
             
-        printIt(f"piClassGC piSeed: {seedFilePath}", lable.SAVED)
+        printIt(f"piClassGC piSeed: {seedFilePath}", label.SAVED)
         return seedFilePath
 
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def createNewPiClassGCSeedFile', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def createNewPiClassGCSeedFile', label.ERROR)
         printIt(
-            f"Error creating new piClassGC piSeed file for {className}: {e}", lable.ERROR)
+            f"Error creating new piClassGC piSeed file for {className}: {e}", label.ERROR)
         return None
 
 def _extract_compound_statement(stmt, contentList, lenContent, init_preSuper, init_postSuper, init_body):
@@ -611,8 +611,8 @@ def analyzePythonClassFile(className: str, pythonFile: Path) -> Dict:
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def analyzePythonClassFile', lable.ERROR)
-        printIt(f"Error analyzing Python class file {pythonFile}: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def analyzePythonClassFile', label.ERROR)
+        printIt(f"Error analyzing Python class file {pythonFile}: {e}", label.ERROR)
         return {}
 
 def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | None = None) -> List[str]:
@@ -640,11 +640,11 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
             tree = ast.parse(pythonContent)
         except SyntaxError as e:
             printIt(
-                f"WARN: Syntax error in {pythonFile.name}: {e}. Skipping sync.", lable.WARN)
+                f"WARN: Syntax error in {pythonFile.name}: {e}. Skipping sync.", label.WARN)
             return []  # Return empty changes list
         except Exception as e:
             printIt(
-                f"WARN: Parse error in {pythonFile.name}: {e}. Skipping sync.", lable.WARN)
+                f"WARN: Parse error in {pythonFile.name}: {e}. Skipping sync.", label.WARN)
             return []  # Return empty changes list
 
         try:
@@ -685,7 +685,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                                 if shouldPreserveElegantPattern(seedContent, className, codeType, codeLines, options):
                                     if options.get('stats', False):
                                         printIt(
-                                            f"PRESERVE: Skipping {codeType} for {className} - preserving elegant pattern", lable.DEBUG)
+                                            f"PRESERVE: Skipping {codeType} for {className} - preserving elegant pattern", label.DEBUG)
                                     continue
 
                                 # Real changes detected - sync them
@@ -712,7 +712,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                                 if shouldPreserveElegantPattern(seedContent, className, 'strCode', methodCode, options):
                                     if options.get('stats', False):
                                         printIt(
-                                            f"PRESERVE: strCode for {className} - preserving default pattern", lable.DEBUG)
+                                            f"PRESERVE: strCode for {className} - preserving default pattern", label.DEBUG)
                                 else:
                                     # Real changes detected - sync them
                                     strCodeLines = extractStrCodeWithComparison(
@@ -747,7 +747,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                                 if shouldPreserveElegantPattern(seedContent, className, codeElementName, methodCode, options):
                                     if options.get('stats', False):
                                         printIt(
-                                            f"PRESERVE: {codeElementName} for {className} - preserving pattern", lable.DEBUG)
+                                            f"PRESERVE: {codeElementName} for {className} - preserving pattern", label.DEBUG)
                                     continue  # Skip this sync
                                 # Real changes detected - sync them
                                 if methodCode:
@@ -788,7 +788,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                             shouldSkip = True
                             if options.get('stats', False):
                                 printIt(
-                                    f"SKIP: fromImports for {className} - {import_part} from {from_part} already handled by initArguments", lable.DEBUG)
+                                    f"SKIP: fromImports for {className} - {import_part} from {from_part} already handled by initArguments", label.DEBUG)
 
                         # Also check for common Pi class patterns
                         if (from_part.startswith('.') and import_part.startswith('Pi')) or \
@@ -799,7 +799,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                                     shouldSkip = True
                                     if options.get('stats', False):
                                         printIt(
-                                            f"SKIP: fromImports for {className} - {import_part} matches initArgument type {piType}", lable.DEBUG)
+                                            f"SKIP: fromImports for {className} - {import_part} matches initArgument type {piType}", label.DEBUG)
                                     break
 
                         if not shouldSkip:
@@ -819,7 +819,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                         if shouldPreserveElegantPattern(seedContent, className, 'fromImports', importLines, options):
                             if options.get('stats', False):
                                 printIt(
-                                    f"PRESERVE: fromImports for {className} - preserving auto-generated imports", lable.DEBUG)
+                                    f"PRESERVE: fromImports for {className} - preserving auto-generated imports", label.DEBUG)
                         else:
                             # Real changes detected - sync them
                             newSeedContent, changed = updateSeedFromImports(
@@ -830,7 +830,7 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
                                 changes.append("fromImports")
                     elif options.get('stats', False):
                         printIt(
-                            f"SKIP: All fromImports for {className} filtered out - handled by initArguments", lable.DEBUG)
+                            f"SKIP: All fromImports for {className} filtered out - handled by initArguments", label.DEBUG)
 
                 if regularImports:
                     newSeedContent, changed = updateSeedImports(
@@ -900,13 +900,13 @@ def syncPythonClassToSeed(pythonFile: Path, piSeedFile: Path, options: dict | No
 
         except SyntaxError as e:
             printIt(
-                f"Syntax error in Python file {pythonFile}: {e}", lable.ERROR)
+                f"Syntax error in Python file {pythonFile}: {e}", label.ERROR)
 
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def syncPythonClassToSeed', lable.ERROR)
-        printIt(f"Error syncing {pythonFile} to {piSeedFile}: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def syncPythonClassToSeed', label.ERROR)
+        printIt(f"Error syncing {pythonFile} to {piSeedFile}: {e}", label.ERROR)
 
     return changes
 
@@ -1032,7 +1032,7 @@ def updateSeedClassDefCode(seedContent: str, className: str, methodName: str, me
         return '\n'.join(newLines), changed
 
     except Exception as e:
-        printIt(f"Error updating seed classDefCode: {e}", lable.ERROR)
+        printIt(f"Error updating seed classDefCode: {e}", label.ERROR)
         return seedContent, False
 
 def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
@@ -1360,6 +1360,6 @@ def rebuildPiSeedInCorrectOrder(seedContent: str, className: str) -> str:
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def rebuildPiSeedInCorrectOrder', lable.ERROR)
-        printIt(f"Error rebuilding piSeed order: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def rebuildPiSeedInCorrectOrder', label.ERROR)
+        printIt(f"Error rebuilding piSeed order: {e}", label.ERROR)
         return seedContent

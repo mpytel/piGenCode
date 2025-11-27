@@ -17,7 +17,7 @@ if __name__ == '__main__':
 """)
 cmdSwitchbordFileStr = dedent("""import sys, traceback
 from argparse import Namespace
-from ..defs.logIt import printIt, lable
+from ..defs.logIt import printIt, label
 from .commands import Commands
 from .cmdOptSwitchbord import cmdOptSwitchbord
 from ..classes.argParse import ArgParse
@@ -40,7 +40,7 @@ def cmdSwitchbord(argParse: ArgParse):
                         cmdOptSwitchbord(switchFlagChk, switchFlags)
                     else:
                         if switchFlagChk not in ["-h", "--help"]:
-                            printIt(f'{switchFlagChk} not defined',lable.WARN)
+                            printIt(f'{switchFlagChk} not defined',label.WARN)
                         else:
                             argParse.parser.print_help()
                     exit()
@@ -54,15 +54,15 @@ def cmdSwitchbord(argParse: ArgParse):
                 argIndex = 0
                 while argIndex < len(theArgs):
                     anArg = theArgs[argIndex]
-                    printIt(f"argument {str(argIndex).zfill(2)}: {anArg}", lable.INFO)
+                    printIt(f"argument {str(argIndex).zfill(2)}: {anArg}", label.INFO)
                     argIndex += 1
                 if len(theArgs) == 0:
-                    printIt("no argument(s) entered", lable.INFO)
+                    printIt("no argument(s) entered", label.INFO)
         else:
             argParse.parser.print_help()
     except Exception as e:
         tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-        printIt(f'{theCmd}\\n{tb_str}', lable.ERROR)
+        printIt(f'{theCmd}\\n{tb_str}', label.ERROR)
         exit()
 """)
 cmdOptSwitchbordFileStr = dedent("""from ..classes.optSwitches import OptSwitches
@@ -71,7 +71,7 @@ def cmdOptSwitchbord(switchFlag: str, switchFlags: str):
     optSwitches = OptSwitches(switchFlags)
     optSwitches.toggleSwitchFlag(switchFlag)
 """)
-newCmdTemplateStr = """from ..defs.logIt import printIt, lable, cStr, color
+newCmdTemplateStr = """from ..defs.logIt import printIt, label, cStr, color
 from .commands import Commands
 
 cmdObj = Commands()
@@ -85,7 +85,7 @@ def ${defName}(argParse):
     theArgs = args.arguments
     argIndex = 0
     nonCmdArg = True
-    printIt("Modify default behavour in src/${packName}/commands/${defName}.py", lable.DEBUG)
+    printIt("Modify default behavour in src/${packName}/commands/${defName}.py", label.DEBUG)
     # delete place holder code bellow that loops though arguments provided
     # when this command is called when not needed.
     # Note: that function having a name that is entered as an argument part
@@ -97,21 +97,21 @@ def ${defName}(argParse):
             exec(f"{anArg}(argParse)")
         elif nonCmdArg:  # not a know aregument for this {packName} {defName} command
             if len(theArgNames) > 1:
-                printIt(f"{theArgNames[argIndex+1]}: {anArg}",lable.INFO)
+                printIt(f"{theArgNames[argIndex+1]}: {anArg}",label.INFO)
             else:
-                printIt(f"unknown argument: {anArg}", lable.INFO)
+                printIt(f"unknown argument: {anArg}", label.INFO)
         argIndex += 1
     if len(theArgs) == 0:
-        printIt("no argument(s) entered", lable.INFO)
+        printIt("no argument(s) entered", label.INFO)
 
 """
 argDefTemplateStr = dedent("""def ${argName}(argParse):
     args = argParse.args
-    printIt(args, lable.INFO)
+    printIt(args, label.INFO)
 
 """)
 asyncTemplateStr = """import asyncio
-from ..defs.logIt import printIt, lable, cStr, color
+from ..defs.logIt import printIt, label, cStr, color
 from .commands import Commands
 
 async def ${defName}_async(argParse):
@@ -120,10 +120,10 @@ async def ${defName}_async(argParse):
     theCmd = args.commands[0]
     theArgs = args.arguments
 
-    printIt(f"Starting async {theCmd} command", lable.INFO)
+    printIt(f"Starting async {theCmd} command", label.INFO)
 
     if len(theArgs) == 0:
-        printIt("No arguments provided", lable.WARN)
+        printIt("No arguments provided", label.WARN)
         return
 
     # Process arguments asynchronously
@@ -132,13 +132,13 @@ async def ${defName}_async(argParse):
         tasks.append(process_argument_async(arg))
 
     results = await asyncio.gather(*tasks)
-    printIt(f"Completed processing {len(results)} arguments", lable.PASS)
+    printIt(f"Completed processing {len(results)} arguments", label.PASS)
 
 async def process_argument_async(arg):
     '''Process individual argument asynchronously'''
     # Simulate async work
     await asyncio.sleep(0.1)
-    printIt(f"Processed: {arg}", lable.INFO)
+    printIt(f"Processed: {arg}", label.INFO)
     return arg
 
 def ${defName}(argParse):
@@ -146,7 +146,7 @@ def ${defName}(argParse):
     asyncio.run(${defName}_async(argParse))
 
 """
-classCallTemplateStr = """from ..defs.logIt import printIt, lable, cStr, color
+classCallTemplateStr = """from ..defs.logIt import printIt, label, cStr, color
 from .commands import Commands
 
 class ${defName}Command:
@@ -161,10 +161,10 @@ class ${defName}Command:
 
     def execute(self):
         '''Main execution method for ${defName} command'''
-        printIt(f"Executing {self.theCmd} command with class-based approach", lable.INFO)
+        printIt(f"Executing {self.theCmd} command with class-based approach", label.INFO)
 
         if len(self.theArgs) == 0:
-            printIt("No arguments provided", lable.WARN)
+            printIt("No arguments provided", label.WARN)
             return
 
         argIndex = 0
@@ -174,7 +174,7 @@ class ${defName}Command:
             if hasattr(self, method_name):
                 getattr(self, method_name)()
             else:
-                printIt(f"Processing argument: {anArg}", lable.INFO)
+                printIt(f"Processing argument: {anArg}", label.INFO)
             argIndex += 1
 
 def ${defName}(argParse):
@@ -184,26 +184,26 @@ def ${defName}(argParse):
 
 
 """
-simpleTemplateStr = """from ..defs.logIt import printIt, lable
+simpleTemplateStr = """from ..defs.logIt import printIt, label
 
 def ${defName}(argParse):
     '''Simple ${defName} command implementation'''
     args = argParse.args
     arguments = args.arguments
 
-    printIt(f"Running ${defName} command", lable.INFO)
+    printIt(f"Running ${defName} command", label.INFO)
 
     if len(arguments) == 0:
-        printIt("No arguments provided", lable.WARN)
+        printIt("No arguments provided", label.WARN)
         return
 
     for i, arg in enumerate(arguments):
-        printIt(f"Argument {i+1}: {arg}", lable.INFO)
+        printIt(f"Argument {i+1}: {arg}", label.INFO)
 
 
 """
 newCmdStr = dedent("""import os, sys, copy
-from ..defs.logIt import printIt, lable
+from ..defs.logIt import printIt, label
 from ..classes.argParse import ArgParse
 from .commands import Commands, cmdDescriptionTagStr
 from .templates.newCmd import cmdDefTemplate, argDefTemplate
@@ -214,7 +214,7 @@ readline.parse_and_bind('set editing-mode vi')
 def newCmd(argParse: ArgParse):
     args = argParse.args
 
-    # Handle --templates option to list available templates
+    # Handle --templates option to list availabel templates
     if hasattr(argParse, 'cmd_options') and 'templates' in argParse.cmd_options:
         list_templates()
         return
@@ -223,7 +223,7 @@ def newCmd(argParse: ArgParse):
     argsDict = args.arguments
 
     if len(argsDict) == 0:
-        printIt("Command name required", lable.ERROR)
+        printIt("Command name required", label.ERROR)
         return
 
     newCmdName = args.arguments[0]
@@ -236,16 +236,16 @@ def newCmd(argParse: ArgParse):
         if hasattr(argParse, 'cmd_options') and 'template' in argParse.cmd_options:
             template_name = argParse.cmd_options['template']
             if not template_exists(template_name):
-                printIt(f"Template '{template_name}' not found. Using default template.", lable.WARN)
+                printIt(f"Template '{template_name}' not found. Using default template.", label.WARN)
                 template_name = 'newCmd'
 
         writeCodeFile(theArgs, template_name)
-        printIt(f'"{newCmdName}" added using {template_name} template.', lable.NewCmd)
+        printIt(f'"{newCmdName}" added using {template_name} template.', label.NewCmd)
     else:
-        printIt(f'"{newCmdName}" exists. use modCmd or rmCmd to modify or remove this command.', lable.INFO)
+        printIt(f'"{newCmdName}" exists. use modCmd or rmCmd to modify or remove this command.', label.INFO)
 
 def list_templates():
-    '''List all available templates'''
+    '''List all availabel templates'''
     template_dir = os.path.join(os.path.dirname(__file__), 'templates')
     templates = []
 
@@ -254,9 +254,9 @@ def list_templates():
             template_name = file[:-3]  # Remove .py extension
             templates.append(template_name)
 
-    printIt("Available templates:", lable.INFO)
+    printIt("Availabel templates:", label.INFO)
     for template in sorted(templates):
-        printIt(f"  - {template}", lable.INFO)
+        printIt(f"  - {template}", label.INFO)
 
 def template_exists(template_name):
     '''Check if a template exists'''
@@ -273,13 +273,13 @@ def verifyArgsWithDiscriptions(cmdObj: Commands, theArgs) -> dict:
         if argName[0] == '-':
             if len(argName) >= 2:
                 if argName[2] == '-':
-                    printIt("Only single hyphen options allowed.",lable.WARN)
+                    printIt("Only single hyphen options allowed.",label.WARN)
                     exit(0)
                 else:
                     theDisc = input(f'Enter help description for {argName}:\\n')
                     if theDisc == '': theDisc = f'no help for {argName}'
             else:
-                printIt("Missing ascii letters after hyphen.",lable.WARN)
+                printIt("Missing ascii letters after hyphen.",label.WARN)
                 exit(0)
         else:
             theDisc = input(f'Enter help description for {argName}:\\n')
@@ -292,12 +292,12 @@ def writeCodeFile(theArgs: dict, template_name: str = 'newCmd') -> str:
     fileDir = os.path.dirname(__file__)
     fileName = os.path.join(fileDir, f'{list(theArgs.keys())[0]}.py')
     if os.path.isfile(fileName):
-        rtnStr = lable.EXISTS
+        rtnStr = label.EXISTS
     else:
         ourStr = cmdCodeBlock(theArgs, template_name)
         with open(fileName, 'w') as fw:
             fw.write(ourStr)
-        rtnStr = lable.SAVED
+        rtnStr = label.SAVED
     return rtnStr
 
 def cmdCodeBlock(theArgs: dict, template_name: str = 'newCmd') -> str:
@@ -311,7 +311,7 @@ def cmdCodeBlock(theArgs: dict, template_name: str = 'newCmd') -> str:
         cmdDefTemplate = template_module.cmdDefTemplate
         argDefTemplate = template_module.argDefTemplate
     except ImportError:
-        printIt(f"Could not import template '{template_name}', using default", lable.WARN)
+        printIt(f"Could not import template '{template_name}', using default", label.WARN)
         from .templates.newCmd import cmdDefTemplate, argDefTemplate
 
     rtnStr = cmdDefTemplate.substitute(
@@ -339,7 +339,7 @@ def updateCMDJson(cmdObj: Commands, theArgs:  dict) -> None:
     cmdObj.commands = commands
 """)
 modCmdStr = dedent("""import os, copy
-from ..defs.logIt import printIt, lable
+from ..defs.logIt import printIt, label
 from ..classes.argParse import ArgParse
 from .commands import Commands, cmdDescriptionTagStr
 from .templates.newCmd import cmdDefTemplate, argDefTemplate
@@ -359,11 +359,11 @@ def modCmd(argParse: ArgParse):
         theArgs = verifyArgsWithDiscriptions(cmdObj, args.arguments)
         if len(theArgs.keys()) > 0:
             updateCMDJson(cmdObj, modCmdName, theArgs)
-            printIt(f'"{modCmdName}" modified.',lable.ModCmd)
+            printIt(f'"{modCmdName}" modified.',label.ModCmd)
         else:
-            printIt(f'"{modCmdName}" unchanged.',lable.INFO)
+            printIt(f'"{modCmdName}" unchanged.',label.INFO)
     else:
-        printIt(f'"{modCmdName}" does not exists. use newCmd or add it.',lable.INFO)
+        printIt(f'"{modCmdName}" does not exists. use newCmd or add it.',label.INFO)
 
 def verifyArgsWithDiscriptions(cmdObj: Commands, theArgs) -> dict:
     rtnDict = {}
@@ -374,13 +374,13 @@ def verifyArgsWithDiscriptions(cmdObj: Commands, theArgs) -> dict:
         if argName[0] == '-':
             if len(argName) >= 2:
                 if argName[2] == '-':
-                    printIt("Only single hyphen options allowed.",lable.WARN)
+                    printIt("Only single hyphen options allowed.",label.WARN)
                     exit(0)
                 else:
                     theDisc = input(f'Enter help description for {argName}:\\n')
                     if theDisc == '': theDisc = f'no help for {argName}'
             else:
-                printIt("Missing ascii letters after hyphen.",lable.WARN)
+                printIt("Missing ascii letters after hyphen.",label.WARN)
                 exit(0)
         else:
             theDisc = ''
@@ -410,12 +410,12 @@ def writeCodeFile(theArgs: dict) -> str:
     fileDir = os.path.dirname(__file__)
     fileName = os.path.join(fileDir, f'{list(theArgs.keys())[0]}.py')
     if os.path.isfile(fileName):
-        rtnStr = lable.EXISTS
+        rtnStr = label.EXISTS
     else:
         ourStr = cmdCodeBlock(theArgs)
         with open(fileName, 'w') as fw:
             fw.write(ourStr)
-        rtnStr = lable.SAVED
+        rtnStr = label.SAVED
     return rtnStr
 
 def cmdCodeBlock(theArgs: dict) -> str:
@@ -447,7 +447,7 @@ def updateCMDJson(cmdObj: Commands, modCmdName: str, theArgs:  dict) -> None:
     cmdObj.commands = commands
 """)
 rmCmdStr = dedent("""import os, json
-from ..defs.logIt import printIt, lable, cStr, color
+from ..defs.logIt import printIt, label, cStr, color
 from .commands import Commands
 
 cmdObj = Commands()
@@ -466,14 +466,14 @@ def rmCmd(argParse):
         if anArg in commands and len(theArgs) == 1:
             if anArg == cmdName:
                 if anArg in ["newCmd", "modCmd", "rmCmd"]:
-                    printIt(f'Permission denied for "{anArg}".',lable.WARN)
+                    printIt(f'Permission denied for "{anArg}".',label.WARN)
                     exit(0)
                 chkRm: str = input(f"Perminantly delete {anArg} (y/N): ")
                 if chkRm == '': chkRm = 'N'
                 if chkRm.lower() == 'y':
                     removeCmd(anArg)
             else:
-                printIt(f'Command "{anArg}" must be removed seperataly from "{cmdName}".',lable.WARN)
+                printIt(f'Command "{anArg}" must be removed seperataly from "{cmdName}".',label.WARN)
         elif cmdName in commands:
             if anArg in commands[cmdName]:
                 chkRm: str = input(f"Perminantly delete {anArg} (y/N): ")
@@ -481,7 +481,7 @@ def rmCmd(argParse):
                 if chkRm.lower() == 'y':
                     removeCmdArg(cmdName, anArg)
         else:
-            printIt(f'"{cmdName}" is not currently a Command.',lable.WARN)
+            printIt(f'"{cmdName}" is not currently a Command.',label.WARN)
             argIndex = len(theArgs)
         argIndex += 1
 
@@ -492,7 +492,7 @@ def removeCmdArg(cmdName, argName):
         del theJson[cmdName][argName]
     with open(jsonFileName, 'w') as wf:
         json.dump(theJson, wf, indent=2)
-    printIt(argName,lable.RmArg)
+    printIt(argName,label.RmArg)
 
 def removeCmd(cmdName):
     global jsonFileName
@@ -505,7 +505,7 @@ def removeCmd(cmdName):
     pyFileName = os.path.join(theDir, pyFileName)
     if os.path.isfile(pyFileName):
         os.remove(pyFileName)
-    printIt(cmdName,lable.RmCmd)
+    printIt(cmdName,label.RmCmd)
 """)
 commandsJsonDict = {
   "switcheFlags": {},
@@ -580,7 +580,7 @@ class Commands(object):
 """)
 optSwitchesTemplate = Template(dedent("""import json
 from pathlib import Path
-from ..defs.logIt import printIt, lable
+from ..defs.logIt import printIt, label
 
 
 rcFileDir = Path(__file__).resolve().parents[2]
@@ -627,7 +627,7 @@ def writeOptJson(optSwitches: dict, switchFlags: dict) -> dict:
     for switchFlag in switchFlags.keys(): # fill in missing items'
         try: _ = rawRC["switcheFlags"][switchFlag]
         except: rawRC["switcheFlags"][switchFlag] = False
-    printIt(formatOptStr(rawRC["switcheFlags"]), lable.INFO)
+    printIt(formatOptStr(rawRC["switcheFlags"]), label.INFO)
     with open(rcFileName, 'w') as wf:
         json.dump(rawRC, wf, indent=2)
 
@@ -858,7 +858,7 @@ class color():
         }
 
 
-class lable():
+class label():
     SAVED = "SAVED: "
     REPLACED = "REPLACED: "
     BLANK = "BK"
@@ -900,7 +900,7 @@ def logIt(*message, logFileName="${name}.log"):
     needClip = False
     if len(message) > 0:
         for mess in message:
-            if mess == lable.BLANK:
+            if mess == label.BLANK:
                 pass
             elif mess in color.l2cDict:
                 prtStr = mess + prtStr
@@ -922,12 +922,12 @@ def printIt(*message, asStr: bool = False) -> str:
     needClip = False
     abortPrt = False
     for mess in message:
-        if mess == lable.ABORTPRT:
+        if mess == label.ABORTPRT:
             abortPrt = True
     if not abortPrt:
         if len(message) > 0:
             for mess in message:
-                if mess == lable.BLANK:
+                if mess == label.BLANK:
                     prtStr = message[0]
                     rtnStr = message[0]
                     needClip = False

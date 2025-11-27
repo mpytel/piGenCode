@@ -1,7 +1,7 @@
 from string import Template
 from textwrap import dedent
 
-cmdDefTemplate = Template(dedent("""from pigencode.defs.logIt import printIt, lable, cStr, color
+cmdDefTemplate = Template(dedent("""from pigencode.defs.logIt import printIt, label, cStr, color
 from .commands import Commands
 
 cmdObj = Commands()
@@ -15,7 +15,7 @@ def ${defName}(argParse):
     theArgs = args.arguments
     argIndex = 0
     nonCmdArg = True
-    printIt("Modify default behavour in src/${packName}/commands/${defName}.py", lable.DEBUG)
+    printIt("Modify default behavour in src/${packName}/commands/${defName}.py", label.DEBUG)
     # delete place holder code bellow that loops though arguments provided
     # when this command is called when not needed.
     # Note: that function having a name that is entered as an argument part
@@ -27,19 +27,19 @@ def ${defName}(argParse):
             exec(f"{anArg}(argParse)")
         elif nonCmdArg:  # not a know aregument for this {packName} {defName} command
             if len(theArgNames) > 1:
-                printIt(f"{theArgNames[argIndex+1]}: {anArg}",lable.INFO)
+                printIt(f"{theArgNames[argIndex+1]}: {anArg}",label.INFO)
             else:
-                printIt(f"unknown argument: {anArg}", lable.INFO)
+                printIt(f"unknown argument: {anArg}", label.INFO)
         argIndex += 1
     if len(theArgs) == 0:
-        printIt("no argument(s) entered", lable.INFO)
+        printIt("no argument(s) entered", label.INFO)
 
 
 """))
 
 argDefTemplate = Template(dedent("""def ${argName}(argParse):
     args = argParse.args
-    printIt(args, lable.INFO)
+    printIt(args, label.INFO)
 
 
 """))

@@ -5,7 +5,7 @@ import traceback
 from json import dumps
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
-from ..logIt import printIt, lable
+from ..logIt import printIt, label
 from ..getSeedPath import getSeedPath
 from ...classes.piGenCode import PiGenCode
 from .piSyncCodeUtil import \
@@ -21,12 +21,12 @@ piSeedValuePattern = r'["\'](.*)["\'].*$'
 global devExept
 devExept = True
 global showDefNames
-# showDefNames = lable.ABORTPRT
-# showDefNames = lable.IMPORT
-showDefNames = lable.ABORTPRT
-showDefNames01 = lable.ABORTPRT
-showDefNames02 = lable.ABORTPRT
-showDefNames03 = lable.ABORTPRT
+# showDefNames = label.ABORTPRT
+# showDefNames = label.IMPORT
+showDefNames = label.ABORTPRT
+showDefNames01 = label.ABORTPRT
+showDefNames02 = label.ABORTPRT
+showDefNames03 = label.ABORTPRT
 # Intelligent pattern detection functions
 
 def analyzeMultiClassFile(pythonFile: Path) -> Dict:
@@ -125,9 +125,9 @@ def analyzeMultiClassFile(pythonFile: Path) -> Dict:
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def analyzeMultiClassFile', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def analyzeMultiClassFile', label.ERROR)
         printIt(
-            f"Error analyzing multi-class file {pythonFile}: {e}", lable.ERROR)
+            f"Error analyzing multi-class file {pythonFile}: {e}", label.ERROR)
         return {}
 
 def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Path | None = None, dest_dir: str | None = None) -> Optional[Path]:
@@ -141,7 +141,7 @@ def createNewPiGenClassSeedFile(className: str, pythonFile: Path, seed_file: Pat
             seedFilePath = seed_file
             seedFileName = seedFilePath.name
         else:
-            # Get next available number
+            # Get next availabel number
             nextNum = getNextPiSeedNumber()
 
             # Create new piSeed file name
@@ -251,15 +251,15 @@ piValueA {className}.piBody:piGenClass:headers '# {className} classes - synced f
         with open(seedFilePath, 'w', encoding='utf-8') as f:
             f.write(seedContent)
 
-        printIt(f"piGenClass piSeed: {seedFilePath}", lable.SAVED)
+        printIt(f"piGenClass piSeed: {seedFilePath}", label.SAVED)
         return seedFilePath
 
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def createNewPiGenClassSeedFile', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def createNewPiGenClassSeedFile', label.ERROR)
         printIt(
-            f"Error creating new piGenClass piSeed file for {className}: {e}", lable.ERROR)
+            f"Error creating new piGenClass piSeed file for {className}: {e}", label.ERROR)
         return None
 
 def syncPythonGenClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
@@ -408,14 +408,14 @@ def syncPythonGenClassToSeed(pythonFile: Path, piSeedFile: Path) -> List[str]:
 
         except SyntaxError as e:
             printIt(
-                f"Syntax error in Python file {pythonFile}: {e}", lable.ERROR)
+                f"Syntax error in Python file {pythonFile}: {e}", label.ERROR)
 
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def syncPythonGenClassToSeed', lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def syncPythonGenClassToSeed', label.ERROR)
         printIt(
-            f"Error syncing {pythonFile} to {piSeedFile}: {e}", lable.ERROR)
+            f"Error syncing {pythonFile} to {piSeedFile}: {e}", label.ERROR)
 
     return changes
 
@@ -475,7 +475,7 @@ def updateGenClassSeedHeaders(seedContent: str, className: str, headers: List[st
         return '\n'.join(newLines), changed
 
     except Exception as e:
-        printIt(f"Error updating piGenClass seed headers: {e}", lable.ERROR)
+        printIt(f"Error updating piGenClass seed headers: {e}", label.ERROR)
         return seedContent, False
 
 def updateGenClassSeedImports(seedContent: str, className: str, imports: List[str]) -> Tuple[str, bool]:
@@ -534,7 +534,7 @@ def updateGenClassSeedImports(seedContent: str, className: str, imports: List[st
         return '\n'.join(newLines), changed
 
     except Exception as e:
-        printIt(f"Error updating piGenClass seed imports: {e}", lable.ERROR)
+        printIt(f"Error updating piGenClass seed imports: {e}", label.ERROR)
         return seedContent, False
 
 
@@ -668,8 +668,8 @@ def updateGenClassSeedMlConstants(seedContent: str, className: str, mlConstants:
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def updateGenClassSeedMlConstants', lable.ERROR)
-        printIt(f"Error updating piGenClass seed multi-line constants: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def updateGenClassSeedMlConstants', label.ERROR)
+        printIt(f"Error updating piGenClass seed multi-line constants: {e}", label.ERROR)
         return seedContent, False
 
 
@@ -760,8 +760,8 @@ def updateGenClassSeedConstants(seedContent: str, className: str, constants: Lis
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def updateGenClassSeedConstants', lable.ERROR)
-        printIt(f"Error updating piGenClass seed constants: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def updateGenClassSeedConstants', label.ERROR)
+        printIt(f"Error updating piGenClass seed constants: {e}", label.ERROR)
         return seedContent, False
 
 def updateGenClassSeedClassDefs(seedContent: str, className: str, classDefs: Dict[str, List[str]]) -> Tuple[str, bool]:
@@ -857,7 +857,7 @@ def updateGenClassSeedClassDefs(seedContent: str, className: str, classDefs: Dic
 
     except Exception as e:
         printIt(
-            f"Error updating piGenClass seed class definitions: {e}", lable.ERROR)
+            f"Error updating piGenClass seed class definitions: {e}", label.ERROR)
         return seedContent, False
 
 
@@ -939,7 +939,7 @@ def updateGenClassSeedGlobalCode(seedContent: str, className: str, globalCode: L
     except Exception as e:
         if devExept:
             tb_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            printIt(f'{tb_str}\n\n --- def updateGenClassSeedGlobalCode', lable.ERROR)
-        printIt(f"Error updating GenClass seed global code: {e}", lable.ERROR)
+            printIt(f'{tb_str}\n\n --- def updateGenClassSeedGlobalCode', label.ERROR)
+        printIt(f"Error updating GenClass seed global code: {e}", label.ERROR)
         return seedContent, False
 

@@ -1,4 +1,4 @@
-from pigencode.defs.logIt import printIt, lable, cStr, color
+from pigencode.defs.logIt import printIt, label, cStr, color
 from pigencode.defs.fileIO import rcFileName, setKeyItem, readJson
 from json import dumps
 
@@ -10,15 +10,15 @@ def setDir(argParse):
     rcJson = readJson(fileName)
     rcKeys = list(rcJson.keys())
     if lenArgs == 0:
-        printIt(f"Valid dirKey include:\n{dumps(rcJson,indent=2)}", lable.INFO)
+        printIt(f"Valid dirKey include:\n{dumps(rcJson,indent=2)}", label.INFO)
     elif lenArgs == 1:
         dirKey = theArgs[0]
         if dirKey == 'list':
-            printIt(f"Valid dirKey include:\n{dumps(rcJson,indent=2)}", lable.INFO)
+            printIt(f"Valid dirKey include:\n{dumps(rcJson,indent=2)}", label.INFO)
         elif dirKey in rcKeys:
-            printIt(f"{dirKey} = {rcJson[dirKey]}", lable.INFO)
+            printIt(f"{dirKey} = {rcJson[dirKey]}", label.INFO)
         else:
-            printIt(f"{dirKey} is not a key in {fileName}", lable.WARN)
+            printIt(f"{dirKey} is not a key in {fileName}", label.WARN)
     elif lenArgs % 2 == 0:
         rcItem = 0
         while rcItem < lenArgs:
@@ -29,6 +29,6 @@ def setDir(argParse):
             if dirKey in rcKeys:
                 setKeyItem(dirKey, dirValue)
             else:
-                printIt(f"{dirKey} is not a key in {fileName}", lable.WARN)
+                printIt(f"{dirKey} is not a key in {fileName}", label.WARN)
     else:
-        printIt(f"A key value pair is missing.", lable.WARN)
+        printIt(f"A key value pair is missing.", label.WARN)

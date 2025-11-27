@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 from re import compile as reCompile
 from pigencode.classes.argParse import ArgParse
-from pigencode.defs.logIt import printIt, lable
+from pigencode.defs.logIt import printIt, label
 from pigencode.defs.getSeedPath import getSeedPath
 
 # Pattern to match piSeed files: piSeed000_name.pi
@@ -35,7 +35,7 @@ def reorderSeeds(argParse: ArgParse):
     # Get piSeeds directory first
     seeds_dir = getSeedPath()
     if not seeds_dir:
-        printIt("Could not find piSeeds directory", lable.ERROR)
+        printIt("Could not find piSeeds directory", label.ERROR)
         return
 
     # Get all piSeed files for reference
@@ -46,13 +46,13 @@ def reorderSeeds(argParse: ArgParse):
         return autoCompactSeeds(seeds_dir, all_seed_files)
 
     if len(theArgs) != 2:
-        printIt("Usage: piGenCode reorderSeeds <source_file> <target_file>", lable.ERROR)
-        printIt("   OR: piGenCode reorderSeeds <source_number> <target_number>", lable.ERROR)
-        printIt("   OR: piGenCode reorderSeeds                                    # Auto-compact gaps", lable.ERROR)
-        printIt("Examples:", lable.INFO)
-        printIt("  piGenCode reorderSeeds piSeeds/piSeed044_piStruct_piDefGC.pi piSeeds/piSeed009_piStruct_piDefGC.pi", lable.INFO)
-        printIt("  piGenCode reorderSeeds 44 9", lable.INFO)
-        printIt("  piGenCode reorderSeeds                                    # Remove gaps in numbering", lable.INFO)
+        printIt("Usage: piGenCode reorderSeeds <source_file> <target_file>", label.ERROR)
+        printIt("   OR: piGenCode reorderSeeds <source_number> <target_number>", label.ERROR)
+        printIt("   OR: piGenCode reorderSeeds                                    # Auto-compact gaps", label.ERROR)
+        printIt("Examples:", label.INFO)
+        printIt("  piGenCode reorderSeeds piSeeds/piSeed044_piStruct_piDefGC.pi piSeeds/piSeed009_piStruct_piDefGC.pi", label.INFO)
+        printIt("  piGenCode reorderSeeds 44 9", label.INFO)
+        printIt("  piGenCode reorderSeeds                                    # Remove gaps in numbering", label.INFO)
         return
 
     # Check if arguments are integers (shortcut mode) or file paths
@@ -66,7 +66,7 @@ def reorderSeeds(argParse: ArgParse):
 
         # Integer shortcut mode - construct file paths
         if source_num not in all_seed_files:
-            printIt(f"Source piSeed{source_num:03d} not found", lable.ERROR)
+            printIt(f"Source piSeed{source_num:03d} not found", label.ERROR)
             return
 
         source_file_info = all_seed_files[source_num]
@@ -77,20 +77,20 @@ def reorderSeeds(argParse: ArgParse):
         target_name = source_file_info['name']
         target_file = f"piSeeds/piSeed{target_num:03d}_{target_name}.pi"
 
-        printIt(f"Integer shortcut mode: {source_num} -> {target_num}", lable.INFO)
+        printIt(f"Integer shortcut mode: {source_num} -> {target_num}", label.INFO)
 
     except ValueError:
         # File path mode - use arguments as-is
         source_file = source_arg
         target_file = target_arg
-        printIt("File path mode", lable.INFO)
+        printIt("File path mode", label.INFO)
 
     # Validate and parse file paths
     source_path = Path(source_file)
     target_path = Path(target_file)
 
     if not source_path.exists():
-        printIt(f"Source file not found: {source_file}", lable.ERROR)
+        printIt(f"Source file not found: {source_file}", label.ERROR)
         return
 
     # Extract numbers from filenames
@@ -98,11 +98,11 @@ def reorderSeeds(argParse: ArgParse):
     target_match = seedFilePattern.match(target_path.name)
 
     if not source_match:
-        printIt(f"Invalid source filename format: {source_path.name}", lable.ERROR)
+        printIt(f"Invalid source filename format: {source_path.name}", label.ERROR)
         return
 
     if not target_match:
-        printIt(f"Invalid target filename format: {target_path.name}", lable.ERROR)
+        printIt(f"Invalid target filename format: {target_path.name}", label.ERROR)
         return
 
     source_num = int(source_match.group(1))
@@ -110,13 +110,13 @@ def reorderSeeds(argParse: ArgParse):
     source_name = source_match.group(2)
     target_name = target_match.group(2)
 
-    printIt(f"Moving piSeed{source_num:03d} to position {target_num:03d}", lable.INFO)
+    printIt(f"Moving piSeed{source_num:03d} to position {target_num:03d}", label.INFO)
 
     # Show preview of changes
     showPreview(all_seed_files, source_num, target_num)
 
     if source_num == target_num:
-        printIt("Source and target positions are the same - no changes needed", lable.WARN)
+        printIt("Source and target positions are the same - no changes needed", label.WARN)
         return
 
     # Perform the reordering
@@ -129,9 +129,9 @@ def reorderSeeds(argParse: ArgParse):
 
     # Validate the reordering
     if validateReorder(seeds_dir):
-        printIt(f"Successfully reordered piSeed files", lable.INFO)
+        printIt(f"Successfully reordered piSeed files", label.INFO)
     else:
-        printIt(f"Reordering completed but validation found issues", lable.WARN)
+        printIt(f"Reordering completed but validation found issues", label.WARN)
 
 # def getSeedPath() -> Path | None:
 #     """Get the piSeeds directory path"""
@@ -176,7 +176,7 @@ def moveBackwards(seeds_dir: Path, all_files: dict, source_num: int, target_num:
     Move a file backwards in the sequence (higher number to lower number)
     Example: Move 044 to 009, increment 009-043 to 010-044
     """
-    printIt(f"Moving backwards: {source_num} -> {target_num}", lable.DEBUG)
+    printIt(f"Moving backwards: {source_num} -> {target_num}", label.DEBUG)
 
     # Create a temporary directory for safe operations
     temp_dir = seeds_dir / "temp_reorder"
@@ -187,7 +187,7 @@ def moveBackwards(seeds_dir: Path, all_files: dict, source_num: int, target_num:
         source_file = all_files[source_num]['path']
         temp_source = temp_dir / f"temp_source_{source_name}.pi"
         shutil.move(str(source_file), str(temp_source))
-        printIt(f"Moved {source_file.name} to temporary location", lable.DEBUG)
+        printIt(f"Moved {source_file.name} to temporary location", label.DEBUG)
 
         # Step 2: Shift files from target_num to source_num-1 up by 1
         files_to_shift = []
@@ -205,13 +205,13 @@ def moveBackwards(seeds_dir: Path, all_files: dict, source_num: int, target_num:
             new_path = seeds_dir / new_name
 
             shutil.move(str(old_path), str(new_path))
-            printIt(f"Renamed {old_path.name} -> {new_name}", lable.DEBUG)
+            printIt(f"Renamed {old_path.name} -> {new_name}", label.DEBUG)
 
         # Step 3: Move source file to target position
         final_name = f"piSeed{target_num:03d}_{target_name}.pi"
         final_path = seeds_dir / final_name
         shutil.move(str(temp_source), str(final_path))
-        printIt(f"Moved source file to {final_name}", lable.INFO)
+        printIt(f"Moved source file to {final_name}", label.INFO)
 
     finally:
         # Clean up temp directory
@@ -223,7 +223,7 @@ def moveForwards(seeds_dir: Path, all_files: dict, source_num: int, target_num: 
     Move a file forwards in the sequence (lower number to higher number)
     Example: Move 009 to 044, decrement 010-044 to 009-043
     """
-    printIt(f"Moving forwards: {source_num} -> {target_num}", lable.DEBUG)
+    printIt(f"Moving forwards: {source_num} -> {target_num}", label.DEBUG)
 
     # Create a temporary directory for safe operations
     temp_dir = seeds_dir / "temp_reorder"
@@ -234,7 +234,7 @@ def moveForwards(seeds_dir: Path, all_files: dict, source_num: int, target_num: 
         source_file = all_files[source_num]['path']
         temp_source = temp_dir / f"temp_source_{source_name}.pi"
         shutil.move(str(source_file), str(temp_source))
-        printIt(f"Moved {source_file.name} to temporary location", lable.DEBUG)
+        printIt(f"Moved {source_file.name} to temporary location", label.DEBUG)
 
         # Step 2: Shift files from source_num+1 to target_num down by 1
         files_to_shift = []
@@ -252,13 +252,13 @@ def moveForwards(seeds_dir: Path, all_files: dict, source_num: int, target_num: 
             new_path = seeds_dir / new_name
 
             shutil.move(str(old_path), str(new_path))
-            printIt(f"Renamed {old_path.name} -> {new_name}", lable.DEBUG)
+            printIt(f"Renamed {old_path.name} -> {new_name}", label.DEBUG)
 
         # Step 3: Move source file to target position
         final_name = f"piSeed{target_num:03d}_{target_name}.pi"
         final_path = seeds_dir / final_name
         shutil.move(str(temp_source), str(final_path))
-        printIt(f"Moved source file to {final_name}", lable.INFO)
+        printIt(f"Moved source file to {final_name}", label.INFO)
 
     finally:
         # Clean up temp directory
@@ -267,22 +267,22 @@ def moveForwards(seeds_dir: Path, all_files: dict, source_num: int, target_num: 
 
 def showPreview(all_files: dict, source_num: int, target_num: int):
     """Show a preview of what changes will be made"""
-    printIt("Preview of changes:", lable.INFO)
+    printIt("Preview of changes:", label.INFO)
 
     if source_num > target_num:
         # Moving backwards
-        printIt(f"  • {all_files[source_num]['full_name']} -> piSeed{target_num:03d}_{all_files[source_num]['name']}.pi", lable.INFO)
+        printIt(f"  • {all_files[source_num]['full_name']} -> piSeed{target_num:03d}_{all_files[source_num]['name']}.pi", label.INFO)
         for num in range(target_num, source_num):
             if num in all_files:
-                printIt(f"  • {all_files[num]['full_name']} -> piSeed{num+1:03d}_{all_files[num]['name']}.pi", lable.INFO)
+                printIt(f"  • {all_files[num]['full_name']} -> piSeed{num+1:03d}_{all_files[num]['name']}.pi", label.INFO)
     else:
         # Moving forwards
-        printIt(f"  • {all_files[source_num]['full_name']} -> piSeed{target_num:03d}_{all_files[source_num]['name']}.pi", lable.INFO)
+        printIt(f"  • {all_files[source_num]['full_name']} -> piSeed{target_num:03d}_{all_files[source_num]['name']}.pi", label.INFO)
         for num in range(source_num + 1, target_num + 1):
             if num in all_files:
-                printIt(f"  • {all_files[num]['full_name']} -> piSeed{num-1:03d}_{all_files[num]['name']}.pi", lable.INFO)
+                printIt(f"  • {all_files[num]['full_name']} -> piSeed{num-1:03d}_{all_files[num]['name']}.pi", label.INFO)
 
-    printIt("", lable.INFO)  # Empty line for readability
+    printIt("", label.INFO)  # Empty line for readability
 
 def validateReorder(seeds_dir: Path):
     """Validate that the reordering was successful"""
@@ -294,10 +294,10 @@ def validateReorder(seeds_dir: Path):
     missing = set(expected) - set(numbers)
 
     if missing:
-        printIt(f"Warning: Missing piSeed numbers: {sorted(missing)}", lable.WARN)
+        printIt(f"Warning: Missing piSeed numbers: {sorted(missing)}", label.WARN)
         return False
 
-    printIt(f"Validation successful: piSeed files numbered {min(numbers):03d} to {max(numbers):03d}", lable.INFO)
+    printIt(f"Validation successful: piSeed files numbered {min(numbers):03d} to {max(numbers):03d}", label.INFO)
     return True
 
 def autoCompactSeeds(seeds_dir: Path, all_seed_files: dict) -> None:
@@ -314,7 +314,7 @@ def autoCompactSeeds(seeds_dir: Path, all_seed_files: dict) -> None:
         - Skip if highest number is >10 away from expected (indicates intentional offset)
     """
     if not all_seed_files:
-        printIt("No piSeed files found to compact", lable.INFO)
+        printIt("No piSeed files found to compact", label.INFO)
         return
 
     # Get sorted list of existing numbers
@@ -323,18 +323,18 @@ def autoCompactSeeds(seeds_dir: Path, all_seed_files: dict) -> None:
     max_num = existing_numbers[-1]
     expected_max = min_num + len(existing_numbers) - 1
 
-    printIt(f"Found {len(existing_numbers)} piSeed files: {min_num:03d} to {max_num:03d}", lable.INFO)
+    printIt(f"Found {len(existing_numbers)} piSeed files: {min_num:03d} to {max_num:03d}", label.INFO)
 
     # Check if there are gaps
     expected_sequence = list(range(min_num, min_num + len(existing_numbers)))
     if existing_numbers == expected_sequence:
-        printIt("No gaps found - piSeed files are already properly numbered", lable.INFO)
+        printIt("No gaps found - piSeed files are already properly numbered", label.INFO)
         return
 
     # Check for intentional offset (>10 gap from expected)
     if max_num - expected_max > 10:
-        printIt(f"Large gap detected ({max_num - expected_max} numbers). This appears to be intentional offset.", lable.INFO)
-        printIt("Skipping auto-compact. Use explicit reorderSeeds if you want to compact anyway.", lable.INFO)
+        printIt(f"Large gap detected ({max_num - expected_max} numbers). This appears to be intentional offset.", label.INFO)
+        printIt("Skipping auto-compact. Use explicit reorderSeeds if you want to compact anyway.", label.INFO)
         return
 
     # Show what gaps will be removed
@@ -344,8 +344,8 @@ def autoCompactSeeds(seeds_dir: Path, all_seed_files: dict) -> None:
             gaps.append(i)
 
     if gaps:
-        printIt(f"Gaps found: {[f'{g:03d}' for g in gaps]}", lable.INFO)
-        printIt("Compacting piSeed files to remove gaps...", lable.INFO)
+        printIt(f"Gaps found: {[f'{g:03d}' for g in gaps]}", label.INFO)
+        printIt("Compacting piSeed files to remove gaps...", label.INFO)
 
     # Create renaming plan
     renaming_plan = []
@@ -369,13 +369,13 @@ def autoCompactSeeds(seeds_dir: Path, all_seed_files: dict) -> None:
         new_number += 1
 
     if not renaming_plan:
-        printIt("No renaming needed", lable.INFO)
+        printIt("No renaming needed", label.INFO)
         return
 
     # Show preview of changes
-    printIt("Preview of changes:", lable.INFO)
+    printIt("Preview of changes:", label.INFO)
     for item in renaming_plan:
-        printIt(f"  • piSeed{item['old_number']:03d}_{item['name']}.pi -> piSeed{item['new_number']:03d}_{item['name']}.pi", lable.INFO)
+        printIt(f"  • piSeed{item['old_number']:03d}_{item['name']}.pi -> piSeed{item['new_number']:03d}_{item['name']}.pi", label.INFO)
 
     # Confirm with user (in a real implementation, you might want user confirmation)
     # For now, proceed automatically
@@ -391,21 +391,21 @@ def autoCompactSeeds(seeds_dir: Path, all_seed_files: dict) -> None:
             temp_file = temp_dir / item['old_path'].name
             shutil.move(str(item['old_path']), str(temp_file))
             temp_files.append((temp_file, item['new_path']))
-            printIt(f"Moved {item['old_path'].name} to temporary location", lable.DEBUG)
+            printIt(f"Moved {item['old_path'].name} to temporary location", label.DEBUG)
 
         # Step 2: Move files back with new names
         for temp_file, new_path in temp_files:
             shutil.move(str(temp_file), str(new_path))
-            printIt(f"Renamed to {new_path.name}", lable.DEBUG)
+            printIt(f"Renamed to {new_path.name}", label.DEBUG)
 
         # Clean up temporary directory
         temp_dir.rmdir()
 
-        printIt(f"Successfully compacted {len(renaming_plan)} piSeed files", lable.INFO)
-        printIt(f"piSeed files now numbered: {min_num:03d} to {min_num + len(existing_numbers) - 1:03d}", lable.INFO)
+        printIt(f"Successfully compacted {len(renaming_plan)} piSeed files", label.INFO)
+        printIt(f"piSeed files now numbered: {min_num:03d} to {min_num + len(existing_numbers) - 1:03d}", label.INFO)
 
     except Exception as e:
-        printIt(f"Error during compacting: {e}", lable.ERROR)
+        printIt(f"Error during compacting: {e}", label.ERROR)
         # Try to restore files from temp directory
         try:
             for temp_file in temp_dir.glob("*.pi"):
@@ -413,6 +413,6 @@ def autoCompactSeeds(seeds_dir: Path, all_seed_files: dict) -> None:
                 if not original_path.exists():
                     shutil.move(str(temp_file), str(original_path))
             temp_dir.rmdir()
-            printIt("Restored files from temporary directory", lable.INFO)
+            printIt("Restored files from temporary directory", label.INFO)
         except:
-            printIt(f"Manual cleanup may be needed in {temp_dir}", lable.WARN)
+            printIt(f"Manual cleanup may be needed in {temp_dir}", label.WARN)

@@ -1,6 +1,6 @@
 # don't import PiContoller because PiClasses my not be present
 import os
-from pi.defs.logIt import printIt, lable, cStr, color
+from pi.defs.logIt import printIt, label, cStr, color
 from pi.defs.piFileIO import piAPIURL
 from pi.defs.piTouch import isPiID
 from pi.defs.piUtil import logedIn, piDupPiTitleZfill, piJoinStr
@@ -14,8 +14,8 @@ from pi.defs.plural2Single import plural2Single
 from pi.classes.piCurrentIndexer import PiCurrentIndexer
 from pi.piClasses.piWordSeek import PiWordSeek
 
-debugOff = lable.ABORTPRT # ^(.*)(printIt)(.*debugOff\)), $1# printIt$2
-debugOn = lable.DEBUG
+debugOff = label.ABORTPRT # ^(.*)(printIt)(.*debugOff\)), $1# printIt$2
+debugOn = label.DEBUG
 debugSet = debugOff
 # debugSet = debugOn
 
@@ -76,7 +76,7 @@ class PiTerminalSwitchboard():
                                     else:
                                         print(f'{field}: {aFieldValue}')
                                 else:
-                                    printIt(f'{field} is not a pi field',lable.WARN)
+                                    printIt(f'{field} is not a pi field',label.WARN)
                                 fieldIndex += 1
                         else:
                             print(f'{arg}\n', aPi)
@@ -100,7 +100,7 @@ class PiTerminalSwitchboard():
                 if showFields[1].isnumeric():
                     theIndex = int(showFields[1])
                     if len(theJson["pis"]) >= theIndex:
-                        printIt(f'theJson:\n{dumps(theJson["pis"][theIndex-1],indent=2)}',lable.DEBUG)
+                        printIt(f'theJson:\n{dumps(theJson["pis"][theIndex-1],indent=2)}',label.DEBUG)
                         return
                     else:
                         currIndexerTitels = theJson['currIndexer']
@@ -117,15 +117,15 @@ class PiTerminalSwitchboard():
                                  aPi["piBase"]["piSD"]
                         if chkStr.find(findStr)>0:
                             noOutput = False
-                            printIt(f'{showFields[0]} containing {showFields[1]}:\n{dumps(aPi,indent=2)}',lable.INFO)
+                            printIt(f'{showFields[0]} containing {showFields[1]}:\n{dumps(aPi,indent=2)}',label.INFO)
                     if noOutput:
-                            printIt(f'No {showFields[0]} containing {showFields[1]} found',lable.WARN)
+                            printIt(f'No {showFields[0]} containing {showFields[1]} found',label.WARN)
 
             else:
                 print(f'Listing of {showFields[0]}')
-                printIt(f'theJson:\n{dumps(theJson["pis"],indent=2)}',lable.INFO)
+                printIt(f'theJson:\n{dumps(theJson["pis"],indent=2)}',label.INFO)
     def list(self):
-        #printIt('in piTerminalSwitchboard.list()',lable.DEBUG)
+        #printIt('in piTerminalSwitchboard.list()',label.DEBUG)
         theURL = f'{piAPIURL}/pis/list'
         if self.theArgs:
             piIndex = 1
@@ -143,7 +143,7 @@ class PiTerminalSwitchboard():
                     #     self.login()
                     #     theURL  = f'{piAPIURL}/pis/login'
                     else:
-                        printIt(res.status_code, lable.ERROR)
+                        printIt(res.status_code, label.ERROR)
                 elif arg in self.piIndexerSTypes:
                     self.listPiType(arg)
                 piIndex += 1
@@ -158,7 +158,7 @@ class PiTerminalSwitchboard():
                     print(f'{pIDPaddingStr}{color.YELLOW}{piIndex}:{color.RESET} {prtStr}')
                     piIndex += 1
             else:
-                printIt(res.status_code, lable.ERROR)
+                printIt(res.status_code, label.ERROR)
     def listPiType(self, piType:str, boolRtnJson:bool=False):
     # list current user's types when called from cli in plurl form
     # piType in self.piIndexerSTypes.
@@ -196,13 +196,13 @@ class PiTerminalSwitchboard():
             else:
                 indexerTitels = self.piCurrentIndexer.currIndexerAsTitels().json()
                 piIndexerStr = getPiIndexerStr(indexerTitels, 0, False)
-                printIt(piIndexerStr,lable.INFO)
+                printIt(piIndexerStr,label.INFO)
         elif res.status_code == status.HTTP_403_FORBIDDEN:
-            printIt(f'piAPI not available error {res.status_code}',lable.WARN)
+            printIt(f'piAPI not availabel error {res.status_code}',label.WARN)
         elif res.status_code == status.HTTP_203_NON_AUTHORITATIVE_INFORMATION:
-            printIt(f'piAPI error {res.status_code}',lable.WARN)
+            printIt(f'piAPI error {res.status_code}',label.WARN)
         else:
-            printIt(f'piAPI error {res.status_code}',lable.FAIL)
+            printIt(f'piAPI error {res.status_code}',label.FAIL)
         return theJson
     def prtPiBaseAndPiIDs(self, thePis):
         piIndex = 1
@@ -237,7 +237,7 @@ class PiTerminalSwitchboard():
         for pi in thePis:
             piBase = pi['piBase']
             if not prtStr:
-                prtStr = printIt(f"prtPiBase2line {piCount} - {piBase['piType']}\n",lable.INFO,asStr=True)
+                prtStr = printIt(f"prtPiBase2line {piCount} - {piBase['piType']}\n",label.INFO,asStr=True)
             lineStr = piBase['piTitle']
             lineStr += ', '+piBase['piSD']
             # prtStr += f'{piIndex}) {lineStr}\n'
@@ -297,7 +297,7 @@ class PiTerminalSwitchboard():
                 if '\\' in list(piSD):
                     piSD = piSD.encode().decode('unicode-escape')
                 # check spelling
-                printIt('spellChk00',lable.WARN)
+                printIt('spellChk00',label.WARN)
                 theTokens = [piType,piTitle,piSD]
                 piType = self.piWordSeek.checkTokens(theTokens[0])
                 piTitle = self.piWordSeek.checkTokens(theTokens[1])
@@ -314,22 +314,22 @@ class PiTerminalSwitchboard():
                     piBase["piUserProfile"] = piUserProfile.__dict__
                     res = req.post(f'{piAPIURL}/pi/user', json=piBase, headers=self.piAuthHeader)
                     if res.status_code == status.HTTP_403_FORBIDDEN:
-                        printIt(f'piAPI not available error {res.status_code}',lable.WARN)
+                        printIt(f'piAPI not availabel error {res.status_code}',label.WARN)
                 else:
                     res = req.post(f'{piAPIURL}/pi', json=piBase, headers=self.piAuthHeader)
                 if res.status_code == status.HTTP_201_CREATED:
                     # the current pi was set in piAPIServer
                     theJson =  res.json()
-                    printIt(f'Current {piType} set to {piTitle}.',lable.INFO)
+                    printIt(f'Current {piType} set to {piTitle}.',label.INFO)
                 elif res.status_code == status.HTTP_203_NON_AUTHORITATIVE_INFORMATION:
-                    printIt(f'Not authorized to create {piType}',lable.WARN)
+                    printIt(f'Not authorized to create {piType}',label.WARN)
                 elif res.status_code == status.HTTP_302_FOUND:
-                    printIt(f'This {piType} exists.',lable.WARN)
+                    printIt(f'This {piType} exists.',label.WARN)
                 else:
-                    printIt(f'piAPI error (setCurrPiType): {res.status_code}',lable.FAIL)
+                    printIt(f'piAPI error (setCurrPiType): {res.status_code}',label.FAIL)
             elif len(self.theArgs) == 3 and type(self.theArgs[0])==int:
                 ''' EXPERIMENTAL use not working. Attempt to use switch flag to edit pi data'''
-                printIt('Place holder for catching three argument entries',lable.DEBUG)
+                printIt('Place holder for catching three argument entries',label.DEBUG)
                 optSwitches = readOptSwitches()["switcheFlags"]
                 if optSwitches["c"]:
                     print(self.theArgs[1])
@@ -350,15 +350,15 @@ class PiTerminalSwitchboard():
                         if piTitle in userDict.keys():
                             self.piCurrentIndexer.setCurrentIndexer(self.piIndexerTypes[0],piTitle)
                         else:
-                            printIt(f'{piTitle} is not a {piType} piTerminalSwitchboard.setCurrPiType',lable.WARN)
+                            printIt(f'{piTitle} is not a {piType} piTerminalSwitchboard.setCurrPiType',label.WARN)
                     else:
-                        printIt(f'users are not set up correctly',lable.ERROR)
+                        printIt(f'users are not set up correctly',label.ERROR)
                 elif piType in self.piIndexerTypes[1:4]:
                     if piTitle.isnumeric():
                         piTypeIndex = self.piIndexerTypes.index(piType) - 1
                         if piTypeIndex < 0: piTypeIndex = 0
                         currPiTitles = self.piCurrentIndexer.getCurrPiTypeList(self.piIndexerTypes[piTypeIndex])
-                        # printIt(str(currPiTitles),lable.DEBUG)
+                        # printIt(str(currPiTitles),label.DEBUG)
                         titleFromList = currPiTitles[int(piTitle)-1]
                         theTokens = [titleFromList]
                     else:
@@ -375,9 +375,9 @@ class PiTerminalSwitchboard():
                             piSType = 'topics'
                         else:
                             piSType = self.piPiClasses.piIndexerSTypes[typeIndex]
-                        #printIt(f'Type: {piType} set to {piTitle} with the following {piSType}.',lable.INFO)
+                        #printIt(f'Type: {piType} set to {piTitle} with the following {piSType}.',label.INFO)
                         prtStr = 'List of ' + cStr(f'{piTitle} {piSType}',color.GREEN) + cStr(f':',color.RESET)
-                        printIt(prtStr,lable.INFO)
+                        printIt(prtStr,label.INFO)
                         # list subtypes here
                         self.piCurrentIndexer = PiCurrentIndexer()
                         currPiTitles = self.piCurrentIndexer.getCurrPiTypeList(piType)
@@ -393,8 +393,8 @@ class PiTerminalSwitchboard():
                     # print(f'switch: {piType}, {piTitle}\n', currentIndexer)
                     elif res.status_code == status.HTTP_304_NOT_MODIFIED:
                         chkNotModifiedStr = self.getNotModifiedStr(piBase)
-                        if chkNotModifiedStr: printIt(self.getNotModifiedStr(piBase),lable.WARN)
-                        else: printIt(f'{piType} is set to {piTitle}',lable.INFO)
+                        if chkNotModifiedStr: printIt(self.getNotModifiedStr(piBase),label.WARN)
+                        else: printIt(f'{piType} is set to {piTitle}',label.INFO)
                     else:
                         print('json=',res)
         else:
@@ -402,7 +402,7 @@ class PiTerminalSwitchboard():
                 if 'rootuser' in self.piPiPackageSystem.piCurrentIndexer.User.piBody.piUserProfile.grants:
                     self.piPiPackageSystem.piCurrentIndexer.bldInitStdCurrUser()
                 else:
-                    printIt('Login as root to create new users.',lable.WARN)
+                    printIt('Login as root to create new users.',label.WARN)
             elif piType in self.piIndexerTypes:
                 piBase = self.piPiPackageSystem.getCurrTypeItemPiBase(piType)
                 if piBase:
@@ -439,10 +439,10 @@ class PiTerminalSwitchboard():
         return rtnStr
     def type(self): # creates or sets current type
         theURL = f'{piAPIURL}type'
-        printIt(f'def type(self) not used yet.\ncommand: {self.theCmd}\narguments: {self.theArgs}',lable.WARN)
+        printIt(f'def type(self) not used yet.\ncommand: {self.theCmd}\narguments: {self.theArgs}',label.WARN)
     def pi(self): # creates or sets current pi
         theURL = f'{piAPIURL}pi'
-        printIt(f'def pi(self) not used yet.\ncommand: {self.theCmd}\narguments: {self.theArgs}',lable.WARN)
+        printIt(f'def pi(self) not used yet.\ncommand: {self.theCmd}\narguments: {self.theArgs}',label.WARN)
     def piTopic(self): # creates a new piTopic of specifed type
         '''Depending the number of arguments this function will
             O - treats the command as a type or types to list type.
@@ -464,7 +464,7 @@ class PiTerminalSwitchboard():
             if chkTypeName:
                 self.listPiType(chkCmdTypeName)
             else:
-                printIt(f'{cStr(chkCmdTypeName,color.UNDERLINE)} command not found.',lable.WARN)
+                printIt(f'{cStr(chkCmdTypeName,color.UNDERLINE)} command not found.',label.WARN)
         elif argCount == 1:
             theJson = self.listPiType(self.theCmd, boolRtnJson=False)
             if len(theJson['pis']) == 0:
@@ -484,18 +484,18 @@ class PiTerminalSwitchboard():
             if res.status_code == status.HTTP_201_CREATED:
                 theJson =  res.json()
                 if not theJson:
-                    printIt(f'This {piType} exists.',lable.WARN)
+                    printIt(f'This {piType} exists.',label.WARN)
                 else:
-                    printIt(f'Current {piType} set to {piTitle}.',lable.INFO)
+                    printIt(f'Current {piType} set to {piTitle}.',label.INFO)
             elif res.status_code == status.HTTP_202_ACCEPTED:
                 typeIndex = self.piPiClasses.piIndexerTypes.index(piType) + 1
                 if piType == self.piPiClasses.piIndexerTypes[3]:
                     piSType = 'topic'
                 else:
                     piSType = self.piPiClasses.piIndexerSTypes[typeIndex]
-                #printIt(f'Type: {piType} set to {piTitle} with the following {piSType}.',lable.INFO)
+                #printIt(f'Type: {piType} set to {piTitle} with the following {piSType}.',label.INFO)
                 prtStr = cStr(f'{piSType}',color.GREEN) + cStr(f' for ',color.RESET) + cStr(f'{piTitle}',color.BLUE) + cStr(f':',color.RESET)
-                printIt(prtStr,lable.INFO)
+                printIt(prtStr,label.INFO)
                 # list subtypes here
                 self.piCurrentIndexer = PiCurrentIndexer()
                 currPiTitles = self.piCurrentIndexer.getCurrPiTypeList(piType)
@@ -515,26 +515,26 @@ class PiTerminalSwitchboard():
                     if res.status_code == status.HTTP_201_CREATED:
                         theJson =  res.json()
                         if not theJson:
-                            printIt(f'This {piType} exists.',lable.WARN)
+                            printIt(f'This {piType} exists.',label.WARN)
                         else:
-                            printIt(f'Current {piType} set to {dupTitle}.',lable.INFO)
+                            printIt(f'Current {piType} set to {dupTitle}.',label.INFO)
                 else:
-                    printIt(f'{piType} {cStr(piTitle,color.UNDERLINE)} exists.',lable.WARN)
+                    printIt(f'{piType} {cStr(piTitle,color.UNDERLINE)} exists.',label.WARN)
             elif res.status_code == status.HTTP_304_NOT_MODIFIED:
                     chkNotModifiedStr = self.getNotModifiedStr(piBase)
-                    if chkNotModifiedStr: printIt(self.getNotModifiedStr(piBase),lable.WARN)
-                    else: printIt(f'{piType} is set to {piTitle}',lable.INFO)
+                    if chkNotModifiedStr: printIt(self.getNotModifiedStr(piBase),label.WARN)
+                    else: printIt(f'{piType} is set to {piTitle}',label.INFO)
             elif res.status_code == status.HTTP_403_FORBIDDEN:
-                printIt(f'piAPI not available {res.status_code}',lable.WARN)
+                printIt(f'piAPI not availabel {res.status_code}',label.WARN)
             elif res.status_code == status.HTTP_203_NON_AUTHORITATIVE_INFORMATION:
-                printIt(f'Not authorized to create {piType}',lable.WARN)
+                printIt(f'Not authorized to create {piType}',label.WARN)
             else:
-                printIt(f'piAPI error: {res.status_code}',lable.FAIL)
+                printIt(f'piAPI error: {res.status_code}',label.FAIL)
         elif argCount == 3:
             # #*** THIS IS WHERE GENERIC TYPES ARE CREATED
             # check spelling
             # There seems to never be that case when argCount == 3
-            printIt(f'There seems to never be that case when argCount == 3 in PiTerminalSwitchboard.piTopic()', lable.ERROR)
+            printIt(f'There seems to never be that case when argCount == 3 in PiTerminalSwitchboard.piTopic()', label.ERROR)
             print('spellChk02')
             theTokens = [self.theCmd,self.theArgs[0],self.theArgs[1]]
             piType = self.piWordSeek.checkTokens(theTokens[0])
@@ -544,9 +544,9 @@ class PiTerminalSwitchboard():
             print('not calling via API')
             newPi = self.piCurrentIndexer.reqNewPi(piType, piTitle, piSD)
             if newPi:
-                printIt(f'{newPi.piBase.piTitle} was created as {newPi.piID}',lable.INFO)
+                printIt(f'{newPi.piBase.piTitle} was created as {newPi.piID}',label.INFO)
             else:
-                printIt(f'{piTitle} was not created.', lable.WARN)
+                printIt(f'{piTitle} was not created.', label.WARN)
         else:
             printIt('How did I get here (piTerminalSwitchboard)?')
             printIt('missing item piType, piTitle, piSD?')

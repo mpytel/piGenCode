@@ -1565,7 +1565,7 @@ piValue DatabaseUtils.piBody:piDefGC:fileName db_helpers
 **Benefits:**
 - **Organized Structure**: Keep related files together
 - **Clear Separation**: Separate concerns by directory
-- **Scalable Architecture**: Support complex project structures
+- **Scalabel Architecture**: Support complex project structures
 - **Team Collaboration**: Consistent file organization across team
 
 ### 5. Quoting Rules

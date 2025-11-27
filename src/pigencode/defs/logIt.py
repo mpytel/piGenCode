@@ -50,7 +50,7 @@ class color():
         }
 
 
-class lable():
+class label():
     SAVED = "SAVED: "
     REPLACED = "REPLACED: "
     BLANK = "BK"
@@ -92,7 +92,7 @@ def logIt(*message, logFileName="piGenCode.log"):
     needClip = False
     if len(message) > 0:
         for mess in message:
-            if mess == lable.BLANK:
+            if mess == label.BLANK:
                 pass
             elif mess in color.l2cDict:
                 prtStr = mess + prtStr
@@ -114,12 +114,12 @@ def printIt(*message, asStr: bool = False) -> str:
     needClip = False
     abortPrt = False
     for mess in message:
-        if mess == lable.ABORTPRT:
+        if mess == label.ABORTPRT:
             abortPrt = True
     if not abortPrt:
         if len(message) > 0:
             for mess in message:
-                if mess == lable.BLANK:
+                if mess == label.BLANK:
                     prtStr = message[0]
                     rtnStr = message[0]
                     needClip = False

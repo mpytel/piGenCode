@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Tuple #, Dict, List, Optional, Set, Any
 from ..classes.argParse import ArgParse
-from ..defs.logIt import printIt, lable
+from ..defs.logIt import printIt, label
 from ..defs.piSyncCode.piSyncCode import syncSingleFile, syncDirectory, syncAllFiles
 from ..defs.piSyncCode.piSyncCodeUtil import printSyncCodeHelp
 
@@ -9,12 +9,12 @@ global options
 global devExept
 devExept = True
 global showDefNames
-# showDefNames = lable.ABORTPRT
-# showDefNames = lable.IMPORT
-showDefNames = lable.ABORTPRT
-showDefNames01 = lable.ABORTPRT
-showDefNames02 = lable.ABORTPRT
-showDefNames03 = lable.ABORTPRT
+# showDefNames = label.ABORTPRT
+# showDefNames = label.IMPORT
+showDefNames = label.ABORTPRT
+showDefNames01 = label.ABORTPRT
+showDefNames02 = label.ABORTPRT
+showDefNames03 = label.ABORTPRT
 # Intelligent pattern detection functions
 
 def syncCode(argParse: ArgParse):
@@ -50,7 +50,7 @@ def syncCode(argParse: ArgParse):
     # Validate filter type if provided
     if options['filter_type'] and options['filter_type'] not in ['class', 'def', 'genclass']:
         printIt(
-            f"Invalid filter type: {options['filter_type']}. Use: class, def, or genclass", lable.ERROR)
+            f"Invalid filter type: {options['filter_type']}. Use: class, def, or genclass", label.ERROR)
         return
 
     # Extract target file from regular arguments (non-option arguments)
@@ -64,10 +64,10 @@ def syncCode(argParse: ArgParse):
 
     # Show options if stats requested
     if options['stats']:
-        printIt("syncCode Enhanced Options:", lable.INFO)
+        printIt("syncCode Enhanced Options:", label.INFO)
         for key, value in options.items():
             if value is not None and value is not False:
-                printIt(f"  {key}: {value}", lable.DEBUG)
+                printIt(f"  {key}: {value}", label.DEBUG)
 
     # Execute based on options
     if options['target_file']:
@@ -84,11 +84,11 @@ def syncCode(argParse: ArgParse):
         else:
             # Try to find the file/directory
             if not targetPath.exists():
-                printIt(f"Target not found: {target}", lable.ERROR)
+                printIt(f"Target not found: {target}", label.ERROR)
                 return
             else:
                 printIt(
-                    f"Target is neither file nor directory: {target}", lable.ERROR)
+                    f"Target is neither file nor directory: {target}", label.ERROR)
                 return
     else:
         # Sync all files with enhanced options

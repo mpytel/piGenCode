@@ -4,7 +4,7 @@ from re import compile as reCompile
 from os import makedirs
 from traceback import format_exception
 from pathlib import Path
-from pi.defs.logIt import printIt, lable
+from pi.defs.logIt import printIt, label
 from pi.defs.piFileIO import getKeyItem, baseDir, piDirs
 from pi.commands.germSeed import germAllSeedFiles
 from pi.commands.genCode import genCodeFile
@@ -24,11 +24,11 @@ class PiPiPackage():
         if self.packageOK: self.packageOK = self._chkPiClassFiles()
         if self.packageOK:
             if self.germAndGen:
-                printIt(f'{packageName} initalized.',lable.INFO)
+                printIt(f'{packageName} initalized.',label.INFO)
             self.piPackageSys = PiPackageSys()
             self.piCurrentIndexer = self.piPackageSys.piCurrentIndexer
         else:
-            printIt(f'{self.packageName} did not germinate correctly.', lable.ERROR)
+            printIt(f'{self.packageName} did not germinate correctly.', label.ERROR)
             exit(0)
     def _chkBaseDirs(self) -> bool:
         rtnBool = False
@@ -38,7 +38,7 @@ class PiPiPackage():
         if self.piSeedsDir.is_dir():
             rtnBool = True
         else:
-            printIt(self.piSeedsDir, lable.DirNotFound)
+            printIt(self.piSeedsDir, label.DirNotFound)
         return rtnBool
     def _chkPiClassFiles(self) -> bool:
         rtnBool = False
@@ -64,9 +64,9 @@ def havePiClasses() -> bool:
             piClassFiles.sort()
             rtnBool = piClasses == piClassFiles
             if not rtnBool:
-                printIt(f'check {piClasses}',lable.FAIL)
-                printIt(f'files {piClassFiles}',lable.FAIL)
-                printIt(f'**** Fix in piPackage.havePiClasses ****',lable.ERROR)
+                printIt(f'check {piClasses}',label.FAIL)
+                printIt(f'files {piClassFiles}',label.FAIL)
+                printIt(f'**** Fix in piPackage.havePiClasses ****',label.ERROR)
     return rtnBool
 
 def PiPackageSys() -> object:

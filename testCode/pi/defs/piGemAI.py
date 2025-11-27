@@ -1,6 +1,6 @@
 # piGemAI functions - synced from existing code
 import os
-from pi.defs.logIt import printIt, lable, cStr, color
+from pi.defs.logIt import printIt, label, cStr, color
 from pi.commands.commands import Commands
 from google import genai
 from google.genai import types
