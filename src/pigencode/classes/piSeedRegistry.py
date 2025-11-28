@@ -3,7 +3,7 @@ Registry pattern for piSeed type handlers and command handlers.
 Replaces exec() calls with a cleaner, more maintainable approach.
 """
 
-from typing import Dict, Callabel, Any, Protocol
+from typing import Dict, Any, Protocol
 from ..defs.logIt import printIt, label
 
 
