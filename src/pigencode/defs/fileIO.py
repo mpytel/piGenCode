@@ -13,7 +13,7 @@ piGenCodeDirs = {
     "piGermDir": "piGerms",
     "piClassGCDir": "piClassGC",
     "piDefGCDir": "piDefsGC",
-    "piGenClassDir": "piGenClasses",
+    "piClassDir": "pi/piClasses",
     "piScratchDir": "piGerms"
 }
 piGCDirs = list(piGenCodeDirs.keys())
